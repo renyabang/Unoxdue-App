@@ -1,0 +1,37 @@
+.App {
+    min-height: 100vh;
+    background-color: #fbf7f2;
+    overflow-x: hidden;
+}
+
+/* Smooth section offset for sticky nav anchors */
+.section-anchor {
+    scroll-margin-top: 88px;
+}
+
+/* Card hover lift */
+.lift {
+    transition: transform 0.35s cubic-bezier(0.22, 1, 0.36, 1),
+        box-shadow 0.35s cubic-bezier(0.22, 1, 0.36, 1);
+}
+.lift:hover {
+    transform: translateY(-8px);
+}
+
+/* Underline grow link */
+.link-underline {
+    position: relative;
+}
+.link-underline::after {
+    content: "";
+    position: absolute;
+    left: 0;
+    bottom: -4px;
+    height: 2px;
+    width: 0;
+    background-color: #ea4e1b;
+    transition: width 0.3s ease;
+}
+.link-underline:hover::after {
+    width: 100%;
+}
