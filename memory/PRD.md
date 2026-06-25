@@ -32,7 +32,7 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - Sicurezza admin: hash pbkdf2, must_change_password, token_version (invalidazione), rate limiting.
 - Sync YouTube via RSS; OCR schedine Vision (senza dati sensibili); sitemap/video-sitemap/robots dinamici.
 - **Step 0 (sicurezza) e Step 1 (E2E admin) — testati (backend 32/32, frontend 19/19).**
-- **[25/06/2026] Step 2 — Uniformare il design SSR al frontend approvato (P0). COMPLETATO + verificato.**
+- **[25/06/2026] Step 2 — Uniformare il design SSR + chiusura deploy. COMPLETATO + verificato.**
   - Build CSS condiviso con Tailwind (scansione `frontend/src/**` + `backend/templates/**`),
     output minificato `backend/static/css/unoxdue.css`, classi inutilizzate rimosse, cache-busting `?v=mtime`.
   - Font ospitati localmente (`backend/static/fonts/*.woff2`, subset latin + latin-ext): Anton, Archivo, Inter. Nessun CDN.
@@ -40,7 +40,11 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
     (navbar dark, hero con glow + marquee, card, slip pronostici, footer 3 colonne, pagine profilo team).
   - Macro condivise (`backend/templates/_macros.html`: icone SVG lucide, card, marquee) per evitare duplicazione.
   - SEO preservato: canonical, JSON-LD, OG, H1 presenti su tutte le pagine; 404 corretto.
-  - Script riproducibili: `scripts/fetch_fonts.py`, `scripts/build_ssr_css.sh`.
+  - **Deploy:** `Dockerfile.backend` ora MULTI-STAGE: ricompila il CSS dentro l'immagine (stage node) senza
+    dipendere da file generati in Emergent; `nginx.conf` con `location ^~ /api/` (asset SSR .css/.woff2 vanno al backend).
+    Validato eseguendo lo stage di build da cartella pulita → output byte-identico al CSS committato (incl. prefisso -webkit Safari).
+    ⚠️ Docker daemon NON disponibile nell'anteprima Emergent: non è stato possibile eseguire `docker build/run` reale qui.
+  - Script riproducibili: `scripts/fetch_fonts.py`, `scripts/build_ssr_css.sh` (CLI standalone, coerente col Docker).
 
 ## Backlog (ordine stretto richiesto dall'utente, messaggio #205)
 - **P1 — Step 3: Archivio completo YouTube** via Data API (backfill paginato playlist Uploads,
@@ -61,6 +65,17 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - `scripts/build_ssr_css.sh`, `scripts/fetch_fonts.py`, `deploy/nginx.conf`, `DEPLOY.md`.
 
 ## Note per il deploy
-Dopo modifiche ai template/classi, rieseguire `bash scripts/build_ssr_css.sh` per rigenerare
-`backend/static/css/unoxdue.css`. I font sono già scaricati in `backend/static/fonts/`.
-Aggiornare il Dockerfile backend per includere lo step di build CSS (TODO al deploy).
+Dopo modifiche ai template/classi, in locale rieseguire `bash scripts/build_ssr_css.sh` per
+rigenerare `backend/static/css/unoxdue.css` (anteprima Emergent). In produzione NON serve:
+il multi-stage `Dockerfile.backend` ricompila il CSS automaticamente dentro l'immagine.
+I font sono già in `backend/static/fonts/` (versionati nel repo).
+TODO deploy futuro: split di `server.py` in `routes/`+`models/` quando il file diventa difficile da mantenere.
+
+## Specifiche Step 5 (grafiche pronostici) — da implementare
+- Watermark/logo UnoXdue discreto ma sempre visibile; branding coerente nei 3 formati (orizzontale, quadrato, 9:16).
+- QR code nelle grafiche social che NON punta direttamente a Twitch ma a una URL stabile sul dominio:
+  `https://unoxdue.net/live/` (grafiche generali) oppure la pagina del pronostico specifico quando disponibile.
+- Route `/live/` redirezionabile dal pannello admin verso: prossima diretta Twitch / live YouTube / ultimo episodio /
+  altra destinazione → così si cambia il target senza rigenerare le immagini già pubblicate.
+- QR: realmente leggibile, contrasto sufficiente, non coprire quote/selezioni, testato su smartphone,
+  etichetta breve ("Guarda la puntata" / "Segui la diretta"), escluso quando la grafica è troppo affollata.

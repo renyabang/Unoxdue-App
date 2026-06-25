@@ -1,6 +1,19 @@
-# ---- UnoXdue backend (FastAPI) ----
-FROM python:3.11-slim
+# ---- UnoXdue backend (FastAPI + SSR Jinja2) ----
 
+# Stage 1: compila il CSS SSR condiviso con Tailwind (React src + template Jinja2).
+# Non dipende da file CSS pre-generati: viene ricostruito dentro l'immagine.
+FROM node:20-alpine AS css-build
+WORKDIR /build
+RUN npm install -g tailwindcss@3.4.17
+# Solo i file necessari al build del CSS (niente node_modules, niente postcss.config del frontend)
+COPY frontend/tailwind.ssr.config.js ./frontend/tailwind.ssr.config.js
+COPY frontend/src ./frontend/src
+COPY backend/templates ./backend/templates
+WORKDIR /build/frontend
+RUN tailwindcss -c tailwind.ssr.config.js -i ./src/ssr.css -o /build/out/unoxdue.css --minify
+
+# Stage 2: backend Python
+FROM python:3.11-slim
 WORKDIR /app/backend
 
 RUN apt-get update && apt-get install -y --no-install-recommends \
@@ -11,6 +24,10 @@ RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir emergentintegrations --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
 
 COPY backend/ ./
+
+# CSS SSR ricompilato nello stage 1 (sovrascrive qualsiasi file di sviluppo).
+# I font sono asset sorgente committati in backend/static/fonts/ e arrivano con COPY backend/.
+COPY --from=css-build /build/out/unoxdue.css ./static/css/unoxdue.css
 
 EXPOSE 8001
 HEALTHCHECK --interval=30s --timeout=5s --retries=3 \

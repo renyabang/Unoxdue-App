@@ -35,10 +35,26 @@ Servizi: `mongo`, `backend` (FastAPI:8001), `frontend` (Nginx:80 con reverse pro
 | `/parlano-di-noi/` | SSR |
 | `/sitemap.xml`, `/video-sitemap.xml`, `/robots.txt` | FastAPI |
 | `/admin` e `/admin/*` | React SPA (non indicizzato) |
-| `/api/*` | FastAPI |
-| asset (`/logo.jpg`, `/hosts/*`, `/team/*.jpg`, JS/CSS) | statici dal build |
+| `/api/*` (incl. `/api/static/css/unoxdue.css`, `/api/static/fonts/*.woff2`) | FastAPI |
+| asset SPA (`/logo.jpg`, `/hosts/*`, `/team/*.jpg`, JS/CSS del build React) | statici dal build |
+
+> Nota nginx: la location API usa `location ^~ /api/` così le richieste come
+> `/api/static/css/unoxdue.css` o `/api/static/fonts/*.woff2` vanno al backend e NON vengono
+> intercettate dalla regex degli asset statici (che altrimenti darebbe 404).
 
 Le URL tecniche `/api/seo/...` sono interne: non vanno nei canonical ne' nelle sitemap.
+
+## 4.bis CSS condiviso e font (pagine SSR)
+Il design delle pagine SSR usa lo **stesso CSS Tailwind** del frontend React, ma servito come file
+statico locale (niente CDN, niente generazione lato browser):
+- `Dockerfile.backend` è **multi-stage**: lo stage `css-build` (node:20) ricompila il CSS
+  analizzando `frontend/src/**` + `backend/templates/**` e produce `backend/static/css/unoxdue.css`
+  (minificato, classi inutilizzate rimosse). L'immagine NON dipende da CSS pre-generati nell'ambiente di sviluppo.
+- I **font sono ospitati localmente** in `backend/static/fonts/*.woff2` (Anton, Archivo, Inter — subset
+  latin + latin-ext). Sono asset sorgente versionati nel repo.
+- **Cache busting**: il backend serve gli asset con `?v=<mtime>` (helper `asset()` in `backend/seo.py`).
+- Build locale (per l'anteprima): `bash scripts/build_ssr_css.sh` (usa la stessa CLI standalone del Docker).
+- Per ri-scaricare i font: `python scripts/fetch_fonts.py`.
 
 ## 5. TLS / dominio
 Mettere un proxy TLS (Caddy/Traefik/Nginx+Certbot) davanti, oppure terminare HTTPS sul load balancer e inoltrare alla porta 80 del container `frontend`.
