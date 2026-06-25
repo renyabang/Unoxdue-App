@@ -202,9 +202,25 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 
 
 
+### [25/06/2026] Step 3 FASE B REALE — OAuth YouTube collegato + trascrizioni reali. COMPLETATO + verificato.
+- GOOGLE_OAUTH_CLIENT_ID/SECRET inseriti; URI redirect registrato (`/api/admin/youtube/oauth/callback`); l'utente ha collegato il canale "unoXdue".
+- Test trascrizioni su 2 video OK, poi BATCH su tutti: **13/13 episodi/interviste con `transcription_status=done`** (sottotitoli IT reali, ~1,78M caratteri), 0 errori, 0 Short/clip/teaser coinvolti. Quota YouTube ampiamente nei limiti.
+
+### [25/06/2026] P1 — Generazione SEO dalle trascrizioni reali (map->reduce + anti-invenzione). COMPLETATO + testato.
+- `srt_utils.py`: parsing SRT -> segmenti con timestamp reali; dedup overlap auto-caption (es. 60k->29k char); chunking allineato ai timestamp; verifica citazioni (substring robusto).
+- `ai_transcript.py`: pipeline MAP (per chunk: summary/topics/entità people-teams-competitions/capitoli con timestamp da marcatori [t=...]/citazioni verbatim) -> REDUCE (sintesi finale: type, guest, h1, seo_title, meta_description, intro, sommario esteso, topics, key_passages). gpt-5.4-mini default, **fallback gpt-5.4 max 1 volta** se i controlli falliscono. Anti-invenzione: citazioni solo se presenti nel testo; capitoli solo con timestamp reali (snap+dedup<60s, cap 15); entità solo se presenti. **Nomi propri ancorati al TITOLO** (fix hallucination 'Baclet'->'Buckley').
+- Workflow **anteprima -> confronto -> pubblica** (campo `ep.ai_preview`, non sovrascrive il pubblico finché l'admin non pubblica). Bundle trascrizione in `db.transcriptions` (srt, clean, segments, lang). Costo/token loggati (`automation_logs` kind=`ai_transcript`).
+- Endpoint admin: `/api/admin/transcripts/seo/status|generate/{slug}|preview/{slug}|publish/{slug}|generate-batch`.
+- SSR: sezione "Capitoli" (deep-link YouTube al timestamp) + "Citazioni" (con speaker) + CTA "Trascrizione della puntata" su episode.html; nuova **pagina canonica** `/{episodi|interviste}/{slug}/trascrizione/` (template `transcript.html`: TOC capitoli, ricerca interna JS, testo pulito in paragrafi nell'HTML SSR). JSON-LD `hasPart`/`Clip` con `startOffset` + `transcript` URL.
+- Admin: pagina "Trascrizioni SEO" (`TranscriptSEO.jsx`): tabella stato (Pubblicato/Anteprima/Da generare), genera/anteprima/pubblica/rigenera, batch, badge modello/costo/needs_review.
+- Testato: pipeline su 3 contenuti (Quinto/Decimo/Baclet) — capitoli 12-15, citazioni 6, costo ~$0.008-0.02/contenuto; SSR verificato (15 Clip JSON-LD, 136 paragrafi pagina trascrizione); testing_agent frontend 100% (iteration_11.json); fix nome ospite verificato (0 'Buckley').
+- DA FARE: generare/pubblicare gli altri 10 episodi (dopo verifica utente sui primi 2).
+
 ## File chiave
-- `backend/auth.py` (sicurezza), `backend/seo.py` (+helper `asset()` versioning), `backend/server.py`
-  (route, mount `/api/static`), `backend/templates/*.html` (+ `_macros.html`), `backend/automations.py`.
+- `backend/auth.py` (sicurezza), `backend/seo.py` (+helper `asset()` versioning, `render_transcript`, JSON-LD capitoli),
+  `backend/server.py` (route, mount `/api/static`), `backend/templates/*.html` (+ `_macros.html`, `transcript.html`), `backend/automations.py`.
+- **NUOVO (P1 SEO trascrizioni):** `backend/srt_utils.py` (parsing SRT/dedup/chunking), `backend/ai_transcript.py`
+  (map->reduce + anti-invenzione), `frontend/src/admin/TranscriptSEO.jsx`.
 - `frontend/tailwind.ssr.config.js`, `frontend/src/ssr.css` (build CSS SSR), `frontend/src/admin/*`.
 - `scripts/build_ssr_css.sh`, `scripts/fetch_fonts.py`, `deploy/nginx.conf`, `DEPLOY.md`.
 

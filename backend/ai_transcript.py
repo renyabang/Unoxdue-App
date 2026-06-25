@@ -37,6 +37,10 @@ SYSTEM_REDUCE = (
     "Sei un caporedattore SEO del podcast italiano di calcio UnoXdue (Serie A). "
     "Sintetizzi note editoriali gia' estratte (verificate sul testo) in una scheda finale. "
     "NON inventare dichiarazioni, nomi, risultati o eventi non presenti nelle note. "
+    "REGOLA NOMI: scrivi i nomi propri (ospite, persone, squadre) ESATTAMENTE come compaiono "
+    "nel TITOLO fornito; NON tradurli, NON anglicizzarli, NON 'correggerli'. I sottotitoli "
+    "automatici possono contenere errori di trascrizione dei nomi: in caso di dubbio usa la "
+    "grafia del TITOLO. "
     "Scrivi in italiano naturale e professionale, senza ripetere keyword in modo artificiale. "
     "Rispondi ESCLUSIVAMENTE con JSON valido."
 )
@@ -99,13 +103,13 @@ def _map_prompt(chunk_text: str) -> str:
 
 def _reduce_prompt(title: str, notes: dict) -> str:
     return (
-        f"Titolo del contenuto: {title}\n\n"
+        f"TITOLO del contenuto (fonte canonica per i nomi propri): {title}\n\n"
         "Note editoriali estratte (verificate sul testo):\n"
         f"{json.dumps(notes, ensure_ascii=False)[:9000]}\n\n"
         "Genera la scheda finale come JSON:\n"
         "{\n"
         '  "type": "episodio | intervista",\n'
-        '  "guest_name": "nome ospite se intervista, altrimenti null",\n'
+        '  "guest_name": "se intervista, il nome dell ospite ESATTAMENTE come nel TITOLO; altrimenti null",\n'
         '  "h1": "H1 chiaro (max ~70 caratteri)",\n'
         '  "seo_title": "title tag con UnoXdue (max ~60 caratteri)",\n'
         '  "meta_description": "meta description (120-158 caratteri)",\n'
@@ -114,6 +118,7 @@ def _reduce_prompt(title: str, notes: dict) -> str:
         '  "topics": ["6-12 argomenti principali, deduplicati"],\n'
         '  "key_passages": ["3-6 passaggi/punti salienti"]\n'
         "}\n"
+        "Regole: i nomi propri devono usare la grafia del TITOLO (non anglicizzare/correggere). "
         "Niente citazioni inventate, niente keyword ripetute artificialmente. Solo JSON."
     )
 

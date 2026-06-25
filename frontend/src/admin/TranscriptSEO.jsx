@@ -147,7 +147,8 @@ export default function TranscriptSEO() {
 
   const load = async () => {
     setLoading(true);
-    try { const r = await api.transcriptSeoStatus(); setItems(r.episodes || []); }
+    try { const r = await api.transcriptSeoStatus(); setItems(r.episodes || []); setMsg(""); }
+    catch (e) { setMsg(`Errore nel caricamento: ${e.message}`); }
     finally { setLoading(false); }
   };
   useEffect(() => { load(); }, []);
