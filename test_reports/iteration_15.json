@@ -1,0 +1,38 @@
+{
+  "summary": "Verified the 404 SSR fix and ran full regression on public clean URLs (frontend-only, no admin login). 21/21 tests PASS. The single FAIL from iteration_14 (unknown routes returning 200 SPA shell) is now fixed: /pagina-finta/, /foo/bar/, /qualsiasi-cosa-inesistente all return HTTP 404 with H1 'Pagina non trovata' and meta robots noindex in the SSR HTML source. No regressions detected: all 12 valid SSR pages still return 200 with real <h1> content (not SPA shell), /admin still loads the React SPA, /logo.jpg returns image/jpeg 200, /sitemap.xml and /robots.txt still served by backend.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "404_unknown_routes": "PASS 3/3 - /pagina-finta/, /foo/bar/, /qualsiasi-cosa-inesistente all return HTTP 404 with H1 'Pagina non trovata' and noindex meta robots. SSR catch-all `GET /seo/{full_path:path}` is correctly registered AFTER all specific /seo routes.",
+    "404_unknown_slugs": "PASS 2/2 - /episodi/non-esiste-xyz/ and /team/non-esiste/ return HTTP 404 (raised by specific SSR routes via HTTPException).",
+    "valid_ssr_pages_200": "PASS 12/12 - /, /episodi/, /episodi/serie-a-2025-2026-giornata-29-puntata-1/, /interviste/, /pronostici/, /team/, /collaborazioni/, /contatti/, /privacy/, /cookie/, /il-podcast/, /parlano-di-noi/ all return 200 with real <h1> content; body length > 500 bytes (not the React SPA shell).",
+    "admin_spa": "PASS - /admin returns 200 with React SPA shell (id=\"root\" + static/js).",
+    "static_asset": "PASS - /logo.jpg returns 200 with content-type image/jpeg.",
+    "sitemap_robots": "PASS - /sitemap.xml returns 200 with <urlset>; /robots.txt returns 200 with User-agent directive."
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_404_regression.py",
+    "/app/test_reports/pytest/iteration_15_404.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "setupProxy.js: the inverted policy is correct. The clean(p) helper strips trailing slashes and queries; the rewrite() maps `/` to /api/seo/home and everything else to /api/seo<path> (sitemap.xml/robots.txt mapped to /api/<file>). Good separation between SSR routes and static assets via the regex /\\.[a-z0-9]+$/i.",
+    "backend/server.py: the catch-all `GET /seo/{full_path:path}` is correctly registered LAST in the api_router (line 957-967), AFTER all specific /seo/* routes (home, episodi, interviste, team/{slug}, etc). FastAPI dispatches in registration order so the catch-all only fires for unmatched paths. Good.",
+    "Episode/team 404 pages (HTTPException 404) do NOT use the branded 'Pagina non trovata' template — they show FastAPI's default JSON error body. Minor UX inconsistency: same status code 404 but different body. Consider adding a global FastAPI exception_handler for 404 on /seo/* that re-renders the same render_page 404 template, or having the specific routes call the same render_page(..., noindex=True, status_code=404) helper instead of raising HTTPException.",
+    "No HEAD method handler observed for /seo/* routes; some uptime monitors may probe with HEAD and receive 405. Low priority (already noted in iteration_14)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_404_regression.py (NEW - 21 regression tests for the 404 fix)"
+  ],
+  "success_rate": {"backend": "n/a (frontend-only review)", "frontend": "21/21 = 100%"},
+  "test_credentials": "Not used. Public-only testing as requested.",
+  "seed_data_creation": "None.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "The 404 SSR fix is fully verified. Regression suite is in /app/backend/tests/test_404_regression.py (21 tests, all PASS). Original SSR suite in /app/backend/tests/test_public_ssr.py from iteration_14 still applies. The inverted proxy in setupProxy.js correctly forwards ALL non-/admin, non-/api, non-/static, non-asset paths to /api/seo<path> on the FastAPI backend; the catch-all `ssr_not_found` at /seo/{full_path:path} renders the branded 404 page with status_code=404 and noindex=True. Minor UX inconsistency: HTTPException-based 404s (unknown episode/team slugs) still show FastAPI's default JSON error rather than the branded template — only the status code matches. If branded 404 for all paths is required, change those raise HTTPException(404) calls to render the same template.",
+  "rca of the issue": "Previous root cause (iteration_14): setupProxy.js isPublic() whitelisted only specific prefixes, so unknown clean URLs fell through to the React dev server (200 SPA shell). Fix applied: (1) setupProxy.js now INVERTS the policy — proxies everything except /admin, /static, /api, /ws, /sockjs-node, /__, paths containing 'hot-update', and any path matching a file-extension regex; (2) backend/server.py adds a catch-all `GET /seo/{full_path:path}` (ssr_not_found) registered AFTER all specific /seo routes that returns render_page(..., noindex=True) with status_code=404. Verified: curl -s -o /dev/null -w '%{http_code}' https://sportivo.preview.emergentagent.com/pagina-finta/ -> 404; HTML source contains <h1>Pagina non trovata</h1> and meta robots noindex. No regressions on valid SSR pages, /admin, static assets, sitemap or robots."
+}
