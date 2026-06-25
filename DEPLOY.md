@@ -56,6 +56,24 @@ statico locale (niente CDN, niente generazione lato browser):
 - Build locale (per l'anteprima): `bash scripts/build_ssr_css.sh` (usa la stessa CLI standalone del Docker).
 - Per ri-scaricare i font: `python scripts/fetch_fonts.py`.
 
+## 4.ter Grafiche pronostici (Playwright/Chromium)
+Le grafiche social (Step 5) sono renderizzate da HTML/CSS/SVG con Playwright/Chromium headless -> PNG + WebP.
+- Dipendenze Python: `playwright`, `qrcode`, `pillow`, `httpx` (in `backend/requirements.txt`).
+- Il `Dockerfile.backend` installa il browser con `python -m playwright install --with-deps chromium`.
+- In sviluppo Emergent i browser sono in `/pw-browsers` (auto-rilevato da `backend/graphics.py`); in Docker si usa il path di default.
+- Font e immagini (logo, foto tipster) sono embeddati in base64 a runtime -> rendering deterministico, niente attese di rete. Gli asset brand sono in `backend/static/public/` (copiati dal frontend) cosi' il backend è autosufficiente anche in Docker.
+- Le immagini generate sono salvate in `backend/uploads/graphics/...` e servite da `/api/uploads/...`.
+- Una sola istanza Chromium viene avviata e riusata; viene chiusa allo shutdown del backend.
+
+## 4.quater /live/ (destinazione QR redirezionabile)
+La route `/live/` reindirizza (302) verso una destinazione gestita dall'admin (Twitch / live YouTube /
+ultimo episodio / URL personalizzata). In produzione Nginx la inoltra al backend
+(`location ~ ^/live/?$ { proxy_pass .../api/live; }`); in dev si usa `/api/live`.
+
+## Sicurezza credenziali
+La password admin NON è mai in chiaro in report/log/seed. È solo in `ADMIN_PASSWORD` (env).
+Rotazione: `python scripts/rotate_admin.py` (nuova password casuale + invalidazione JWT via token_version).
+
 ## 5. TLS / dominio
 Mettere un proxy TLS (Caddy/Traefik/Nginx+Certbot) davanti, oppure terminare HTTPS sul load balancer e inoltrare alla porta 80 del container `frontend`.
 

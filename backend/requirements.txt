@@ -71,6 +71,8 @@ passlib==1.7.4
 pathspec==1.1.1
 pillow==12.2.0
 pillow_heif==1.4.0
+playwright==1.60.0
+qrcode==8.2
 platformdirs==4.10.0
 pluggy==1.6.0
 propcache==0.5.2

@@ -328,6 +328,33 @@ frontend:
           + pulsante per-riga ('Generato'), batch da Contenuti. Nessun bug. Nota minore: testid 'ai-batch-btn' duplicato su due
           route (risolto: rinominati ai-batch-btn-settings / ai-batch-btn-contents).
 
+  - task: "Step 5 — Generazione grafiche pronostici (Playwright/Chromium) + /live/ + miglioramenti Contenuti + rotazione credenziali"
+    implemented: true
+    working: true
+    file: "backend/graphics.py, backend/server.py (graphics/live endpoints), scripts/rotate_admin.py, frontend/src/admin/Graphics.jsx, frontend/src/admin/Contents.jsx, frontend/src/admin/AdminApp.jsx, frontend/src/admin/api.js, Dockerfile.backend, deploy/nginx.conf"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: |
+          [25/06/2026] Step 5 completato. graphics.py rende HTML/CSS/SVG -> Chromium headless -> PNG+WebP in 3 formati
+          (1200x630, 1080x1080, 1080x1920 @2x). Logo+watermark, foto/nome tipster (fallback iniziali), Serie A/stagione/giornata,
+          partite/mercati/selezioni, quote o "Quota non disponibile", quota totale, disclaimer 18+/gioco responsabile/quote variabili,
+          QR verso pagina pronostico (o /live/) con etichetta. Nessun dato sensibile (solo dati strutturati). Auto-scala anti-taglio,
+          istanza Chromium riusata, timeout+retry, log kind=graphics. Endpoint: /admin/graphics/generate, /admin/predictions,
+          /admin/predictions/pick, /admin/live, /api/live (+ /live/ SSR). Backend verificato via curl + screenshot reali (1/3/6 sel, nomi
+          lunghi, quota n.d., foto mancante). Sicurezza: scripts/rotate_admin.py ruota la password (solo in env) e invalida i JWT.
+          Step 4 migliorato: filtro stato AI + badge da-verificare + rielabora selezionati nei Contenuti.
+        -working: true
+        -agent: "testing"
+        -comment: |
+          iteration_4: frontend 10/11 PASS (Grafiche: live config, genera 3 formati con immagini, download/URL, editor; Contenuti:
+          filtro/badge/rielabora-selezionati tutti PASS). 1 bug MEDIUM: messaggio 'pick-msg' non compariva dopo 'Salva dati'
+          (lista smontata durante reload). FIX (lista sempre montata) -> iteration_5 retest 100% (2/2): pick-msg compare con testo
+          atteso e persiste; nessuna regressione. password admin letta da /app/backend/.env (mascherata).
+
 metadata:
   created_by: "main_agent"
   version: "1.0"

@@ -56,6 +56,22 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
   - Admin UI: pagina "AI / SEO" (`AIGen.jsx`) con interruttori (globale, auto-sync, short, componenti, limiti, modello),
     pulsante batch; in "Contenuti" colonna AI + pulsante "Elabora con AI" per riga + batch archivio.
   - Testato: testing_agent frontend 6/6 flussi PASS (100%); backend verificato via curl (process singolo + batch + SSR riflette i contenuti).
+- **[25/06/2026] Sicurezza — rotazione credenziali admin.**
+  - Password admin ruotata e archiviata SOLO in `ADMIN_PASSWORD` (env). Mai in chiaro in report/log/seed/risposte.
+  - Procedura: `scripts/rotate_admin.py` (password casuale, hash pbkdf2 nel DB, token_version++ => JWT precedenti invalidati, must_change_password=false).
+- **[25/06/2026] Step 4 (miglioramento) — Contenuti: filtro stato AI + badge "Da verificare" + rielabora selezionati. TESTATO.**
+  - Filtro (tutti/da_verificare/errore/non elaborato/elaborato/pubblicato), badge contatore cliccabile, ordinamento problematici-primi,
+    checkbox multi-selezione + "Rielabora selezionati" (batch su slug specifici). 
+- **[25/06/2026] Step 5 — Generazione automatica grafiche pronostici (P1). COMPLETATO + testato.**
+  - `backend/graphics.py`: HTML/CSS/SVG -> Playwright/Chromium headless -> PNG + WebP, 3 formati (1200x630, 1080x1080, 1080x1920 @2x).
+  - Contenuti: logo + watermark UnoXdue, foto/nome tipster (fallback iniziali), Serie A/stagione/giornata, partite/mercati/selezioni,
+    quote reali o "Quota non disponibile", quota totale, disclaimer 18+/gioco responsabile/quote variabili, data agg.
+  - QR verso la pagina del pronostico (o /live/); leggibile, contrasto, spazio, non sovrapposto, con etichetta. Route `/live/` redirezionabile da admin.
+  - Vietati esclusi: importo/bonus/vincita/saldo/ID/dati personali/branding operatore — si rende SOLO il dato strutturato (nessuna quota inventata).
+  - Robustezza: auto-scala anti-taglio (1..6+ selezioni, nomi/mercati lunghi), una sola istanza Chromium riusata, timeout+retry, errori loggati (kind="graphics").
+  - Admin: pagina "Grafiche" (anteprima 3 formati, genera/rigenera, download PNG/WebP, copia URL, retry, modifica dati pre-rigenerazione) + card /live/.
+  - Testato: testing_agent frontend 10/11 -> dopo fix 11/11 (retest 100%); backend verificato via curl + screenshot reali dei 3 formati e casi limite.
+  - Docker: `Dockerfile.backend` installa Chromium (`playwright install --with-deps chromium`); asset brand in `backend/static/public/`.
 
 ## Backlog (ordine stretto richiesto dall'utente, messaggio #205)
 - **P1 — Step 3: Archivio completo YouTube** via Data API (backfill paginato playlist Uploads,
@@ -63,8 +79,7 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - **P1 — Step 4: Classificazione AI + generazione automatica** ✅ COMPLETATO (25/06/2026).
   Nota: trascrizioni/citazioni/capitoli reali rimandati allo Step 3 (sottotitoli via YouTube OAuth o audio autorizzato),
   poi rielaborazione automatica che sostituisce il sommario provvisorio (transcription_status: pending → done).
-- **P1 — Step 5: Generazione automatica grafica pronostici** (template HTML/SVG -> export PNG/WebP
-  orizzontale, quadrato, 9:16; nessun dato sensibile utente/bookmaker).
+- **P1 — Step 5: Generazione automatica grafica pronostici** ✅ COMPLETATO (25/06/2026).
 - **P2 — Step 6: Risultati, storico e pubblicazione condizionata** (aggiornamento risultati,
   stato complessivo schedina, log storico, auto-pubblicazione).
 - **P2 — Step 7: Integrazioni Rassegna stampa (Perplexity) e comparatore quote (Odds API)**,

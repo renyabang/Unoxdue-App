@@ -23,6 +23,9 @@ COPY backend/requirements.txt ./requirements.txt
 RUN pip install --no-cache-dir -r requirements.txt \
     && pip install --no-cache-dir emergentintegrations --extra-index-url https://d33sy5i8bnduwe.cloudfront.net/simple/
 
+# Chromium per la generazione grafiche (Playwright) + librerie di sistema
+RUN python -m playwright install --with-deps chromium
+
 COPY backend/ ./
 
 # CSS SSR ricompilato nello stage 1 (sovrascrive qualsiasi file di sviluppo).
