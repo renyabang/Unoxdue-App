@@ -18,13 +18,16 @@ from urllib.parse import urlparse, urlunparse
 
 import requests
 
-from config_db import db, PERPLEXITY_API_KEY
+from config_db import db, SITE_URL, PERPLEXITY_API_KEY
 import automations as auto
 
 ALLOWED_STATUS = {"found", "verified", "review", "published", "discarded", "error"}
 CURATED = {"published", "discarded", "verified"}  # non sovrascritti dal re-run
 PERPLEXITY_MODEL = "sonar"
 LOW_CONF = 0.6
+SECTION = {"episode": "episodi", "interview": "interviste", "team": "team"}
+LINK_LABEL = {"episode": "Episodio collegato", "interview": "Intervista collegata",
+              "team": "Membro del team collegato"}
 
 
 def _now():
@@ -149,21 +152,43 @@ def _reach_sync(url: str):
         return None, False
 
 
-# ----------------------- associazione contenuti -----------------------
-async def _associate(text: str):
+# ----------------------- associazione contenuti (multipla) -----------------------
+async def _associate_all(text: str):
+    """Trova TUTTI i contenuti pertinenti (team, episodi, interviste) menzionati nel testo."""
     t = (text or "").lower()
+    out = []
     team = await db.team.find({}, {"_id": 0, "slug": 1, "name": 1}).to_list(100)
     for m in team:
         nm = (m.get("name") or "").lower()
         if nm and len(nm) > 3 and nm in t:
-            return {"type": "team", "slug": m.get("slug"), "title": m.get("name")}
+            out.append({"type": "team", "slug": m.get("slug"), "title": m.get("name"), "source": "auto"})
     eps = await db.episodes.find({}, {"_id": 0, "slug": 1, "title": 1, "type": 1, "guest_name": 1}).to_list(2000)
     for e in eps:
         gn = (e.get("guest_name") or "").lower()
         if gn and len(gn) > 3 and gn in t:
-            return {"type": "interview" if e.get("type") == "intervista" else "episode",
-                    "slug": e.get("slug"), "title": e.get("title")}
-    return None
+            out.append({"type": "interview" if e.get("type") == "intervista" else "episode",
+                        "slug": e.get("slug"), "title": e.get("title"), "source": "auto"})
+    seen, ded = set(), []
+    for l in out:
+        k = (l["type"], l["slug"])
+        if k in seen:
+            continue
+        seen.add(k)
+        ded.append(l)
+    return ded
+
+
+def _merge_links(existing_links, auto_links):
+    """Mantiene i collegamenti manuali esistenti e fonde gli auto, dedup per (type, slug)."""
+    manual = [l for l in (existing_links or []) if l.get("source") == "manual"]
+    seen, merged = set(), []
+    for l in manual + auto_links:
+        k = (l.get("type"), l.get("slug"))
+        if k in seen:
+            continue
+        seen.add(k)
+        merged.append(l)
+    return merged
 
 
 def _decide_status(reachable, confidence, mentions, linked) -> str:
@@ -207,13 +232,14 @@ async def run_search(query: str = "UnoXdue", actor: str = "admin") -> dict:
         text = f"{it.get('title', '')} {it.get('summary', '')}"
         low = text.lower()
         mentions = "unoxdue" in low or "uno x due" in low or "1x2" in low
-        linked = await _associate(text)
+        auto_links = await _associate_all(text)
+        links = _merge_links(existing.get("links") if existing else None, auto_links)
         conf = it.get("confidence")
         try:
             conf = float(conf) if conf is not None else None
         except (TypeError, ValueError):
             conf = None
-        status = _decide_status(reachable, conf, mentions, linked)
+        status = _decide_status(reachable, conf, mentions, bool(links))
         if status == "error":
             errors += 1
         doc = {
@@ -221,7 +247,7 @@ async def run_search(query: str = "UnoXdue", actor: str = "admin") -> dict:
             "source": it.get("source", ""), "title": it.get("title", ""),
             "url": url, "canonical_url": cu, "date": it.get("date", ""),
             "summary": it.get("summary", ""),  # sintesi originale (no testo integrale)
-            "linked": linked, "query": query, "provider": provider.name,
+            "links": links, "query": query, "provider": provider.name,
             "detected_at": existing.get("detected_at") if existing else _now(),
             "updated_at": _now(), "reachable": reachable, "http_status": status_code,
             "confidence": conf, "status": status,
@@ -256,13 +282,71 @@ async def set_status(item_id: str, status: str, actor: str = "admin") -> dict:
     return {"ok": True, "prev": prev, "status": status}
 
 
-async def set_link(item_id: str, ltype: str, slug: str, title: str) -> dict:
+async def set_link(item_id: str, action: str, ltype: str, slug: str, title: str) -> dict:
+    """Aggiunge o rimuove un collegamento manuale (senza eliminare l'articolo)."""
     doc = await db.press.find_one({"id": item_id})
     if not doc:
         return {"ok": False, "error": "Articolo non trovato"}
-    linked = {"type": ltype, "slug": slug, "title": title} if ltype else None
-    await db.press.update_one({"id": item_id}, {"$set": {"linked": linked, "updated_at": _now()}})
-    return {"ok": True, "linked": linked}
+    links = list(doc.get("links") or [])
+    if action == "remove":
+        links = [l for l in links if not (l.get("slug") == slug and l.get("type") == ltype)]
+    else:
+        if not ltype or not slug:
+            return {"ok": False, "error": "Tipo/slug mancanti"}
+        if not any(l.get("slug") == slug and l.get("type") == ltype for l in links):
+            links.append({"type": ltype, "slug": slug, "title": title, "source": "manual"})
+    await db.press.update_one({"id": item_id}, {"$set": {"links": links, "updated_at": _now()}})
+    await auto.log_automation("press", "info", f"Associazione {action} ({ltype}:{slug})", {"id": item_id})
+    return {"ok": True, "links": links}
+
+
+async def link_options() -> dict:
+    """Contenuti selezionabili per l'associazione manuale (episodi/interviste/team)."""
+    opts = []
+    eps = await db.episodes.find({}, {"_id": 0, "slug": 1, "title": 1, "type": 1}).sort("published_at", -1).to_list(500)
+    for e in eps:
+        opts.append({"type": "interview" if e.get("type") == "intervista" else "episode",
+                     "slug": e.get("slug"), "title": e.get("title")})
+    team = await db.team.find({}, {"_id": 0, "slug": 1, "name": 1}).to_list(100)
+    for m in team:
+        opts.append({"type": "team", "slug": m.get("slug"), "title": m.get("name")})
+    return {"options": opts}
+
+
+async def published_for(slug: str):
+    """Articoli pubblicati + raggiungibili collegati a uno specifico contenuto (dedup per URL canonica, recenti)."""
+    items = await db.press.find(
+        {"status": "published", "reachable": True, "links.slug": slug}, {"_id": 0}).to_list(50)
+    seen, out = set(), []
+    for it in sorted(items, key=lambda x: (x.get("date") or ""), reverse=True):
+        cu = it.get("canonical_url") or it.get("url")
+        if cu in seen:
+            continue
+        seen.add(cu)
+        out.append({"source": it.get("source"), "title": it.get("title"), "date": it.get("date"),
+                    "summary": it.get("summary"), "url": it.get("url")})
+    return out
+
+
+async def published_archive():
+    """Tutti gli articoli pubblicati per la pagina 'Parlano di noi', con link interni puliti (dedup)."""
+    items = await db.press.find({"status": "published"}, {"_id": 0}).sort("date", -1).to_list(200)
+    seen, out = set(), []
+    for it in items:
+        cu = it.get("canonical_url") or it.get("url")
+        if cu in seen:
+            continue
+        seen.add(cu)
+        internals = []
+        for l in (it.get("links") or []):
+            sec = SECTION.get(l.get("type"))
+            if sec and l.get("slug"):
+                internals.append({"url": f"{SITE_URL}/{sec}/{l['slug']}/",
+                                  "label": LINK_LABEL.get(l.get("type"), "Collegato"),
+                                  "title": l.get("title")})
+        out.append({"source": it.get("source"), "title": it.get("title"), "date": it.get("date"),
+                    "summary": it.get("summary"), "url": it.get("url"), "internals": internals})
+    return out
 
 
 async def list_all(status: str = None, limit: int = 100) -> dict:

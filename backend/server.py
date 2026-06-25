@@ -442,6 +442,7 @@ async def admin_press_set_status(payload: PressStatusIn, admin: str = Depends(ge
 
 class PressLinkIn(BaseModel):
     id: str
+    action: str = "add"
     type: Optional[str] = None
     slug: Optional[str] = None
     title: Optional[str] = None
@@ -449,7 +450,12 @@ class PressLinkIn(BaseModel):
 
 @api_router.post("/admin/press/link")
 async def admin_press_link(payload: PressLinkIn, admin: str = Depends(get_current_admin)):
-    return await press.set_link(payload.id, payload.type, payload.slug, payload.title)
+    return await press.set_link(payload.id, payload.action, payload.type, payload.slug, payload.title)
+
+
+@api_router.get("/admin/press/link-options")
+async def admin_press_link_options(admin: str = Depends(get_current_admin)):
+    return await press.link_options()
 
 
 @api_router.get("/admin/odds")
@@ -635,13 +641,8 @@ async def ssr_il_podcast():
 
 @api_router.get("/seo/parlano-di-noi", response_class=HTMLResponse)
 async def ssr_press():
-    items = await db.press.find(
-        {"$or": [{"status": "published"}, {"status": {"$exists": False}}]}, {"_id": 0}).to_list(200)
-    cards = [{"url": p.get("url"), "title": p.get("title"), "kicker": p.get("source", ""),
-              "thumbnail": None} for p in items]
-    return HTMLResponse(seo.render_archive("Parlano di noi",
-        "Le interviste e i contenuti di UnoXdue ripresi dalle principali testate sportive.",
-        "/parlano-di-noi/", cards))
+    items = await press.published_archive()
+    return HTMLResponse(seo.render_press_archive(items))
 
 
 @api_router.get("/seo/episodi", response_class=HTMLResponse)
@@ -700,7 +701,8 @@ async def ssr_team_member(slug: str):
     related = await db.episodes.find({"participants.slug": slug}, {"_id": 0}).to_list(50)
     rel = [{"section": ("interviste" if r.get("type") == "intervista" else "episodi"),
             "slug": r["slug"], "title": r.get("title")} for r in related]
-    return HTMLResponse(seo.render_team_member(m, rel))
+    press_box = await press.published_for(slug)
+    return HTMLResponse(seo.render_team_member(m, rel, press_box))
 
 
 @api_router.get("/seo/episodi/{slug}", response_class=HTMLResponse)
@@ -708,7 +710,8 @@ async def ssr_episode(slug: str):
     ep = await db.episodes.find_one({"slug": slug})
     if not ep:
         raise HTTPException(status_code=404, detail="Contenuto non trovato")
-    return HTMLResponse(seo.render_episode(ep))
+    press_box = await press.published_for(slug)
+    return HTMLResponse(seo.render_episode(ep, press_box))
 
 
 @api_router.get("/seo/interviste/{slug}", response_class=HTMLResponse)
@@ -716,7 +719,8 @@ async def ssr_interview(slug: str):
     ep = await db.episodes.find_one({"slug": slug})
     if not ep:
         raise HTTPException(status_code=404, detail="Contenuto non trovato")
-    return HTMLResponse(seo.render_episode(ep))
+    press_box = await press.published_for(slug)
+    return HTMLResponse(seo.render_episode(ep, press_box))
 
 
 # ============================ Sitemap / robots / RSS ============================

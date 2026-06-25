@@ -55,4 +55,22 @@
       </div>
     </section>
     {% endif %}
+
+    {% if press %}
+    <section class="bg-[#f4ebe1] py-14 lg:py-20" data-testid="press-box">
+      <div class="max-w-5xl mx-auto px-5 lg:px-8">
+        <h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mb-5 leading-tight">Ne hanno parlato</h2>
+        <div class="space-y-3">
+          {% for a in press[:3] %}
+          <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="block bg-white border border-[#ecdfce] hover:border-[#EA4E1B]/50 rounded-xl px-5 py-4 transition-colors group">
+            <p class="text-[11px] font-bold uppercase tracking-wide text-[#9c8b7d]">{{ a.source }}{% if a.date %} &middot; {{ a.date }}{% endif %}</p>
+            <p class="font-archivo font-extrabold text-[#1a1411] mt-1 group-hover:text-[#EA4E1B] transition-colors">{{ a.title }}</p>
+            {% if a.summary %}<p class="text-sm text-[#6b5d52] mt-1 leading-relaxed">{{ a.summary }}</p>{% endif %}
+          </a>
+          {% endfor %}
+        </div>
+        {% if press|length > 3 %}<a href="{{ site_url }}/parlano-di-noi/" class="mt-4 inline-flex items-center gap-1.5 text-sm font-bold uppercase tracking-wide text-[#EA4E1B] hover:text-[#d3430f]">Vedi tutti</a>{% endif %}
+      </div>
+    </section>
+    {% endif %}
 {% endblock %}

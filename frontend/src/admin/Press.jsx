@@ -28,11 +28,20 @@ export default function Press() {
   const [busy, setBusy] = useState("");
   const [runRes, setRunRes] = useState(null);
   const [preview, setPreview] = useState(null);
+  const [linkOptions, setLinkOptions] = useState([]);
 
   const loadStatus = () => api.pressStatus().then((s) => { setStatus(s.provider); setCounts(s.counts || {}); }).catch(() => {});
   const loadList = (f) => api.pressList(f).then((d) => { setItems(d.items || []); setCounts(d.counts || {}); }).catch(() => {});
+  const refresh = async () => {
+    try {
+      const d = await api.pressList(filter);
+      setItems(d.items || []); setCounts(d.counts || {});
+      setPreview((prev) => prev ? ((d.items || []).find((x) => x.id === prev.id) || prev) : prev);
+    } catch (e) { /* noop */ }
+    loadStatus();
+  };
 
-  useEffect(() => { loadStatus(); loadList(""); }, []);
+  useEffect(() => { loadStatus(); loadList(""); api.pressLinkOptions().then((d) => setLinkOptions(d.options || [])).catch(() => {}); }, []);
   useEffect(() => { loadList(filter); /* eslint-disable-next-line */ }, [filter]);
 
   const run = async () => {
@@ -40,14 +49,28 @@ export default function Press() {
     try {
       const r = await api.pressRun(query);
       setRunRes(r);
-      loadStatus(); loadList(filter);
+      refresh();
     } catch (e) { setRunRes({ ok: false, error: e.message }); }
     setBusy("");
   };
 
   const setStatusFor = async (id, st) => {
     setBusy(`st-${id}`);
-    try { await api.pressSetStatus(id, st); loadStatus(); loadList(filter); if (preview?.id === id) setPreview({ ...preview, status: st }); } catch (e) { /* noop */ }
+    try { await api.pressSetStatus(id, st); await refresh(); } catch (e) { /* noop */ }
+    setBusy("");
+  };
+
+  const addLink = async (item, optValue) => {
+    const opt = linkOptions.find((o) => `${o.type}|${o.slug}` === optValue);
+    if (!opt) return;
+    setBusy(`link-${item.id}`);
+    try { await api.pressLink({ id: item.id, action: "add", type: opt.type, slug: opt.slug, title: opt.title }); await refresh(); } catch (e) { /* noop */ }
+    setBusy("");
+  };
+
+  const removeLink = async (item, l) => {
+    setBusy(`link-${item.id}`);
+    try { await api.pressLink({ id: item.id, action: "remove", type: l.type, slug: l.slug }); await refresh(); } catch (e) { /* noop */ }
     setBusy("");
   };
 
@@ -113,7 +136,7 @@ export default function Press() {
                     <p className="font-semibold text-[#1a1411] leading-tight">{p.title}</p>
                     <p className="text-xs text-[#6b5d52] mt-0.5">{p.source} · {p.date}
                       {p.reachable === false && <span className="ml-1 text-red-600 inline-flex items-center gap-0.5"><XCircle className="w-3 h-3" /> irraggiungibile</span>}
-                      {p.linked && <span className="ml-1 text-indigo-600 inline-flex items-center gap-0.5"><Link2 className="w-3 h-3" /> {p.linked.title}</span>}
+                      {p.links && p.links.length > 0 && <span className="ml-1 text-indigo-600 inline-flex items-center gap-0.5"><Link2 className="w-3 h-3" /> {p.links[0].title}{p.links.length > 1 ? ` +${p.links.length - 1}` : ""}</span>}
                     </p>
                   </td>
                   <td className="px-4 py-3"><Badge s={p.status} tid={`press-status-${p.id}`} /></td>
@@ -139,7 +162,24 @@ export default function Press() {
               <p className="text-xs text-[#6b5d52] mt-1">{preview.source} · {preview.date}</p>
               <p className="text-sm text-[#4a3d34] mt-3">{preview.summary}</p>
               <a href={preview.url} target="_blank" rel="noopener noreferrer" className="mt-3 inline-flex items-center gap-1.5 text-sm text-[#EA4E1B] hover:text-[#d3430f] break-all"><ExternalLink className="w-3.5 h-3.5" /> {preview.url}</a>
-              {preview.linked && <p className="mt-2 text-xs text-indigo-600 inline-flex items-center gap-1"><Link2 className="w-3.5 h-3.5" /> Collegato a: {preview.linked.title} ({preview.linked.type})</p>}
+
+              <div className="mt-4 pt-4 border-t border-[#f0e7da]">
+                <p className="text-xs font-semibold text-[#6b5d52] uppercase tracking-wide mb-2">Contenuti collegati</p>
+                <div className="flex flex-wrap gap-1.5 mb-2" data-testid="press-links">
+                  {(preview.links || []).length === 0 && <span className="text-xs text-[#9c8b7d]">Nessun collegamento.</span>}
+                  {(preview.links || []).map((l, i) => (
+                    <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full pl-2.5 pr-1 py-0.5" data-testid={`press-link-${l.type}-${l.slug}`}>
+                      <Link2 className="w-3 h-3" /> {l.title} <span className="text-indigo-400">({l.source || "auto"})</span>
+                      <button onClick={() => removeLink(preview, l)} disabled={busy === `link-${preview.id}`} className="ml-0.5 text-indigo-400 hover:text-red-600" data-testid={`press-link-remove-${l.slug}`}><XCircle className="w-3.5 h-3.5" /></button>
+                    </span>
+                  ))}
+                </div>
+                <select data-testid="press-link-add" value="" onChange={(e) => e.target.value && addLink(preview, e.target.value)} disabled={busy === `link-${preview.id}`} className="w-full text-xs border border-[#e2d4c2] rounded-lg px-2 py-2">
+                  <option value="">+ Aggiungi collegamento manuale…</option>
+                  {linkOptions.map((o) => <option key={`${o.type}|${o.slug}`} value={`${o.type}|${o.slug}`}>{`[${o.type}] ${o.title}`}</option>)}
+                </select>
+              </div>
+
               <div className="mt-5 flex flex-wrap gap-2">
                 <button data-testid="press-publish-btn" onClick={() => setStatusFor(preview.id, "published")} disabled={busy === `st-${preview.id}`} className="inline-flex items-center gap-1.5 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-lg disabled:opacity-60">
                   <CheckCircle2 className="w-3.5 h-3.5" /> Pubblica

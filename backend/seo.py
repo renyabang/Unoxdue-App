@@ -81,7 +81,7 @@ def breadcrumb_jsonld(items) -> str:
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
-def render_episode(ep: dict) -> str:
+def render_episode(ep: dict, press=None) -> str:
     ep = enrich(ep)
     canonical = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/'
     bc = breadcrumb_jsonld([
@@ -92,6 +92,7 @@ def render_episode(ep: dict) -> str:
     return env.get_template("episode.html").render(
         ep=ep, canonical=canonical, site_url=SITE_URL,
         jsonld=episode_jsonld(ep), breadcrumb_jsonld=bc, year=_year(),
+        press=press or [],
     )
 
 
@@ -131,7 +132,7 @@ def render_prediction(p: dict) -> str:
     )
 
 
-def render_team_member(m: dict, related) -> str:
+def render_team_member(m: dict, related, press=None) -> str:
     m = dict(m); m.pop("_id", None)
     m["meta_description"] = (m.get("bio") or m.get("name", ""))[:160]
     photo = m.get("photo", "/logo.jpg")
@@ -149,7 +150,16 @@ def render_team_member(m: dict, related) -> str:
     ])
     return env.get_template("team_member.html").render(
         m_=m, canonical=canonical, site_url=SITE_URL, jsonld=jsonld,
-        breadcrumb_jsonld=bc, related=related, year=_year(),
+        breadcrumb_jsonld=bc, related=related, year=_year(), press=press or [],
+    )
+
+
+def render_press_archive(items) -> str:
+    canonical = f"{SITE_URL}/parlano-di-noi/"
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), ("Parlano di noi", canonical)])
+    return env.get_template("press.html").render(
+        items=items, canonical=canonical, site_url=SITE_URL,
+        breadcrumb_jsonld=bc, year=_year(),
     )
 
 

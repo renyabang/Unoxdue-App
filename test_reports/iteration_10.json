@@ -1,0 +1,38 @@
+{
+  "summary": "Step 7B BIDIREZIONALE (rassegna stampa <-> contenuti) testato end-to-end sul frontend admin + verifica SSR via richiesta diretta. Tutti i flussi richiesti funzionano correttamente: login, /admin/rassegna, run fixture (4 articoli), anteprima con sezione 'Contenuti collegati' (press-links) e chip auto-link 'Sono Micuccio', aggiunta manuale via press-link-add con chip etichettato '(manual)', rimozione via press-link-remove-<slug> (articolo NON eliminato, riga resta), pubblicazione, filtri Pubblicato/Tutti, e SSR su intervista (press-box presente con link esterno target=_blank rel='noopener noreferrer') e archivio /parlano-di-noi (link interno pulito '/interviste/<slug>/' con etichetta 'Intervista collegata'). Non-regressione OK su /admin, /admin/risultati, /admin/schedine, /admin/youtube.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "login": "OK (admin@unoxdue.net, password letta da ADMIN_PASSWORD; NON stampata).",
+    "press_page": "data-testid='press-page' OK; badge demo OK.",
+    "press_run": "Run pulito: '4 nuovi · 0 aggiornati · 0 curati saltati · 1 errori' (Verificato 2, Trovato 1, Errore 1). Tabella popolata con 4 righe.",
+    "auto_links_detected": "Riga 'La Gazzetta dello Sport' presenta gia' chip auto 'press-link-team-sono-micuccio' nell'anteprima (associazione automatica funzionante).",
+    "manual_add": "Selezionato episodio 'C'era della magia...' dal select press-link-add: nuovo chip 'press-link-episode-cera-della-magia-...' compare con etichetta '(manual)'. Nessun errore.",
+    "manual_remove": "Click su press-link-remove-<slug>: chip eliminato (2 -> 1 chip), articolo NON eliminato (press-row-<id> ancora presente in tabella). Nessun errore.",
+    "multi_link": "Articolo Gazzetta collegato simultaneamente a team 'sono-micuccio' + episode 'cera-della-magia-...' + interview 'fabio-ceravolo-130-gol-carriera' = 3 collegamenti coesistenti, senza errori.",
+    "publish": "press-publish-btn -> badge stato 'Pubblicato' OK.",
+    "filters": "press-filter-published mostra 1 riga (solo Gazzetta pubblicata in questa sessione); press-filter-all torna a 4 righe.",
+    "ssr_intervista": "GET /api/seo/interviste/fabio-ceravolo-130-gol-carriera (HTTP 200) contiene <div data-testid=\"press-box\"> con titolo 'Ne hanno parlato' e <a href=\"https://www.gazzetta.it/\" target=\"_blank\" rel=\"noopener noreferrer\"> verso l'articolo pubblicato 'UnoXdue, il podcast Serie A di Sono Micuccio conquista il pubblico'.",
+    "ssr_parlano_di_noi": "GET /api/seo/parlano-di-noi (HTTP 200) contiene link interno '/interviste/fabio-ceravolo-130-gol-carriera/' con etichetta 'Intervista collegata'. Conta 7 link esterni con rel='noopener noreferrer'.",
+    "non_regression": "/admin/risultati, /admin/schedine, /admin/youtube, /admin caricano senza errori (.error/[class*=error]/[id*=error] vuoti)."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Press.jsx: addLink/removeLink hanno catch silenti (/* noop */); un fallimento del POST /admin/press/link non e' visibile all'admin. Consigliato un toast/inline error.",
+    "Press.jsx: il select press-link-add elenca TUTTE le opzioni anche quelle gia' collegate (non disabilitate); l'utente puo' provare a riassociarle (l'API gestisce ma e' UX migliorabile filtrando o disabilitando le option gia' presenti).",
+    "Press.jsx: press-link-remove-<slug> usa solo lo slug come parte del testid; se due collegamenti di tipo diverso condividessero lo stesso slug ci sarebbe collisione. Consigliato includere anche il type (es. press-link-remove-<type>-<slug>).",
+    "Press.jsx: nessun feedback visivo durante busy=link-<id> oltre al disable; un mini-loader nel chip o nel select migliorerebbe la UX."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per richiesta; gia' verificato dal main agent)", "frontend": "100%"},
+  "test_credentials": "Letta da /app/backend/.env (ADMIN_PASSWORD); NON stampata. Email admin@unoxdue.net.",
+  "seed_data_creation": "4 articoli press fixture creati/aggiornati dalla run nella sessione; 1 articolo (Gazzetta) collegato a team 'sono-micuccio' (auto) + episode 'cera-della-magia-...' (manual) + interview 'fabio-ceravolo-130-gol-carriera' (manual) e portato a status=published. Main agent ripulira' come dichiarato.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Step 7B 'collegamento bidirezionale' della rassegna stampa pienamente funzionante (FE admin + SSR). Tutti i data-testid documentati esistono e si comportano come atteso. Provider press in modalita' fixture (Perplexity non attivo). Solo suggerimenti UX nei critical_code_review_comments (non blocchi)."
+}

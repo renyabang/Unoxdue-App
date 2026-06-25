@@ -70,4 +70,5 @@ export const api = {
   pressList: (status) => req(`/admin/press/list${status ? `?status=${status}` : ""}`),
   pressSetStatus: (id, status) => req("/admin/press/set-status", { method: "POST", body: { id, status } }),
   pressLink: (body) => req("/admin/press/link", { method: "POST", body }),
+  pressLinkOptions: () => req("/admin/press/link-options"),
 };
