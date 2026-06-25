@@ -265,7 +265,7 @@ backend:
 frontend:
   - task: "Pannello admin React /admin (login, dashboard, contenuti, schedine, log, integrazioni)"
     implemented: true
-    working: "NA"
+    working: true
     file: "frontend/src/admin/*, frontend/src/App.js"
     stuck_count: 0
     priority: "high"
@@ -274,12 +274,15 @@ frontend:
         -working: "NA"
         -agent: "main"
         -comment: "NON testare frontend senza permesso utente. Sito pubblico React resta su '/'. Admin su '/admin'."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ COMPREHENSIVE E2E TEST PASSED (19/19 steps). Full admin panel tested with real browser automation at /admin. ALL FLOWS WORKING: (1) Login screen with logo/email/password/Entra button, (2) Wrong password shows 'Credenziali non valide' error, (3) Login with admin@unoxdue.net / Sportivo#UxD-2026! successful, (4) Forced password change screen appears on first login, (5) Password change to NuovaPwd#2026! successful with token invalidation, (6) Dashboard loads with sidebar (5 nav items), stat cards (16 contenuti, 3 interviste, 2 pagine pronostici, 11 da verificare), integrations status, and logs, (7) YouTube sync 'Sincronizza ora' works - returns 'Sync completato: 0 nuovi, 15 aggiornati, 15 trovati', (8) Contenuti page shows 16 items in table with title/type/status, (9) SSR preview link opens /api/seo/interviste/fabio-ceravolo-130-gol-carriera with proper <h1> tag, (10) Schedine/Pronostici page loads, (11) Image upload from /app/test_assets/slip.jpg successful with preview, (12) OCR 'Analizza schedina' extracts 6 selections with total_odds 17.63 via OpenAI Vision (gpt-5.4), (13) VERIFIED: NO sensitive data (importo/bonus/vincita/stake/saldo) in OCR output - correctly sanitized, (14) Prediction save with tipster='Il Marziano', season='2025-2026', round='38' successful with preview link, (15) Log automazioni shows 12 entries including youtube_sync and ocr_slip logs, (16) Integrazioni page shows 6 integrations with status (YouTube channel active, OCR Vision active, others in demo mode), (17) Press search 'Cerca menzioni' returns JSON demo response, (18) Logout 'Esci' returns to login screen, (19) Protected route /admin/contenuti redirects to login when not authenticated. Console: 1 expected 401 error (logout token check). Network: 1 CDN error (non-critical). All major admin features functional. Test credentials updated: new password NuovaPwd#2026! works, old password correctly rejected."
 
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 2
-  run_ui: false
+  test_sequence: 3
+  run_ui: true
 
 test_plan:
   current_focus: []
@@ -345,4 +348,54 @@ agent_communication:
       
       All 32 tests passed. No critical issues. Security refactor successful.
       Test file: /app/backend_test_security.py (can be re-run anytime)
+    -agent: "testing"
+    -message: |
+      ✅ FRONTEND ADMIN PANEL E2E TESTING COMPLETE - ALL TESTS PASSED (19/19)
+      
+      Comprehensive end-to-end testing of UnoXdue admin panel completed with real browser automation.
+      Base URL: https://sportivo.preview.emergentagent.com/admin
+      
+      AUTHENTICATION & SECURITY (5 tests):
+      1. ✅ Login screen renders correctly (logo, email, password, "Entra" button)
+      2. ✅ Wrong password error handling works ("Credenziali non valide")
+      3. ✅ Login successful with admin@unoxdue.net / Sportivo#UxD-2026!
+      4. ✅ Forced password change screen appears on first login
+      5. ✅ Password change to NuovaPwd#2026! successful, old tokens invalidated
+      
+      DASHBOARD & NAVIGATION (3 tests):
+      6. ✅ Dashboard loads with complete sidebar (5 nav items: Dashboard, Contenuti, Schedine/Pronostici, Log automazioni, Integrazioni)
+      7. ✅ Stat cards display correct data (16 contenuti, 3 interviste, 2 pagine pronostici, 11 da verificare)
+      8. ✅ YouTube sync "Sincronizza ora" works - message: "Sync completato: 0 nuovi, 15 aggiornati, 15 trovati"
+      
+      CONTENUTI MANAGEMENT (2 tests):
+      9. ✅ Contenuti page displays 16 items with title/type/status in table
+      10. ✅ SSR preview link opens /api/seo/interviste/fabio-ceravolo-130-gol-carriera with proper <h1> tag
+      
+      SCHEDINE/PRONOSTICI OCR (5 tests):
+      11. ✅ Image upload from /app/test_assets/slip.jpg successful with preview
+      12. ✅ OCR "Analizza schedina" extracts 6 selections with total_odds 17.63 (OpenAI Vision gpt-5.4 via Emergent key)
+      13. ✅ CRITICAL SECURITY CHECK: NO sensitive data in OCR output (verified no importo/bonus/vincita/stake/saldo)
+      14. ✅ Prediction save works (tipster: Il Marziano, season: 2025-2026, round: 38)
+      15. ✅ Success message with public preview link appears
+      
+      LOGS & INTEGRATIONS (2 tests):
+      16. ✅ Log automazioni displays 12 entries (youtube_sync, ocr_slip, prediction logs)
+      17. ✅ Integrazioni page shows 6 integrations with correct status (YouTube channel: active, OCR Vision: active, others: demo mode)
+      18. ✅ Press search "Cerca menzioni" returns JSON demo response
+      
+      LOGOUT & PROTECTION (2 tests):
+      19. ✅ Logout "Esci" returns to login screen
+      20. ✅ Protected route /admin/contenuti redirects to login when not authenticated
+      
+      CONSOLE & NETWORK:
+      - 1 expected 401 error (logout token validation check)
+      - 1 non-critical CDN error (Cloudflare RUM)
+      - No blocking errors or red screen issues
+      
+      CREDENTIALS UPDATE:
+      - New password: NuovaPwd#2026! (works correctly)
+      - Old password: Sportivo#UxD-2026! (correctly rejected after change)
+      
+      All admin panel features fully functional. Ready for production use.
+
 
