@@ -113,6 +113,13 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - Scheduler: `POST /api/cron/press?secret=&schedule=weekly|monthly` (weekly=30gg, monthly=90gg; backfill NON automatico). Storico in `press_runs`; log tecnico `press_rejected`; endpoint `/admin/press/runs` e `/admin/press/rejected`. UI: selettore finestra, statistiche esclusive, suggeriti con conferma, pannello "Ultime esecuzioni", "Log tecnico (scartati)".
 - SECONDO test reale (backfill, 14 query, sonar): grezzi 41 − dup 11 = 30 unici → social 0, non-articolo 6, irraggiungibili 3, FP 16, validi 5 (4 found auto-linkati Baclet/Ceravolo + 1 review Garritano). 0 menzioni reali perse. Costo REALE $0.074. Nessuna pubblicazione automatica. Modello resta `sonar` (A/B con sonar-pro solo se necessario).
 
+### [25/06/2026] Step 3 FASE A REALE — Import archivio YouTube (Data API v3). COMPLETATO + verificato.
+- YOUTUBE_API_KEY inserita in `.env`. Channel ID `UCN85Yle0zaIKue4ymUj1OCQ` verificato (canale "unoXdue", 54 video, 36 iscritti, playlist uploads `UUN85Yle0zaIKue4ymUj1OCQ`).
+- `youtube.py`: `_upsert_video` ora salva descrizione completa + `uploads_playlist`; `backfill` traccia errori, classificazione e quota reale; report arricchito.
+- Backfill paginato (2 pagine, 50/pag): 54 trovati = 33 Shorts esclusi + 21 episodi/interviste (11 nuovi + 10 aggiornati). Dedup per `youtube_id`. 0 errori. Quota REALE: 5 unità (1 channels.list + 2 playlistItems + 2 videos.list) su 10.000/giorno.
+- Salvati: titolo, descrizione, data, durata, miniature, playlist, stato. Nessuna trascrizione avviata. Contenuti già elaborati preservati (update solo metadati, type/status/SEO intatti). SSR verificato (/api/seo/episodi = 16 card, interviste Ceravolo/Baclet).
+- Da decidere con utente: (a) affinare classify_video (durata ≤90s = short anche con parola "intervista"; ri-classificare clip 2-3 min); (b) pulizia 7 voci pregresse da feed RSS.
+
 ### [giugno 2026] Step 7B BIDIREZIONALE — Collegamento rassegna stampa ⇄ contenuti (P2). COMPLETATO + testato (fixture, e2e).
 - `press.py`: `links` come LISTA (auto + manuale), `_associate_all` (multi-match team/episodi/interviste), `_merge_links`
   (preserva i manuali al re-run), `set_link(action add/remove)` (rimozione/correzione senza eliminare l'articolo), `link_options`,

@@ -105,10 +105,11 @@ async def channel_stats() -> dict:
 
 
 # ----------------------- upsert singolo video (riusato da backfill e WebSub) -----------------------
-async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publish=True, source="youtube_api"):
+async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publish=True,
+                        source="youtube_api", playlist=None):
     kind = classify_video(title, desc, seconds)
     if kind == "short":
-        return {"action": "skipped_short", "youtube_id": youtube_id}
+        return {"action": "skipped_short", "kind": "short", "youtube_id": youtube_id}
     existing = await db.episodes.find_one({"youtube_id": youtube_id})
     doc = {
         "slug": existing["slug"] if existing else slugify(title),
@@ -117,16 +118,20 @@ async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publis
         "youtube_id": youtube_id,
         "published_at": published,
         "thumbnail": f"https://img.youtube.com/vi/{youtube_id}/maxresdefault.jpg",
+        "description": desc or (existing.get("description") if existing else ""),
         "excerpt": (desc[:240] if desc else (existing.get("excerpt") if existing else title)),
         "source": source,
         "updated_at": datetime.now(timezone.utc).isoformat(),
     }
+    if playlist:
+        doc["uploads_playlist"] = playlist
     if seconds:
         doc["duration"] = human_duration(seconds)
         doc["duration_seconds"] = seconds
     if existing:
         await db.episodes.update_one({"youtube_id": youtube_id}, {"$set": doc})
-        return {"action": "updated", "slug": doc["slug"]}
+        return {"action": "updated", "kind": kind, "type": doc["type"],
+                "status": existing.get("status"), "slug": doc["slug"], "youtube_id": youtube_id}
     # nuovo contenuto
     if not desc or len(desc) < 20:
         doc["status"] = "da_verificare"
@@ -135,7 +140,8 @@ async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publis
     doc["transcription_status"] = "pending"
     doc["created_at"] = doc["updated_at"]
     await db.episodes.insert_one(dict(doc))
-    return {"action": "created", "slug": doc["slug"]}
+    return {"action": "created", "kind": kind, "type": doc["type"],
+            "status": doc["status"], "slug": doc["slug"], "youtube_id": youtube_id}
 
 
 # ----------------------- backfill completo -----------------------
@@ -160,11 +166,13 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
 
     uploads = info["uploads_playlist"]
     items, pages, page_token = [], 0, None
+    page_errors = 0
     while True:
         pages += 1
         try:
             resp = await loop.run_in_executor(None, _list_uploads_sync, uploads, page_token)
         except Exception as e:
+            page_errors += 1
             await log_automation("youtube_backfill", "error", f"playlistItems.list fallita (pagina {pages}): {e}")
             break
         for it in resp.get("items", []):
@@ -184,8 +192,10 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
 
     # durate in batch da 50
     dur_map = {}
+    videos_calls = 0
     for i in range(0, len(items), 50):
         chunk = [x["id"] for x in items[i:i + 50]]
+        videos_calls += 1
         try:
             dresp = await loop.run_in_executor(None, _video_details_sync, chunk)
             for d in dresp.get("items", []):
@@ -193,19 +203,55 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
         except Exception as e:
             await log_automation("youtube_backfill", "warning", f"videos.list fallita (chunk): {e}")
 
-    created = updated = skipped = 0
+    created = updated = skipped = upsert_errors = 0
+    type_counts = {"episodio": 0, "intervista": 0}
+    da_verificare = 0
     for x in items:
-        r = await _upsert_video(x["id"], x["title"], x["desc"], x["published"], dur_map.get(x["id"], 0), auto_publish)
+        try:
+            r = await _upsert_video(x["id"], x["title"], x["desc"], x["published"],
+                                    dur_map.get(x["id"], 0), auto_publish, playlist=uploads)
+        except Exception as e:
+            upsert_errors += 1
+            await log_automation("youtube_backfill", "warning", f"Upsert fallito {x['id']}: {e}")
+            continue
         a = r.get("action")
+        if a == "skipped_short":
+            skipped += 1
+            continue
         created += a == "created"
         updated += a == "updated"
-        skipped += a == "skipped_short"
+        t = r.get("type")
+        if t in type_counts:
+            type_counts[t] += 1
+        if r.get("status") == "da_verificare":
+            da_verificare += 1
 
-    summary = {"ok": True, "demo": False, "channel_video_count": info["video_count"],
-               "fetched": len(items), "pages": pages, "created": created,
-               "updated": updated, "skipped_shorts": skipped}
+    total_in_db = await db.episodes.count_documents({})
+    quota = {
+        "channels_list": 1,
+        "playlist_items_list": pages,
+        "videos_list": videos_calls,
+        "total_units": 1 + pages + videos_calls,
+        "daily_limit": 10000,
+        "nota": "Costo standard read API: 1 unità per chiamata list. La quota residua reale è visibile nella dashboard Google Cloud.",
+    }
+    summary = {
+        "ok": True, "demo": False,
+        "channel_id": YOUTUBE_CHANNEL_ID, "channel_title": info.get("title"),
+        "uploads_playlist": uploads,
+        "channel_video_count": info["video_count"],
+        "fetched": len(items), "pages": pages,
+        "created": created, "updated": updated, "skipped_shorts": skipped,
+        "shorts": skipped, "episodi": type_counts["episodio"], "interviste": type_counts["intervista"],
+        "non_classificati": da_verificare,
+        "errors": page_errors + upsert_errors,
+        "imported_total": total_in_db,
+        "quota": quota,
+    }
     await log_automation("youtube_backfill", "ok",
-                         f"Backfill completato: {created} nuovi, {updated} aggiornati, {skipped} short saltati", summary)
+                         f"Backfill REALE: {len(items)} trovati, {created} nuovi, {updated} aggiornati, "
+                         f"{skipped} short, {type_counts['episodio']} episodi, {type_counts['intervista']} interviste, "
+                         f"quota {quota['total_units']} unità", summary)
     return summary
 
 
