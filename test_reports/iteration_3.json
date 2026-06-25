@@ -14,7 +14,7 @@
   ],
   "updated_files": [],
   "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
-  "test_credentials": "admin@unoxdue.net / UnoXdue#Admin-2026! (verified working, must_change_password=false, NOT modified during tests)",
+  "test_credentials": "admin@unoxdue.net / [REDACTED] (read from ADMIN_PASSWORD env, NOT printed)",
   "seed_data_creation": "None. Used existing 16 episodi/interviste already in DB.",
   "retest_needed": false,
   "main_agent_can_self_test": true,
