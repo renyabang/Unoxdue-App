@@ -42,5 +42,10 @@ GOOGLE_OAUTH_REFRESH_TOKEN = os.environ.get("GOOGLE_OAUTH_REFRESH_TOKEN", "")
 WEBSUB_HUB = os.environ.get("WEBSUB_HUB", "https://pubsubhubbub.appspot.com/subscribe")
 WEBSUB_SECRET = os.environ.get("WEBSUB_SECRET", "")
 
+# Step 6 — Provider risultati/stato eventi (NON quote). Demo 'fixture' finché manca la chiave reale.
+SPORT_RESULTS_API_PROVIDER = os.environ.get("SPORT_RESULTS_API_PROVIDER", "fixture")
+SPORT_RESULTS_API_URL = os.environ.get("SPORT_RESULTS_API_URL", "")
+SPORT_RESULTS_API_KEY = os.environ.get("SPORT_RESULTS_API_KEY", "")
+
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)

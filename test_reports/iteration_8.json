@@ -1,0 +1,24 @@
+{
+  "summary": "Step 6 Risultati & Settlement (modalita FIXTURE/demo) - testato end-to-end via Playwright sul frontend /admin/risultati. Tutti gli 8 punti del review_request superati: login admin, navigazione, badge demo, provider fixture, select min-valid (1/2/3) salvato senza errori, caricamento giornata 37 con 3 giocate, esecuzione settlement con esiti attesi (VINTA/PERSA/DA VERIFICARE a livello giocata; tutte le selezioni con stato corretto), correzione manuale su Napoli-Udinese (manual_review -> won) con etichetta (MANUALE) e re-settle che NON sovrascrive la correzione manuale, riga storico 'Ultimo settlement' con versioni e correzioni, non-regressione su /admin/schedine, /admin/grafiche, /admin/youtube, /admin (zero JS errors).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_8.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Results.jsx: il pubblicazione condizionata select salva subito ad ogni change senza debounce ne feedback visuale di conferma; UX ok ma utile mostrare un toast/check breve dopo saveSettings.",
+    "Results.jsx riga 111: l'option text contiene espressioni inline (es. {(p.picks||[]).length}) che il devtools di Emergent avvolge in <span style=display:contents> dentro <option>, generando un warning React di hydration ('<span> cannot be a child of <option>'). Non e un bug del codice prodotto (l'app gira correttamente), ma e un warning console rumoroso. Si puo silenziare costruendo la label come stringa prima del JSX: `{`${p.competition||'Serie A'} ${p.season} - ${p.round}^ giornata (${(p.picks||[]).length} giocate)`}`.",
+    "Results.jsx: in correct() l'errore viene inghiottito (noop) - sarebbe utile mostrare un toast d'errore all'utente."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net / ADMIN_PASSWORD da /app/backend/.env (letta a runtime, mai stampata)",
+  "seed_data_creation": "Nessuno - usato il pronostico demo gia presente (Serie A 2025-2026 round 37, 3 giocate).",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Step 6 frontend OK. Dati demo testati: Inter-Milan(VINTA), Napoli-Roma(VINTA), Juventus-Lazio(VINTA), Roma-Sassuolo(PERSA), Atalanta-Torino(RINVIATA), Fiorentina-Empoli(ANNULLATA), Napoli-Udinese 1X2+U/O3,5(DA VERIFICARE->corretto manualmente a VINTA). Aggregati giocate: Sono Micuccio=VINTA, Il Ninja=PERSA, Il Marziano=DA VERIFICARE (pre-correzione) / VINTA (post-correzione). Re-settle conferma idempotenza della correzione manuale. Provider attivo: 'fixture' (demo, badge mostrato).",
+  "rca of the issue": "N/A - nessun bug bloccante. Solo warning di hydration React causato dal devtool overlay di Emergent che inietta <span> dentro <option>; non impatta la funzionalita."
+}

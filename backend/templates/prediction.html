@@ -17,6 +17,7 @@
 {% endblock %}
 {% block main %}
 {% import "_macros.html" as m %}
+{% set ST = {'won':['Vinta','bg-green-100 text-green-700'],'lost':['Persa','bg-red-100 text-red-700'],'void':['Void','bg-gray-200 text-gray-600'],'pending':['In attesa','bg-amber-100 text-amber-700'],'postponed':['Rinviata','bg-amber-100 text-amber-700'],'suspended':['Sospesa','bg-amber-100 text-amber-700'],'cancelled':['Annullata','bg-gray-200 text-gray-600'],'manual_review':['Da verificare','bg-[#fde7d6] text-[#c2410c]']} %}
     <section class="relative overflow-hidden bg-[#14100e]">
       <div class="pointer-events-none absolute -top-24 -right-10 w-[34rem] h-[34rem] rounded-full bg-[#EA4E1B]/15 blur-[130px]"></div>
       <div class="pointer-events-none absolute -bottom-32 left-0 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
@@ -51,6 +52,7 @@
                 </div>
               </div>
               {% if pick.status %}<span class="text-[10px] font-bold uppercase tracking-wide text-[#14100e] bg-[#F6D9BF] px-2.5 py-1 rounded-full flex-shrink-0">{{ pick.status }}</span>{% endif %}
+              {% if pick.settlement and pick.settlement.status %}{% set ps = ST.get(pick.settlement.status) %}{% if ps %}<span class="text-[10px] font-bold uppercase tracking-wide px-2.5 py-1 rounded-full flex-shrink-0 {{ ps[1] }}">{{ ps[0] }}</span>{% endif %}{% endif %}
             </div>
             <div class="flex-1 divide-y divide-[#efe4d6]">
               {% for s in pick.selections %}
@@ -60,6 +62,7 @@
                 <div class="flex items-center justify-between mt-1.5 gap-3">
                   <span class="text-sm text-[#6b5d52]">{{ s.market }}</span>
                   <span class="inline-flex items-center gap-2 flex-shrink-0">
+                    {% if s.settlement and s.settlement.status and s.settlement.status != 'pending' %}{% set sst = ST.get(s.settlement.status) %}{% if sst %}<span class="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded {{ sst[1] }}">{{ sst[0] }}</span>{% endif %}{% endif %}
                     <span class="text-sm font-semibold text-[#1a1411]">{{ s.pick }}</span>
                     <span class="text-sm font-bold text-white bg-[#EA4E1B] px-2 py-0.5 rounded-md tabular-nums">{{ s.odds }}</span>
                   </span>

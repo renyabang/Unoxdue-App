@@ -16,6 +16,8 @@ import automations as auto
 import ai_content as ai
 import graphics as gfx
 import youtube as yt
+import results_provider as rp
+import settlement as settle
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -180,9 +182,11 @@ async def add_pick(payload: PickIn, admin: str = Depends(get_current_admin)):
         await db.slip_uploads.update_one({"id": payload.ocr_upload_id},
                                          {"$set": {"status": "confermato",
                                                    "confirmed_at": datetime.now(timezone.utc).isoformat()}})
+    # pubblicazione condizionata (publish_min_valid)
+    pub = await settle.apply_publish_rule(payload.competition, payload.season, payload.round)
     url = f'{SITE_URL}/pronostici/serie-a/{payload.season}/giornata-{payload.round}/'
     await auto.log_automation("prediction", "ok", f"Giocata di {payload.tipster} salvata (giornata {payload.round})")
-    return {"ok": True, "public_url": url}
+    return {"ok": True, "public_url": url, "published": pub}
 
 
 @api_router.post("/admin/predictions/ocr")
@@ -485,6 +489,70 @@ async def cron_youtube(secret: str = Query(...)):
     except Exception as e:
         logger.error("AI autorun error: %s", e)
     return res
+
+
+# ============================ Admin: Risultati & settlement (Step 6) ============================
+@api_router.get("/admin/results/status")
+async def admin_results_status(admin: str = Depends(get_current_admin)):
+    s = await db.settings.find_one({"_id": "global"}) or {}
+    return {"provider": rp.provider_status(), "settings": (s.get("results") or {"publish_min_valid": 1})}
+
+
+@api_router.put("/admin/results/settings")
+async def admin_results_settings(data: dict, admin: str = Depends(get_current_admin)):
+    mv = int(data.get("publish_min_valid", 1))
+    mv = 1 if mv < 1 else (3 if mv > 3 else mv)
+    results = {"publish_min_valid": mv}
+    await db.settings.update_one({"_id": "global"}, {"$set": {"results": results}}, upsert=True)
+    return {"ok": True, "results": results}
+
+
+class SettleIn(BaseModel):
+    competition: str = "Serie A"
+    season: str
+    round: int
+
+
+@api_router.post("/admin/results/settle")
+async def admin_results_settle(payload: SettleIn, admin: str = Depends(get_current_admin)):
+    return await settle.compute_round(payload.competition, payload.season, payload.round,
+                                      source="manual", actor="admin")
+
+
+@api_router.get("/admin/results/{season}/{round_}")
+async def admin_results_view(season: str, round_: int, admin: str = Depends(get_current_admin)):
+    pred = await db.predictions.find_one({"season": season, "round": round_}, {"_id": 0})
+    if not pred:
+        raise HTTPException(status_code=404, detail="Pronostico non trovato")
+    try:
+        events = await rp.get_provider().get_events(pred.get("competition", "Serie A"), season, round_)
+    except Exception:
+        events = []
+    return {"prediction": pred, "events": events, "provider": rp.provider_status()}
+
+
+class CorrectIn(BaseModel):
+    competition: str = "Serie A"
+    season: str
+    round: int
+    pick_index: int
+    selection_index: Optional[int] = None
+    new_status: str
+    note: Optional[str] = None
+
+
+@api_router.post("/admin/results/correct")
+async def admin_results_correct(payload: CorrectIn, admin: str = Depends(get_current_admin)):
+    return await settle.correct(payload.competition, payload.season, payload.round,
+                                payload.pick_index, payload.selection_index,
+                                payload.new_status, payload.note, "admin")
+
+
+@api_router.post("/cron/settle")
+async def cron_settle(secret: str = Query(...), season: str = Query(...), round: int = Query(...)):
+    if not CRON_SECRET or secret != CRON_SECRET:
+        raise HTTPException(status_code=403, detail="Cron secret non valido")
+    return await settle.compute_round("Serie A", season, round, source="cron")
 
 
 # ============================ Public SSR pages ============================
