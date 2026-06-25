@@ -67,3 +67,10 @@ Es. ep.1: `UnoXdue | Serie A 2025/26, 29ª giornata | Primo appuntamento`
 - Script: `scripts/slug_migration.py` (plan/backup/titles/migrate/refresh-related/rollback). Backup+rollback includono episodes+transcriptions.
 - Rollback disponibile e validato: `/app/backups/slug_migration_20260625_192942` (13 ep + 13 trascr, caricabili) → `python slug_migration.py rollback <dir>`.
 - Speciale + puntate 3/4/7/9 senza pagina trascrizione (anteprima, transcription_seo_status non generato): atteso, nessuna regressione.
+
+## STEP 3 (25/06/2026) — Pubblicazione 4 approved_short. COMPLETATA + verificata
+- Pubblicati in modo indipendente: Terzo(31ª/p3), Quarto(32ª/p4), Settimo(35ª/p7), Nono(37ª/p9). Tutti PASS controlli bloccanti (sezioni>=3 con >=2 H2, capitoli con timestamp reali, >=2 citazioni VERBATIM verificate, topics, trascrizione presente).
+- Flusso: `scripts/publish_short.py --publish` (publish_preview) -> ri-applicato `slug_migration.py titles` (casing/H1 descrittivo) + `refresh-related`.
+- Verifica per episodio: ep 200, trascrizione 200 (119-129 paragrafi), H1 descrittivo UnoXdue+stagione+giornata, breadcrumb breve, 5-6 H2, 12 capitoli, 5 citazioni, 14 topics, canonical=nuovo, JSON-LD (PodcastEpisode+12 Clip+transcript+BreadcrumbList), OG ok, meta ok, 0 "Unoxdue", presente in sitemap+video-sitemap.
+- Ora 12/13 con has_transcript_page + transcription_seo_status=published. Resta solo Speciale Mondiali (Step 4).
+- Rollback pre-pubblicazione: `/app/backups/slug_migration_20260625_200003`.
