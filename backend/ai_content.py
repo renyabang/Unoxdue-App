@@ -204,27 +204,30 @@ async def generate_for_slug(slug: str, components: dict = None, is_auto: bool = 
     return {"ok": False, "error": last_err, "slug": slug}
 
 
-async def process_batch(only_missing: bool = True, types=None, limit: int = 20) -> dict:
-    q = {}
-    if only_missing:
-        q["$or"] = [{"ai": {"$exists": False}}, {"ai.status": {"$ne": "ok"}}]
-    if types:
-        q["type"] = {"$in": types}
-    items = await db.episodes.find(q, {"slug": 1, "_id": 0}).limit(int(limit)).to_list(int(limit))
-    slugs = [i["slug"] for i in items]
+async def process_batch(only_missing: bool = True, types=None, limit: int = 20, slugs=None) -> dict:
+    if slugs:
+        target = list(slugs)[:int(limit) if limit else len(slugs)] if limit else list(slugs)
+    else:
+        q = {}
+        if only_missing:
+            q["$or"] = [{"ai": {"$exists": False}}, {"ai.status": {"$ne": "ok"}}]
+        if types:
+            q["type"] = {"$in": types}
+        items = await db.episodes.find(q, {"slug": 1, "_id": 0}).limit(int(limit)).to_list(int(limit))
+        target = [i["slug"] for i in items]
     ok = failed = 0
     results = []
-    for s in slugs:
+    for s in target:
         r = await generate_for_slug(s, is_auto=False)
         results.append({"slug": s, "ok": r.get("ok", False), "error": r.get("error")})
         if r.get("ok"):
             ok += 1
         else:
             failed += 1
-    await auto.log_automation("ai_generate", "info", f"Batch AI: {ok} ok, {failed} falliti su {len(slugs)}",
-                              {"ok": ok, "failed": failed, "total": len(slugs)})
-    return {"ok": True, "processed": len(slugs), "succeeded": ok, "failed": failed, "results": results,
-            "remaining_hint": "Riesegui per elaborare i contenuti rimanenti." if len(slugs) == int(limit) else ""}
+    await auto.log_automation("ai_generate", "info", f"Batch AI: {ok} ok, {failed} falliti su {len(target)}",
+                              {"ok": ok, "failed": failed, "total": len(target)})
+    return {"ok": True, "processed": len(target), "succeeded": ok, "failed": failed, "results": results,
+            "remaining_hint": "Riesegui per elaborare i contenuti rimanenti." if (not slugs and len(target) == int(limit)) else ""}
 
 
 async def maybe_autorun_after_sync(sync_result: dict) -> dict:

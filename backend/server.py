@@ -1,5 +1,5 @@
 from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
-from fastapi.responses import HTMLResponse, Response, JSONResponse
+from fastapi.responses import HTMLResponse, Response, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import os
@@ -14,6 +14,7 @@ from auth import auth_router, get_current_admin, ensure_admin
 import seo
 import automations as auto
 import ai_content as ai
+import graphics as gfx
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -262,11 +263,99 @@ class AIBatchIn(BaseModel):
     only_missing: bool = True
     types: Optional[List[str]] = None
     limit: int = 15
+    slugs: Optional[List[str]] = None
 
 
 @api_router.post("/admin/ai/process-batch")
 async def admin_ai_batch(payload: AIBatchIn, admin: str = Depends(get_current_admin)):
-    return await ai.process_batch(payload.only_missing, payload.types, payload.limit)
+    return await ai.process_batch(payload.only_missing, payload.types, payload.limit, payload.slugs)
+
+
+# ============================ Admin: grafiche pronostici (Step 5) ============================
+@api_router.get("/admin/predictions")
+async def admin_list_predictions(admin: str = Depends(get_current_admin)):
+    return await db.predictions.find({}, {"_id": 0}).sort([("season", -1), ("round", -1)]).to_list(500)
+
+
+class GraphicsIn(BaseModel):
+    season: str
+    round: int
+    pick_index: int
+
+
+@api_router.post("/admin/graphics/generate")
+async def admin_graphics_generate(payload: GraphicsIn, admin: str = Depends(get_current_admin)):
+    return await gfx.generate_pick(payload.season, payload.round, payload.pick_index)
+
+
+class PickEditIn(BaseModel):
+    season: str
+    round: int
+    pick_index: int
+    type: Optional[str] = None
+    total_odds: Optional[str] = None
+    selections: Optional[List[dict]] = None
+
+
+@api_router.put("/admin/predictions/pick")
+async def admin_edit_pick(payload: PickEditIn, admin: str = Depends(get_current_admin)):
+    pred = await db.predictions.find_one({"season": payload.season, "round": payload.round})
+    if not pred:
+        raise HTTPException(status_code=404, detail="Pronostico non trovato")
+    picks = pred.get("picks", [])
+    if payload.pick_index < 0 or payload.pick_index >= len(picks):
+        raise HTTPException(status_code=400, detail="Indice giocata non valido")
+    p = picks[payload.pick_index]
+    if payload.type is not None:
+        p["type"] = payload.type
+    if payload.total_odds is not None:
+        p["total_odds"] = payload.total_odds
+    if payload.selections is not None:
+        p["selections"] = payload.selections
+    now = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
+    await db.predictions.update_one({"season": payload.season, "round": payload.round},
+                                    {"$set": {"picks": picks, "updated_at": now}})
+    return {"ok": True}
+
+
+# ---- /live/ : destinazione redirezionabile dall'admin (per QR e link) ----
+DEFAULT_LIVE = {"target": "twitch", "url": ""}
+LIVE_PRESETS = {
+    "twitch": "https://www.twitch.tv/unoxdue_",
+    "youtube": "https://www.youtube.com/@unoXdue/live",
+}
+
+
+async def _resolve_live() -> str:
+    s = await db.settings.find_one({"_id": "global"}) or {}
+    live = s.get("live") or DEFAULT_LIVE
+    t = live.get("target", "twitch")
+    if t == "custom" and live.get("url"):
+        return live["url"]
+    if t == "latest_episode":
+        ep = await db.episodes.find_one({"type": "episodio", "status": "pubblicato"},
+                                        {"_id": 0, "slug": 1}, sort=[("published_at", -1)])
+        if ep:
+            return f"{SITE_URL}/episodi/{ep['slug']}/"
+    return LIVE_PRESETS.get(t, LIVE_PRESETS["twitch"])
+
+
+@api_router.get("/admin/live")
+async def admin_get_live(admin: str = Depends(get_current_admin)):
+    s = await db.settings.find_one({"_id": "global"}) or {}
+    return {"live": s.get("live") or DEFAULT_LIVE, "resolved": await _resolve_live()}
+
+
+@api_router.put("/admin/live")
+async def admin_put_live(data: dict, admin: str = Depends(get_current_admin)):
+    live = {"target": data.get("target", "twitch"), "url": data.get("url", "")}
+    await db.settings.update_one({"_id": "global"}, {"$set": {"live": live}}, upsert=True)
+    return {"ok": True, "live": live, "resolved": await _resolve_live()}
+
+
+@api_router.get("/live")
+async def api_live_redirect():
+    return RedirectResponse(url=await _resolve_live(), status_code=302)
 
 
 @api_router.get("/admin/press/search")
@@ -507,6 +596,13 @@ async def seed_all():
         logger.error("Seed error: %s", e)
 
 
+@app.get("/live")
+@app.get("/live/")
+async def live_redirect():
+    return RedirectResponse(url=await _resolve_live(), status_code=302)
+
+
 @app.on_event("shutdown")
 async def shutdown_db_client():
+    await gfx.shutdown_browser()
     client.close()

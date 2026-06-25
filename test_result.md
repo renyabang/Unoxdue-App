@@ -302,6 +302,32 @@ frontend:
           episode, team member, pagina statica (pixel-match con React). Auth NON toccata: login 200.
           Limite dev noto: le URL pulite restano instradate alla SPA React; SSR testato su /api/seo/... (nginx in prod).
 
+  - task: "Step 4 — Classificazione AI + generazione automatica (gpt-5.4-mini via Emergent LLM)"
+    implemented: true
+    working: true
+    file: "backend/ai_content.py, backend/server.py, backend/automations.py, frontend/src/admin/AIGen.jsx, frontend/src/admin/Contents.jsx, frontend/src/admin/AdminApp.jsx, frontend/src/admin/api.js"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: |
+          [25/06/2026] Step 4 completato. ai_content.py genera SOLO da titolo+descrizione: classificazione,
+          seo_title/meta/h1, intro, sommario PROVVISORIO, topics, seo_keywords. NIENTE trascrizioni/citazioni/capitoli.
+          transcription_status=pending; fallimenti -> stato 'da_verificare' (max 1 retry automatico).
+          Endpoint /api/admin/ai/{settings|process/{slug}|process-batch}; limiti giorn./mensili + stima costo/token loggati.
+          Hook auto-on-sync (OFF di default). UI: pagina 'AI / SEO' con interruttori+batch; 'Contenuti' con colonna AI + pulsanti.
+          Backend verificato via curl (process singolo: classificazione=episodio, SEO+summary+topics, transcription pending;
+          batch 3 ok; SSR episodio riflette i contenuti). Password admin cambiata via flusso legittimo a UnoXdue#Admin-2026!.
+        -working: true
+        -agent: "testing"
+        -comment: |
+          Frontend E2E 6/6 PASS (100%): login diretto (no forced-change), pagina AI/SEO carica con toggle corretti + card uso,
+          toggle auto-sync + salva + persistenza dopo reload, batch da pagina AI ('12 ok, 0 falliti'), Contenuti con colonna AI
+          + pulsante per-riga ('Generato'), batch da Contenuti. Nessun bug. Nota minore: testid 'ai-batch-btn' duplicato su due
+          route (risolto: rinominati ai-batch-btn-settings / ai-batch-btn-contents).
+
 metadata:
   created_by: "main_agent"
   version: "1.0"

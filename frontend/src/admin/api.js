@@ -47,4 +47,9 @@ export const api = {
   updateAiSettings: (body) => req("/admin/ai/settings", { method: "PUT", body }),
   aiProcess: (slug) => req(`/admin/ai/process/${slug}`, { method: "POST" }),
   aiProcessBatch: (body) => req("/admin/ai/process-batch", { method: "POST", body }),
+  adminPredictions: () => req("/admin/predictions"),
+  generateGraphics: (body) => req("/admin/graphics/generate", { method: "POST", body }),
+  editPick: (body) => req("/admin/predictions/pick", { method: "PUT", body }),
+  getLive: () => req("/admin/live"),
+  setLive: (body) => req("/admin/live", { method: "PUT", body }),
 };

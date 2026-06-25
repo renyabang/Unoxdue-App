@@ -45,12 +45,24 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
     Validato eseguendo lo stage di build da cartella pulita → output byte-identico al CSS committato (incl. prefisso -webkit Safari).
     ⚠️ Docker daemon NON disponibile nell'anteprima Emergent: non è stato possibile eseguire `docker build/run` reale qui.
   - Script riproducibili: `scripts/fetch_fonts.py`, `scripts/build_ssr_css.sh` (CLI standalone, coerente col Docker).
+- **[25/06/2026] Step 4 — Classificazione AI e generazione automatica (P1). COMPLETATO + testato.**
+  - Modulo `backend/ai_content.py` con gpt-5.4-mini via Emergent LLM key (emergentintegrations).
+  - Genera SOLO da titolo+descrizione: classificazione (episodio/intervista/short + ospite), seo_title,
+    meta_description, h1, intro, sommario PROVVISORIO, topics, seo_keywords. NIENTE trascrizioni/citazioni/capitoli.
+    `transcription_status: "pending"` su ogni contenuto; contenuti falliti → stato "da_verificare" (max 1 retry automatico).
+  - Endpoint: `/api/admin/ai/settings` (GET/PUT), `/api/admin/ai/process/{slug}` (POST), `/api/admin/ai/process-batch` (POST).
+    Limiti giornaliero/mensile, stima costo+token loggati in automation_logs (kind="ai_generate").
+  - Hook automatico (OFF di default) dopo la sync YouTube: elabora i nuovi episodi/interviste se `auto_on_sync` attivo (cap 10).
+  - Admin UI: pagina "AI / SEO" (`AIGen.jsx`) con interruttori (globale, auto-sync, short, componenti, limiti, modello),
+    pulsante batch; in "Contenuti" colonna AI + pulsante "Elabora con AI" per riga + batch archivio.
+  - Testato: testing_agent frontend 6/6 flussi PASS (100%); backend verificato via curl (process singolo + batch + SSR riflette i contenuti).
 
 ## Backlog (ordine stretto richiesto dall'utente, messaggio #205)
 - **P1 — Step 3: Archivio completo YouTube** via Data API (backfill paginato playlist Uploads,
   anti-duplicati, gestione stati video, webhook PubSubHubbub/WebSub per i futuri video). Richiede YOUTUBE_API_KEY utente.
-- **P1 — Step 4: Classificazione AI + generazione automatica** (classifica episodio/intervista/short,
-  trascrizioni, capitoli, titoli/meta SEO, structured data).
+- **P1 — Step 4: Classificazione AI + generazione automatica** ✅ COMPLETATO (25/06/2026).
+  Nota: trascrizioni/citazioni/capitoli reali rimandati allo Step 3 (sottotitoli via YouTube OAuth o audio autorizzato),
+  poi rielaborazione automatica che sostituisce il sommario provvisorio (transcription_status: pending → done).
 - **P1 — Step 5: Generazione automatica grafica pronostici** (template HTML/SVG -> export PNG/WebP
   orizzontale, quadrato, 9:16; nessun dato sensibile utente/bookmaker).
 - **P2 — Step 6: Risultati, storico e pubblicazione condizionata** (aggiornamento risultati,

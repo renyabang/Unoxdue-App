@@ -1,0 +1,34 @@
+{
+  "summary": "Step 5 frontend E2E (Grafiche + Contenuti filters/badge/reprocess) completed. 10/11 flows PASS. Real Playwright/Chromium graphics generation works end-to-end with all 3 formats (horizontal 2400x1260, square 2160x2160, vertical 2160x3840) loading correctly with PNG/WebP download links + URL button. Live /live/ target switch (twitch->youtube->twitch) works and resolved URL updates. Contents filter, badge, checkbox + 'Rielabora selezionati' batch reprocess all work. 1 UI bug found: after editing pick data and clicking 'Salva dati', the success message data-testid='pick-msg-...' is NOT rendered (data IS persisted correctly).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [
+      {
+        "component": "Graphics.jsx PickCard.saveEdit",
+        "issue": "After successful editPick API call (200 {\"ok\":true}, data persisted - verified by re-opening edit shows new value 15.75), the confirmation message 'Dati aggiornati. Ora puoi rigenerare.' inside <p data-testid='pick-msg-...'> never renders in DOM (element count remains 0 after 3s wait). The editor closes (correct) but user gets ZERO visual feedback that save succeeded. Likely cause: setEditing(false) + setMsg(...) + onChanged() (which triggers parent load()) interaction. Suspect: when parent calls setPreds() with new array, the new pred order/object reference causes PickCard to remount (loses local msg state) OR React batches the setMsg with subsequent re-render that resets it. Generate/Rigenera flow shows pick-msg correctly, so the issue is specific to saveEdit path.",
+        "selector": "[data-testid='pick-msg-2025-2026-38-0']",
+        "priority": "MEDIUM"
+      }
+    ],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_4.json"],
+  "action_items": [
+    "Fix Graphics.jsx PickCard.saveEdit so the 'Dati aggiornati. Ora puoi rigenerare.' confirmation message becomes visible to the admin after save. Suggestions: (a) ensure msg setState happens AFTER onChanged() completes, or (b) lift onChanged() to also trigger only a debounced refresh, or (c) use a useEffect timeout to keep msg visible for 3-4s, or (d) keep editor open until user acknowledges (set msg first, close editor on next interaction). Verify by checking that <p data-testid='pick-msg-2025-2026-38-0'> appears in DOM with the success text for at least 2 seconds after Save."
+  ],
+  "critical_code_review_comments": [
+    "Graphics.jsx PickCard saveEdit: msg confirmation not surfaced in UI despite successful API + persistence -> bad UX, user thinks save failed silently.",
+    "Graphics.jsx: PickCard uses key={i} (index) for picks inside a prediction; safe today since order is stable from backend, but if backend ever returns picks reordered, local component state (msg, draft, bust) would jump rows.",
+    "Contents.jsx + Graphics.jsx both use the literal hex color in tailwind arbitrary class names (e.g. text-[#EA4E1B]); not a bug, but selectors built on these classes (like 'span.text-[#EA4E1B]') are brittle. Recommend adding dedicated data-testid attributes for 'live-resolved-url' and 'live-target-current' to make automated verification more robust.",
+    "No data-testid on Esci/logout, login email/password inputs, or login submit button -> we worked around with 'form input' nth selectors. Adding data-testid='login-email', 'login-password', 'login-submit' would help future tests."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "91% (10/11 flows PASS; 1 bug)"},
+  "test_credentials": "admin@unoxdue.net / **** (read from /app/backend/.env ADMIN_PASSWORD, NOT modified). Login confirmed working: direct to dashboard, no forced password change.",
+  "seed_data_creation": "None. Used existing pronostico season=2025-2026 round=38 with 3 picks. Note: a second pronostico 'Serie A 2026-2027 round 38' is also present in DB (1 pick 'Il Marziano', not yet generated).",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Verified flows: (1) Login direct (no forced pw change) using ADMIN_PASSWORD from backend/.env. (2) /admin/grafiche loads graphics-page + live-card + pred-2025-2026-38. (3) LiveCard select youtube -> Salva -> live-msg='Destinazione /live/ aggiornata.' -> resolved becomes 'https://www.youtube.com/@unoXdue/live'; revert to twitch resolves to 'https://www.twitch.tv/unoxdue_'. (4) pick-generate-2025-2026-38-0 -> all 3 format previews fmt-horizontal/square/vertical render with images at full resolution (2400x1260, 2160x2160, 2160x3840), each has 2 download links (PNG, WebP) + 1 URL copy button. Total ~1s when graphics already cached, can take 10-40s on fresh generate. (5) Contents: 16 rows, filter dropdown switches counts correctly (all=16, elaborato=16, da_verificare=0, errore=0, non_elaborato=0). (6) badge-da-verificare NOT visible since 0 items - this is expected, not a bug. (7) Checkbox tick -> reprocess-selected-btn appears with 'Rielabora selezionati (1)' label; click -> contents-msg='Rielaborati: 1 ok, 0 falliti su 1.' Real LLM call succeeds. ONLY BUG: pick-edit save shows no UI confirmation msg even though data is saved (API 200 ok, value persists on re-open).",
+  "rca_of_the_issue": "Pick edit no-confirmation bug: setMsg('Dati aggiornati...') is set in saveEdit after successful editPick, but onChanged()->parent load()->setPreds(new array) causes React reconciliation in which PickCard local msg state appears to be lost (or the message conditional renders for too short a time to be detectable by 3s polling). Reproduction: /admin/grafiche -> pick-edit-2025-2026-38-0 -> change Quota totale -> pick-save-2025-2026-38-0 -> observe: editor closes, value persists in backend (verified via re-open), but <p data-testid='pick-msg-2025-2026-38-0'> never appears. Mitigation: keep msg outside the parent reload chain (e.g. set msg, schedule onChanged via setTimeout 100ms, ensure msg persists via useRef-driven timeout, OR move the success message to a parent-level toast that survives child re-renders)."
+}

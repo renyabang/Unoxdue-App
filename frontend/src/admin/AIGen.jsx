@@ -143,7 +143,7 @@ export default function AIGen() {
           className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-5 py-3 rounded-lg disabled:opacity-60 transition-colors">
           {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} Salva impostazioni
         </button>
-        <button onClick={batch} disabled={batchBusy} data-testid="ai-batch-btn"
+        <button onClick={batch} disabled={batchBusy} data-testid="ai-batch-btn-settings"
           className="inline-flex items-center gap-2 bg-[#14100e] hover:bg-[#EA4E1B] text-white font-bold uppercase tracking-wide px-5 py-3 rounded-lg disabled:opacity-60 transition-colors">
           {batchBusy ? <Loader2 className="w-4 h-4 animate-spin" /> : <Wand2 className="w-4 h-4" />} Elabora archivio ora
         </button>
