@@ -840,6 +840,9 @@ async def ssr_team_member(slug: str):
 async def ssr_episode(slug: str):
     ep = await db.episodes.find_one({"slug": slug})
     if not ep:
+        red = await _slug_redirect(slug, "trascrizione" not in slug)
+        if red:
+            return red
         raise HTTPException(status_code=404, detail="Contenuto non trovato")
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
@@ -849,9 +852,22 @@ async def ssr_episode(slug: str):
 async def ssr_interview(slug: str):
     ep = await db.episodes.find_one({"slug": slug})
     if not ep:
+        red = await _slug_redirect(slug)
+        if red:
+            return red
         raise HTTPException(status_code=404, detail="Contenuto non trovato")
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
+
+
+async def _slug_redirect(slug: str, transcript: bool = False):
+    """301 dal vecchio slug al nuovo (campo previous_slugs)."""
+    red = await db.episodes.find_one({"previous_slugs": slug})
+    if not red:
+        return None
+    sec = "interviste" if red.get("type") == "intervista" else "episodi"
+    suffix = "trascrizione/" if transcript else ""
+    return RedirectResponse(url=f"{seo.SITE_URL}/{sec}/{red['slug']}/{suffix}", status_code=301)
 
 
 @api_router.get("/seo/episodi/{slug}/trascrizione", response_class=HTMLResponse)
@@ -864,9 +880,14 @@ async def ssr_interview_transcript(slug: str):
     return await _render_transcript_page(slug, "interviste")
 
 
-async def _render_transcript_page(slug: str, section: str) -> HTMLResponse:
+async def _render_transcript_page(slug: str, section: str):
     ep = await db.episodes.find_one({"slug": slug})
-    if not ep or not ep.get("has_transcript_page"):
+    if not ep:
+        red = await _slug_redirect(slug, transcript=True)
+        if red:
+            return red
+        raise HTTPException(status_code=404, detail="Trascrizione non disponibile")
+    if not ep.get("has_transcript_page"):
         raise HTTPException(status_code=404, detail="Trascrizione non disponibile")
     b = await ait.get_transcript_clean(slug)
     clean = b.get("clean", "")

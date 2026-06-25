@@ -7,7 +7,7 @@
     "design_issues": []
   },
   "test_results_detail": {
-    "login": "OK (admin@unoxdue.net + UxdTest!2026 da test_credentials.md).",
+    "login": "OK (admin@unoxdue.net + [REDACTED] da test_credentials.md).",
     "menu_navigation": "Click su /admin/trascrizioni dalla sidebar OK; voce 'Trascrizioni SEO' presente con icona FileText.",
     "page_load": "data-testid='transcript-seo-page' presente; tabella con 13 righe (3 Pubblicato + 10 Da generare). Header tabella: Contenuto/Tipo/Stato SEO/Azioni.",
     "batch_button": "data-testid='seo-batch-btn' (Genera anteprime mancanti) visibile in alto a destra. Non cliccato per evitare attese LLM lunghe.",
@@ -32,7 +32,7 @@
   ],
   "updated_files": [],
   "success_rate": {"backend": "n/a (skip per richiesta)", "frontend": "100%"},
-  "test_credentials": "admin@unoxdue.net / UxdTest!2026 (da /app/memory/test_credentials.md). NON stampata nelle console.",
+  "test_credentials": "admin@unoxdue.net / [REDACTED] (da /app/memory/test_credentials.md). NON stampata nelle console.",
   "seed_data_creation": "Riga 'allan-baclet-playoff-cosenza' ri-pubblicata via UI durante il test (era gia' 'Pubblicato' prima; lo stato resta 'Pubblicato'). Nessun altro dato creato.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

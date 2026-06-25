@@ -7,7 +7,7 @@
     "design_issues": []
   },
   "test_results_detail": {
-    "login": "OK (admin@unoxdue.net + UxdTest!2026 da test_credentials.md). Pulsante login etichetta 'ENTRA'.",
+    "login": "OK (admin@unoxdue.net + [REDACTED] da test_credentials.md). Pulsante login etichetta 'ENTRA'.",
     "page_load": "data-testid 'transcript-seo-page' presente. Tabella con 13 righe, tutte con bottone 'Anteprima' (seo-view-<slug>), 6 con badge 'rev' rosso (needs_review).",
     "batch_button": "seo-batch-btn 'Genera anteprime mancanti' visibile in alto a destra. Non cliccato (LLM lento).",
     "preview_modal_open": "seo-view-fabio-ceravolo-130-gol-carriera apre seo-preview-modal entro 10s. seo-preview-content caricato.",
@@ -40,7 +40,7 @@
   ],
   "updated_files": [],
   "success_rate": {"backend": "n/a (skip per richiesta - solo frontend)", "frontend": "100%"},
-  "test_credentials": "admin@unoxdue.net / UxdTest!2026 (da /app/memory/test_credentials.md).",
+  "test_credentials": "admin@unoxdue.net / [REDACTED] (da /app/memory/test_credentials.md).",
   "seed_data_creation": "Modificata preview SEO della riga 'fabio-ceravolo-130-gol-carriera' (sezione 0 con marker '[TEST_EDIT]' nel titolo e 'test-edit-marker' nel paragrafo). Modifica salvata in preview (stato 'Anteprima'). Nessuna pubblicazione effettuata - il contenuto pubblico NON è stato toccato. Per ripristinare basta rigenerare l'anteprima (seo-regen-btn) o riscrivere via editor.",
   "retest_needed": false,
   "main_agent_can_self_test": true,

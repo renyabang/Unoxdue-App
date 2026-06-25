@@ -7,7 +7,7 @@
     "design_issues": []
   },
   "test_results_detail": {
-    "login": "OK (admin@unoxdue.net / UxdTest!2026)",
+    "login": "OK (admin@unoxdue.net / [REDACTED])",
     "page_load": "data-testid 'results-page' presente. Titolo 'Risultati & Settlement'.",
     "provider_box": "Mostra 'Attivo: football-data' (codice). Badge demo (results-demo-badge) assente. Nessuna nota gialla demo visibile. PASS.",
     "pred_select": "results-pred-select presente con 2 opzioni reali: 2026-2027|38 (1 giocata 'Il Marziano') e 2025-2026|38 (3 giocate 'Sono Micuccio', 'Il Ninja', 'Il Marziano').",
@@ -30,7 +30,7 @@
   ],
   "updated_files": [],
   "success_rate": {"backend": "n/a (frontend only)", "frontend": "100%"},
-  "test_credentials": "admin@unoxdue.net / UxdTest!2026 (da /app/memory/test_credentials.md).",
+  "test_credentials": "admin@unoxdue.net / [REDACTED] (da /app/memory/test_credentials.md).",
   "seed_data_creation": "Nessuna modifica al DB. Il dry-run è read-only by design (backend non scrive con dry_run=true). I 2 round esistenti nel DB non sono stati alterati.",
   "retest_needed": false,
   "main_agent_can_self_test": true,
