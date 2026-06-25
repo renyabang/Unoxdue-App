@@ -62,8 +62,21 @@ def enrich(ep: dict) -> dict:
             ep["published_human"] = ep["published_at"]
     ep.setdefault("published_human", ep.get("published_at", ""))
     ep.setdefault("duration", "\u2014")
-    for k in ("summary", "topics", "chapters", "quotes", "participants", "related"):
+    for k in ("summary", "topics", "chapters", "quotes", "participants", "related", "summary_sections", "toc"):
         ep.setdefault(k, [])
+    # summary_sections: garantisci id univoci + toc dagli H2
+    if ep["summary_sections"]:
+        used, toc = set(), []
+        for s in ep["summary_sections"]:
+            sid = s.get("id") or "sezione"
+            base, k2 = sid, 2
+            while sid in used:
+                sid = f"{base}-{k2}"; k2 += 1
+            used.add(sid); s["id"] = sid
+            if int(s.get("level", 2)) == 2:
+                toc.append({"id": sid, "heading": s.get("heading", "")})
+        if not ep["toc"]:
+            ep["toc"] = toc
     # deep-link dei capitoli al timestamp YouTube
     yid = ep.get("youtube_id")
     norm_ch = []

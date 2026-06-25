@@ -46,7 +46,10 @@
 
         {% if ep.excerpt %}<p class="text-[#4a3d34] text-lg sm:text-xl leading-relaxed mt-8">{{ ep.excerpt }}</p>{% endif %}
 
-        {% if ep.summary %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-3 leading-tight">Di cosa si parla</h2>{% for p in ep.summary %}<p class="text-[#4a3d34] text-base sm:text-lg leading-relaxed mt-3">{{ p }}</p>{% endfor %}{% endif %}
+        {% if ep.summary_sections %}
+        {% if ep.toc and ep.toc|length >= 3 %}<nav class="mt-10 bg-white border border-[#ecdfce] rounded-2xl p-5" data-testid="summary-toc" aria-label="In questa puntata"><p class="font-archivo font-extrabold uppercase tracking-wide text-xs text-[#9c8b7d] mb-2">In questa puntata</p><ul class="space-y-1.5">{% for t in ep.toc %}<li><a href="#{{ t.id }}" class="text-[#4a3d34] hover:text-[#EA4E1B] transition-colors text-sm">{{ t.heading }}</a></li>{% endfor %}</ul></nav>{% endif %}
+        <section class="episode-summary mt-8" data-testid="episode-summary">{% for s in ep.summary_sections %}{% if s.level == 3 %}<h3 id="{{ s.id }}" class="font-archivo font-extrabold text-[#1a1411] text-lg sm:text-xl mt-7 mb-2 leading-snug scroll-mt-24">{{ s.heading }}</h3>{% else %}<h2 id="{{ s.id }}" class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-9 mb-3 leading-tight scroll-mt-24">{{ s.heading }}</h2>{% endif %}{% for p in s.paragraphs %}<p class="text-[#4a3d34] text-base sm:text-lg leading-relaxed mt-3">{{ p }}</p>{% endfor %}{% endfor %}</section>
+        {% elif ep.summary %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-3 leading-tight">Di cosa si parla</h2>{% for p in ep.summary %}<p class="text-[#4a3d34] text-base sm:text-lg leading-relaxed mt-3">{{ p }}</p>{% endfor %}{% endif %}
 
         {% if ep.topics %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-4 leading-tight">Argomenti principali</h2><div class="flex flex-wrap gap-2.5">{% for t in ep.topics %}<span class="inline-block bg-white border border-[#ecdfce] rounded-full px-4 py-2 text-sm text-[#4a3d34]">{{ t }}</span>{% endfor %}</div>{% endif %}
 

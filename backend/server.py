@@ -334,6 +334,15 @@ async def admin_transcripts_seo_preview(slug: str, admin: str = Depends(get_curr
     return await ait.get_preview(slug)
 
 
+class SectionsIn(BaseModel):
+    sections: List[dict]
+
+
+@api_router.put("/admin/transcripts/seo/preview/{slug}/sections")
+async def admin_transcripts_seo_save_sections(slug: str, payload: SectionsIn, admin: str = Depends(get_current_admin)):
+    return await ait.save_preview_sections(slug, payload.sections)
+
+
 @api_router.post("/admin/transcripts/seo/publish/{slug}")
 async def admin_transcripts_seo_publish(slug: str, admin: str = Depends(get_current_admin)):
     return await ait.publish_preview(slug)

@@ -1,0 +1,49 @@
+{
+  "summary": "Feature P1 'Trascrizioni SEO v2' (workflow ANTEPRIMA -> EDIT -> PUBBLICA con editor di sezioni H2/H3) testata end-to-end sul frontend admin. Login OK (admin@unoxdue.net), navigazione /admin/trascrizioni OK, pagina con 13 righe (tutte 'Anteprima' disponibile come da spec), 6 righe con badge 'rev' rosso (Da revisionare). Aperto modale anteprima su 'fabio-ceravolo-130-gol-carriera': chip meta (Modello, intro Np, sommario Np, sez/H2, cap/cit) presenti, sezioni 'Sommario strutturato (H2/H3)' rendered, capitoli e entità visibili. Editor di sezioni testato completamente: 6 card iniziali, modifica heading + paragrafo + livello (H2/H3) OK, aggiunta sezione (6->7) OK, rimozione ultima (7->6) OK, move down/up (swap heading 0<->1 e ripristino) OK. PUT /api/admin/transcripts/seo/preview/{slug}/sections risponde 200 con summary_sections aggiornati; dopo save l'editor si chiude, l'edit button torna visibile, i marker '[TEST_EDIT]' e 'test-edit-marker' persistono nella preview. Pulsante 'Pubblica anteprima' (seo-publish-btn) presente, DISABILITATO durante editing (corretto: previene pubblicazione di bozza non salvata) e RIABILITATO dopo save. NON cliccato come richiesto. Pulsante 'Genera anteprime mancanti' (seo-batch-btn) visibile in alto. Smoke non-regressione: 10/10 voci di menu admin (Dashboard, Contenuti, YouTube, AI/SEO, Schedine, Grafiche, Risultati, Rassegna, Log, Integrazioni) caricano senza pageerror.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "login": "OK (admin@unoxdue.net + UxdTest!2026 da test_credentials.md). Pulsante login etichetta 'ENTRA'.",
+    "page_load": "data-testid 'transcript-seo-page' presente. Tabella con 13 righe, tutte con bottone 'Anteprima' (seo-view-<slug>), 6 con badge 'rev' rosso (needs_review).",
+    "batch_button": "seo-batch-btn 'Genera anteprime mancanti' visibile in alto a destra. Non cliccato (LLM lento).",
+    "preview_modal_open": "seo-view-fabio-ceravolo-130-gol-carriera apre seo-preview-modal entro 10s. seo-preview-content caricato.",
+    "preview_meta_chips": "Modello/intro Np/sommario Np/N sez/H2/cap/cit tutti presenti. Nessun badge 'Da verificare' per questa riga (anche se nella tabella aveva badge rev - controllare correlazione needs_review status vs meta.needs_review).",
+    "preview_sections_render": "Sommario strutturato (H2/H3) rendered con sezioni heading + paragrafi; capitoli con timestamp; entità (persone/squadre/competizioni); pulsante 'Modifica' presente.",
+    "section_editor": "seo-edit-sections-btn -> apre section-editor con 6 sezioni (section-edit-0..5). Tutti i campi presenti: section-level-N (select H2/H3), section-heading-N (input), section-para-N-M (textarea), section-remove-N (trash), section-add-btn.",
+    "edit_operations": {
+      "change_heading": "OK (input value updated)",
+      "change_paragraph": "OK (textarea value updated)",
+      "change_level_H2_H3": "OK (select_option('2') accepted)",
+      "add_section": "6 -> 7 OK",
+      "remove_section": "7 -> 6 OK (last index)",
+      "move_down": "swap heading[0]<->heading[1] verified",
+      "move_up": "restore heading[0] verified"
+    },
+    "save_sections": "seo-save-sections-btn -> PUT /api/admin/transcripts/seo/preview/fabio-ceravolo-130-gol-carriera/sections status=200. Response body: {ok:true, summary_sections:[{id:'dallinfanzia-...-test-edit', level:2, heading:'... [TEST_EDIT]', paragraphs:['... [test-edit-marker]', ...]}, ...]}. ID auto-rigenerato a partire dal nuovo heading (slugificato). Dopo save: editor chiuso (section-editor count=0), seo-edit-sections-btn torna visibile, marker persistono nel preview reload.",
+    "publish_btn_state": "seo-publish-btn visibile sempre nel footer del modale; abilitato fuori da editing, DISABILITATO durante editing (title='Salva prima le sezioni'), RIABILITATO dopo save. NON cliccato come richiesto.",
+    "close_modal": "seo-close-btn chiude il modale (count=0).",
+    "smoke_non_regression": "10/10 route admin (/admin, /admin/contenuti, /admin/youtube, /admin/ai, /admin/schedine, /admin/grafiche, /admin/risultati, /admin/rassegna, /admin/log, /admin/integrazioni) caricano senza pageerror."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "TranscriptSEO.jsx SectionEditor: validazioni client-side (empty heading, duplicate, badH3First) sono solo visuali (bordo rosso + messaggio) ma NON bloccano il save. saveSections() invia comunque la lista anche con titoli vuoti/duplicati o H3 in prima posizione. Considerare disabilitare seo-save-sections-btn quando ci sono errori di validazione, oppure mostrare conferma esplicita. Il backend potrebbe già rifiutare ma il feedback UI sarebbe più chiaro.",
+    "TranscriptSEO.jsx PreviewPanel.saveSections: dopo successo chiama setSections(r.summary_sections) E load(). La doppia operazione è ridondante (load() ricarica e re-popola sections dalla preview); si potrebbe evitare la chiamata load() risparmiando un round-trip, oppure rimuovere setSections (load gestisce tutto).",
+    "TranscriptSEO.jsx SectionEditor.add: id 'nuova-${Date.now()}' rischia collisione se due add in rapida successione; comunque il backend re-genera l'id dallo slug heading. OK, ma considerare prefisso UUID per sicurezza.",
+    "TranscriptSEO.jsx: stato 'busy' è una stringa singola condivisa tra load/gen/save/pub; durante save anche regen, publish e close mostrano stato disabled-ish solo se controllati esplicitamente. seo-close-btn non è disabilitato durante save -> utente può chiudere il modale mentre PUT è in volo. Considerare disable o conferma.",
+    "TranscriptSEO.jsx: load() non gestisce errori di /api/admin/transcripts/seo/status (try/finally senza catch nello status di pagina) - se l'API fallisce, la tabella resta vuota senza messaggio di errore (già segnalato in iteration_11).",
+    "TranscriptSEO.jsx batch(): hardcoded {only_missing:true, limit:15} (già segnalato in iteration_11)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skip per richiesta - solo frontend)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net / UxdTest!2026 (da /app/memory/test_credentials.md).",
+  "seed_data_creation": "Modificata preview SEO della riga 'fabio-ceravolo-130-gol-carriera' (sezione 0 con marker '[TEST_EDIT]' nel titolo e 'test-edit-marker' nel paragrafo). Modifica salvata in preview (stato 'Anteprima'). Nessuna pubblicazione effettuata - il contenuto pubblico NON è stato toccato. Per ripristinare basta rigenerare l'anteprima (seo-regen-btn) o riscrivere via editor.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature v2 'Trascrizioni SEO' completamente funzionante a livello UI. Tutti i data-testid presenti e operativi: transcript-seo-page, seo-batch-btn, seo-row-<slug>, seo-view-<slug>, seo-gen-<slug>, seo-preview-modal, seo-preview-content, seo-edit-sections-btn, seo-save-sections-btn, section-editor, section-edit-N, section-level-N, section-heading-N, section-para-N-M, section-remove-N, section-add-btn, seo-publish-btn, seo-regen-btn, seo-close-btn. Workflow ANTEPRIMA->EDIT->SAVE confermato: PUT /api/admin/transcripts/seo/preview/{slug}/sections risponde 200 e aggiorna solo la preview. Il bottone Pubblica è correttamente disabilitato durante editing. Stato attuale: 13/13 righe con preview disponibile, 6 marcate 'rev'. Non testato 'Pubblica' né 'Rigenera'/'Genera' come da istruzione. Riga 'fabio-ceravolo-130-gol-carriera' ha preview modificata col marker [TEST_EDIT].",
+  "rca of the issue": "Nessun bug bloccante. Nota minore (non bug): le validazioni client-side delle sezioni (titolo vuoto/duplicato/H3 in prima posizione) sono visuali ma il save procede comunque - vedere critical_code_review_comments per dettagli."
+}

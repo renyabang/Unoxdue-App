@@ -81,6 +81,7 @@ export const api = {
   transcriptSeoStatus: () => req("/admin/transcripts/seo/status"),
   transcriptSeoGenerate: (slug) => req(`/admin/transcripts/seo/generate/${slug}`, { method: "POST" }),
   transcriptSeoPreview: (slug) => req(`/admin/transcripts/seo/preview/${slug}`),
+  transcriptSeoSaveSections: (slug, sections) => req(`/admin/transcripts/seo/preview/${slug}/sections`, { method: "PUT", body: { sections } }),
   transcriptSeoPublish: (slug) => req(`/admin/transcripts/seo/publish/${slug}`, { method: "POST" }),
   transcriptSeoBatch: (body) => req("/admin/transcripts/seo/generate-batch", { method: "POST", body }),
 };
