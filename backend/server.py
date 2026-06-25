@@ -905,7 +905,7 @@ async def ssr_pronostici_archive():
 async def ssr_prediction(season: str, round_: int):
     p = await db.predictions.find_one({"season": season, "round": round_})
     if not p:
-        raise HTTPException(status_code=404, detail="Pronostici non trovati")
+        return _render_ssr_404()
     return HTMLResponse(seo.render_prediction(p))
 
 
@@ -924,7 +924,7 @@ async def ssr_team_archive():
 async def ssr_team_member(slug: str):
     m = await db.team.find_one({"slug": slug})
     if not m:
-        raise HTTPException(status_code=404, detail="Membro non trovato")
+        return _render_ssr_404()
     related = await db.episodes.find({"participants.slug": slug}, {"_id": 0}).to_list(50)
     rel = [{"section": ("interviste" if r.get("type") == "intervista" else "episodi"),
             "slug": r["slug"], "title": r.get("title")} for r in related]
@@ -939,7 +939,7 @@ async def ssr_episode(slug: str):
         red = await _slug_redirect(slug)
         if red:
             return red
-        raise HTTPException(status_code=404, detail="Contenuto non trovato")
+        return _render_ssr_404()
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
 
@@ -951,7 +951,7 @@ async def ssr_interview(slug: str):
         red = await _slug_redirect(slug)
         if red:
             return red
-        raise HTTPException(status_code=404, detail="Contenuto non trovato")
+        return _render_ssr_404()
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
 
@@ -987,9 +987,9 @@ async def _render_transcript_page(slug: str, section: str):
         red = await _slug_redirect(slug, transcript=True)
         if red:
             return red
-        raise HTTPException(status_code=404, detail="Trascrizione non disponibile")
+        return _render_ssr_404()
     if not ep.get("has_transcript_page"):
-        raise HTTPException(status_code=404, detail="Trascrizione non disponibile")
+        return _render_ssr_404()
     b = await ait.get_transcript_clean(slug)
     clean = b.get("clean", "")
     return HTMLResponse(seo.render_transcript(ep, clean, ep.get("chapters", [])))
