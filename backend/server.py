@@ -416,12 +416,30 @@ async def admin_press_status(admin: str = Depends(get_current_admin)):
 
 
 class PressRunIn(BaseModel):
-    query: str = "UnoXdue"
+    query: Optional[str] = None
+    mode: str = "ordinary"  # ordinary=30gg | weekly=90gg | backfill=24 mesi
+    max_queries: Optional[int] = None
+    max_results: Optional[int] = None
 
 
 @api_router.post("/admin/press/run")
 async def admin_press_run(payload: PressRunIn, admin: str = Depends(get_current_admin)):
-    return await press.run_search(payload.query, actor="admin")
+    return await press.run_search(query=payload.query, mode=payload.mode, actor="admin",
+                                  max_queries=payload.max_queries, max_results=payload.max_results)
+
+
+@api_router.get("/admin/press/config")
+async def admin_press_config_get(admin: str = Depends(get_current_admin)):
+    return await press.get_config()
+
+
+class PressConfigIn(BaseModel):
+    config: dict
+
+
+@api_router.post("/admin/press/config")
+async def admin_press_config_set(payload: PressConfigIn, admin: str = Depends(get_current_admin)):
+    return await press.set_config(payload.config)
 
 
 @api_router.get("/admin/press/list")

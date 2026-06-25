@@ -19,7 +19,7 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 ## Integrazioni
 - OpenAI Vision (OCR grafiche comparative pronostici) — Emergent LLM Key via `emergentintegrations` (modello gpt-5.4). ATTIVO.
 - YouTube — sync RSS + Data API v3 (Step 3, demo finché manca YOUTUBE_API_KEY) + WebSub + OAuth sottotitoli (demo finché mancano GOOGLE_OAUTH_*).
-- Perplexity (rassegna stampa) — DEMO (manca chiave utente). Step 7B.
+- Perplexity (rassegna stampa) — ATTIVO (Perplexity Sonar 'sonar'; usa search_results + domain denylist + filtri data). Step 7B.
 - **Comparatore quote esterno (The Odds API/Odds API) — DEPRECATO/DISATTIVATO.** Le quote provengono SOLO dall'OCR
   della grafica comparativa fornita dal team. `ODDS_API_*` restano come funzione futura disattivata, senza sviluppo prioritario.
 - Risultati/stato eventi (Step 6) — da integrare con API-Football o equivalente SOLO per risultati/fixture/stato (non per quote).
@@ -88,6 +88,24 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 ### Ordine concordato dopo Step 7B (messaggio utente)
 1. inserimento credenziali YouTube API + Google OAuth → 2. test reale Step 3 → 3. inserimento provider risultati (SPORT_RESULTS_API_KEY + provider=apifootball) →
 4. test reale Step 6 → 5. inserimento Perplexity → 6. test reale Step 7B → 7. test e2e completo → 8. backup+checkpoint → 9. refactoring finale.
+
+### [25/06/2026] Step 7B REALE — Regole query Perplexity + primo test reale. COMPLETATO + testato (reale, e2e).
+- PERPLEXITY_API_KEY inserita in `.env`. Provider reale attivo (`sonar`).
+- `press.py` riscritto con le regole dell'utente ALLA LETTERA + configurazione modificabile dall'admin (`db.press_config`):
+  - Query brand (5), team (4 nomi, mai da soli), ospiti dinamici dal DB (×2 forme), contenuti recenti (no intero archivio).
+  - Finestre: ordinary=30gg (`search_recency_filter:"month"`), weekly=90gg (`search_after_date_filter`),
+    backfill=24 mesi CALENDARIO (non 720gg fissi). Backfill una tantum.
+  - Esclusioni via `search_domain_filter` denylist (`-unoxdue.net -youtube.com -twitch.tv -instagram.com -tiktok.com`) + filtro locale.
+  - Fonte dati = `search_results` di Perplexity (URL realmente trovati), più affidabile dello structured output.
+  - Pertinenza: rilevante solo se cita UnoXdue o riprende un contenuto UnoXdue; altrimenti FALSO POSITIVO (non associato, non pubblicato).
+  - Dedup per URL canonica + titolo (copie/syndication); verifica raggiungibilità; confidence euristica; cap risultati (default 10).
+  - NESSUNA pubblicazione automatica: stati found/review. Costo REALE letto da `usage.cost.total_cost`.
+- Endpoint: `/admin/press/run` (mode + query manuale opzionale + max_queries/max_results), `/admin/press/config` (GET/POST).
+- Admin `Press.jsx`: selettore finestra (Ordinaria/Estesa/Backfill), query manuale opzionale, riquadro statistiche (query eseguite,
+  trovati, duplicati, irraggiungibili, validi, falsi positivi, salvati, costo reale), badge "Falso positivo" + motivo in anteprima.
+- PRIMO TEST REALE (backfill 24 mesi, 14 query): 46 grezzi → 35 unici (11 duplicati) → 14 irraggiungibili → 6 validi, 28 falsi positivi,
+  10 salvati (3 Trovato auto-linkati: Cosenzachannel→Baclet×2, Parmalive→Ceravolo; 7 Da revisionare). Costo REALE $0.0745. Nessuna pubblicazione automatica.
+- Smoke test UI superato (login, lista 10, badge falso positivo + motivo, collegamenti auto). API e2e verificate via curl.
 
 ### [giugno 2026] Step 7B BIDIREZIONALE — Collegamento rassegna stampa ⇄ contenuti (P2). COMPLETATO + testato (fixture, e2e).
 - `press.py`: `links` come LISTA (auto + manuale), `_associate_all` (multi-match team/episodi/interviste), `_merge_links`

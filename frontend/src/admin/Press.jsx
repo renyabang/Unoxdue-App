@@ -23,7 +23,8 @@ export default function Press() {
   const [status, setStatus] = useState(null);
   const [counts, setCounts] = useState({});
   const [items, setItems] = useState([]);
-  const [query, setQuery] = useState("UnoXdue");
+  const [mode, setMode] = useState("ordinary");
+  const [manualQuery, setManualQuery] = useState("");
   const [filter, setFilter] = useState("");
   const [busy, setBusy] = useState("");
   const [runRes, setRunRes] = useState(null);
@@ -47,7 +48,7 @@ export default function Press() {
   const run = async () => {
     setBusy("run"); setRunRes(null);
     try {
-      const r = await api.pressRun(query);
+      const r = await api.pressRun({ mode, query: manualQuery.trim() || undefined });
       setRunRes(r);
       refresh();
     } catch (e) { setRunRes({ ok: false, error: e.message }); }
@@ -88,22 +89,54 @@ export default function Press() {
       {/* Ricerca */}
       <div className="mt-6 bg-white rounded-xl border border-[#ecdfce] p-5">
         <div className="flex flex-wrap items-end gap-3">
+          <div>
+            <label className="text-xs font-semibold text-[#6b5d52] uppercase">Finestra temporale</label>
+            <div className="flex gap-1.5 mt-1" data-testid="press-mode">
+              {[
+                { v: "ordinary", t: "Ordinaria · 30gg" },
+                { v: "weekly", t: "Estesa · 90gg" },
+                { v: "backfill", t: "Backfill · 24 mesi" },
+              ].map((m) => (
+                <button key={m.v} data-testid={`press-mode-${m.v}`} onClick={() => setMode(m.v)}
+                  className={`text-xs font-bold uppercase tracking-wide px-3 py-2 rounded-lg transition-colors ${mode === m.v ? "bg-[#14100e] text-white" : "bg-white border border-[#ecdfce] text-[#6b5d52] hover:bg-[#fbf7f2]"}`}>
+                  {m.t}
+                </button>
+              ))}
+            </div>
+          </div>
           <div className="flex-1 min-w-[220px]">
-            <label className="text-xs font-semibold text-[#6b5d52] uppercase">Query di ricerca</label>
-            <input data-testid="press-query" value={query} onChange={(e) => setQuery(e.target.value)} className="w-full mt-1 border border-[#e2d4c2] rounded-lg px-3 py-2 text-sm" />
+            <label className="text-xs font-semibold text-[#6b5d52] uppercase">Query manuale (opzionale)</label>
+            <input data-testid="press-query" value={manualQuery} onChange={(e) => setManualQuery(e.target.value)} placeholder='Vuoto = query automatiche (brand, team, ospiti)' className="w-full mt-1 border border-[#e2d4c2] rounded-lg px-3 py-2 text-sm" />
           </div>
           <button data-testid="press-run-btn" onClick={run} disabled={busy === "run"} className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
             {busy === "run" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Cerca rassegna
           </button>
         </div>
-        {demo && <p className="text-amber-700 text-xs mt-2">{status?.note}</p>}
+        <p className="text-[#6b5d52] text-xs mt-2">Nessuna pubblicazione automatica: i risultati restano in <b>Trovato</b> o <b>Da revisionare</b>. Esclusi i social e i duplicati; i falsi positivi non vengono associati.</p>
+        {busy === "run" && <p className="text-[#6b5d52] text-xs mt-1 inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Ricerca reale in corso (può richiedere ~30-60s)…</p>}
         {runRes && (
           <div data-testid="press-run-result" className="mt-3 text-sm bg-[#fbf7f2] rounded-lg p-3 text-[#4a3d34]">
             {runRes.ok ? (
-              <span className="flex flex-wrap items-center gap-2">
-                <CheckCircle2 className="w-4 h-4 text-green-600" /> {runRes.found} nuovi · {runRes.updated} aggiornati · {runRes.skipped} curati saltati · {runRes.errors} errori
-                {Object.entries(runRes.by_status || {}).map(([k, v]) => <span key={k} className="inline-flex items-center gap-1"><Badge s={k} /> {v}</span>)}
-              </span>
+              <div>
+                <p className="font-semibold text-[#1a1411] inline-flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-600" /> Ricerca completata · {runRes.window_label}</p>
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
+                  {[
+                    ["Query eseguite", runRes.stats?.queries_executed],
+                    ["Trovati (grezzi)", runRes.stats?.raw_found],
+                    ["Duplicati esclusi", runRes.stats?.duplicates_excluded],
+                    ["URL irraggiungibili", runRes.stats?.unreachable],
+                    ["Validi", runRes.stats?.valid],
+                    ["Falsi positivi", runRes.stats?.false_positives],
+                    ["Salvati", runRes.stats?.saved],
+                    [`Costo (${runRes.stats?.cost_source || "stima"})`, `$${runRes.stats?.cost_usd ?? 0}`],
+                  ].map(([k, v]) => (
+                    <div key={k} className="bg-white rounded-lg border border-[#ecdfce] px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-[#9c8b7d]">{k}</p>
+                      <p className="font-bold text-[#1a1411]">{v ?? 0}</p>
+                    </div>
+                  ))}
+                </div>
+              </div>
             ) : <span className="text-red-600">Errore: {runRes.error}</span>}
           </div>
         )}
@@ -157,7 +190,12 @@ export default function Press() {
           {!preview && <p className="text-[#9c8b7d] text-sm">Seleziona un articolo per l'anteprima prima della pubblicazione.</p>}
           {preview && (
             <div data-testid="press-preview">
-              <div className="flex items-center gap-2 mb-2"><Badge s={preview.status} /> {preview.confidence != null && <span className="text-xs text-[#6b5d52]">confidence {Math.round(preview.confidence * 100)}%</span>}</div>
+              <div className="flex flex-wrap items-center gap-2 mb-2">
+                <Badge s={preview.status} />
+                {preview.confidence != null && <span className="text-xs text-[#6b5d52]">confidence {Math.round(preview.confidence * 100)}%</span>}
+                {preview.relevant === false && <span data-testid="press-false-positive" className="text-[10px] font-bold uppercase tracking-wide bg-red-100 text-red-700 px-2 py-0.5 rounded-full">Falso positivo</span>}
+              </div>
+              {preview.status_reason && <p data-testid="press-reason" className="text-xs text-[#6b5d52] mb-2 italic">Motivo: {preview.status_reason}</p>}
               <h3 className="font-archivo font-extrabold text-[#1a1411] leading-tight">{preview.title}</h3>
               <p className="text-xs text-[#6b5d52] mt-1">{preview.source} · {preview.date}</p>
               <p className="text-sm text-[#4a3d34] mt-3">{preview.summary}</p>
