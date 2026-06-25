@@ -59,6 +59,60 @@ def classify_video(title: str, description: str, seconds: int = 0) -> str:
     return "episodio"
 
 
+# ----------------------- classificazione editoriale (formato + tipo) -----------------------
+# Soglia: i contenuti <= 180s (3 min) sono Short/clip/teaser, mai episodi/interviste complete.
+SHORT_MAX_SECONDS = 180
+TEASER_KW = ["teaser", "anticipazion", "prossimament", "in arrivo", "domani", "trailer",
+             "promo", "spoiler", "stasera", "questa sera", "tra poco", "a breve",
+             "non perdere", "ore 14", "ore 15", "ore 18", "ore 21", "in diretta tra"]
+# editorial_type ammessi sul sito pubblico
+EDITORIAL_ALLOWED = {"episodio", "intervista"}
+
+
+def classify_content(title: str, description: str, seconds: int = 0) -> dict:
+    """Ritorna youtube_format (short|long_form), editorial_type (episodio|intervista|clip|teaser|altro),
+    excluded (bool) e reason. Durata e formato prevalgono sulla parola 'intervista' nel titolo."""
+    text = f"{title} {description}".lower()
+    has_short_tag = "#short" in text
+    is_short_dur = 0 < int(seconds or 0) <= SHORT_MAX_SECONDS
+    youtube_format = "short" if (has_short_tag or is_short_dur) else "long_form"
+    if youtube_format == "short":
+        editorial_type = "teaser" if any(k in text for k in TEASER_KW) else "clip"
+    else:
+        editorial_type = "intervista" if "intervist" in text else "episodio"
+    excluded = youtube_format == "short" or editorial_type not in EDITORIAL_ALLOWED
+    if not excluded:
+        reason = None
+    elif has_short_tag:
+        reason = f"YouTube Short (#shorts) — {editorial_type}"
+    elif is_short_dur:
+        reason = f"durata {int(seconds or 0)}s ≤ {SHORT_MAX_SECONDS}s — {editorial_type}"
+    else:
+        reason = editorial_type
+    return {"youtube_format": youtube_format, "editorial_type": editorial_type,
+            "excluded": excluded, "reason": reason}
+
+
+async def is_excluded_video(youtube_id: str) -> bool:
+    if not youtube_id:
+        return False
+    return bool(await db.youtube_exclusions.find_one({"youtube_id": youtube_id}))
+
+
+async def record_exclusion(youtube_id, title, info, seconds=0, published=None, source="youtube_api"):
+    """Tabella tecnica di esclusione: evita reimport di Short/clip/teaser. NON contenuto editoriale."""
+    await db.youtube_exclusions.update_one(
+        {"youtube_id": youtube_id},
+        {"$set": {
+            "youtube_id": youtube_id, "title": title, "reason": info.get("reason"),
+            "youtube_format": info.get("youtube_format"), "editorial_type": info.get("editorial_type"),
+            "duration_seconds": seconds, "published_at": published, "source": source,
+            "detected_at": datetime.now(timezone.utc).isoformat(),
+        }},
+        upsert=True,
+    )
+
+
 # ----------------------- YouTube sync (RSS feed) -----------------------
 YT_NS = {
     "atom": "http://www.w3.org/2005/Atom",
@@ -105,20 +159,30 @@ async def youtube_sync(channel_id: str = None, auto_publish: bool = True) -> dic
         youtube_id = vid.text
         title = (title_el.text or "").strip()
         published = pub_el.text[:10] if pub_el is not None and pub_el.text else None
-        kind = classify_video(title, desc)
-        if kind == "short":
+        if await is_excluded_video(youtube_id):
             skipped += 1
             continue
+        info = classify_content(title, desc, 0)
+        if info["excluded"]:
+            await record_exclusion(youtube_id, title, info, 0, published, source="youtube_feed")
+            await db.episodes.delete_one({"youtube_id": youtube_id})
+            skipped += 1
+            continue
+        kind = info["editorial_type"]
         slug = slugify(title)
         existing = await db.episodes.find_one({"youtube_id": youtube_id})
+        etype = existing.get("type") if (existing and existing.get("type") in ("episodio", "intervista")) else kind
         doc = {
             "slug": existing["slug"] if existing else slug,
-            "type": existing.get("type") if existing else kind,
+            "type": etype,
+            "youtube_format": "long_form",
+            "editorial_type": etype,
             "title": title,
             "youtube_id": youtube_id,
             "published_at": published,
             "thumbnail": f"https://img.youtube.com/vi/{youtube_id}/maxresdefault.jpg",
             "excerpt": (desc[:240] if desc else title),
+            "description": desc or (existing.get("description") if existing else ""),
             "source": "youtube_feed",
             "updated_at": datetime.now(timezone.utc).isoformat(),
         }

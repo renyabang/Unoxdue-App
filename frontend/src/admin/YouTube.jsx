@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Youtube, RefreshCw, Loader2, Radio, KeyRound, FileText,
-  CheckCircle2, XCircle, AlertTriangle, Download,
+  CheckCircle2, XCircle, AlertTriangle, Download, Link2, Unlink, Ban,
 } from "lucide-react";
 import { api } from "./api";
 
@@ -33,14 +33,40 @@ export default function YouTube() {
   const [busy, setBusy] = useState("");
   const [backfillRes, setBackfillRes] = useState(null);
   const [autoPublish, setAutoPublish] = useState(true);
+  const [excl, setExcl] = useState(null);
+  const [oauthMsg, setOauthMsg] = useState("");
 
   const loadAll = () => {
     api.youtubeStats().then(setStats).catch(() => {});
     api.websubStatus().then(setWebsub).catch(() => {});
     api.oauthStatus().then(setOauth).catch(() => {});
     api.transcripts().then(setTrans).catch(() => {});
+    api.youtubeExclusions().then(setExcl).catch(() => {});
   };
-  useEffect(loadAll, []);
+  useEffect(() => {
+    loadAll();
+    const p = new URLSearchParams(window.location.search).get("oauth");
+    if (p === "connected") setOauthMsg("✅ YouTube collegato con successo.");
+    else if (p === "error") setOauthMsg("❌ Collegamento YouTube non riuscito. Verifica account/credenziali e riprova.");
+    if (p) window.history.replaceState({}, "", window.location.pathname);
+  }, []);
+
+  const connectYouTube = async () => {
+    setBusy("oauth-connect");
+    try {
+      const r = await api.oauthStart(window.location.origin);
+      if (r.ok && r.auth_url) { window.location.href = r.auth_url; return; }
+      setOauthMsg("❌ " + (r.error || "Errore avvio OAuth"));
+    } catch (e) { setOauthMsg("❌ " + e.message); }
+    setBusy("");
+  };
+
+  const disconnectYouTube = async () => {
+    setBusy("oauth-disconnect");
+    try { await api.oauthDisconnect(); api.oauthStatus().then(setOauth).catch(() => {}); setOauthMsg("YouTube disconnesso."); }
+    catch (e) { /* noop */ }
+    setBusy("");
+  };
 
   const runBackfill = async () => {
     setBusy("backfill"); setBackfillRes(null);
@@ -113,16 +139,38 @@ export default function YouTube() {
           <div data-testid="yt-backfill-result" className="mt-4 text-sm bg-[#fbf7f2] rounded-lg p-3 text-[#4a3d34]">
             {backfillRes.ok ? (
               <>
-                {backfillRes.demo && <DemoBadge />}{" "}
-                <span className="font-semibold">{backfillRes.created ?? 0}</span> nuovi,{" "}
-                <span className="font-semibold">{backfillRes.updated ?? 0}</span> aggiornati
-                {typeof backfillRes.skipped_shorts === "number" && <> , {backfillRes.skipped_shorts} short saltati</>}
-                {backfillRes.pages && <> — {backfillRes.pages} pagine</>}
-                {backfillRes.note && <p className="text-amber-700 mt-1">{backfillRes.note}</p>}
+                {backfillRes.demo && <DemoBadge />}
+                <div className="grid grid-cols-2 sm:grid-cols-4 gap-2">
+                  {[
+                    ["Trovati", backfillRes.fetched],
+                    ["Nuovi", backfillRes.created],
+                    ["Aggiornati", backfillRes.updated],
+                    ["Episodi", backfillRes.episodi],
+                    ["Interviste", backfillRes.interviste],
+                    ["Short esclusi", backfillRes.excluded_shorts],
+                    ["Clip escluse", backfillRes.excluded_clips],
+                    ["Teaser esclusi", backfillRes.excluded_teasers],
+                    ["Quota (unità)", backfillRes.quota?.total_units],
+                  ].map(([k, v]) => (
+                    <div key={k} className="bg-white rounded-lg border border-[#ecdfce] px-3 py-2">
+                      <p className="text-[10px] uppercase tracking-wide text-[#9c8b7d]">{k}</p>
+                      <p className="font-bold text-[#1a1411]">{v ?? 0}</p>
+                    </div>
+                  ))}
+                </div>
+                {backfillRes.note && <p className="text-amber-700 mt-2">{backfillRes.note}</p>}
               </>
             ) : (
               <span className="text-red-600">Errore: {backfillRes.error}</span>
             )}
+          </div>
+        )}
+
+        {excl?.total > 0 && (
+          <div className="mt-3 text-sm text-[#6b5d52] inline-flex items-center gap-2" data-testid="yt-exclusions">
+            <Ban className="w-4 h-4 text-[#9c8b7d]" />
+            Esclusi (Short/clip/teaser): <b className="text-[#1a1411]">{excl.total}</b>
+            {Object.entries(excl.counts || {}).map(([k, v]) => <span key={k} className="text-xs">· {k}: {v}</span>)}
           </div>
         )}
       </div>
@@ -177,11 +225,47 @@ export default function YouTube() {
         <div className="flex items-center gap-2 mb-3">
           <KeyRound className="w-5 h-5 text-[#EA4E1B]" />
           <h2 className="font-archivo font-extrabold text-[#1a1411]">Sottotitoli e trascrizioni (OAuth)</h2>
-          {oauth && (oauth.configured
-            ? <span className="text-[11px] font-bold uppercase bg-green-100 text-green-700 px-2 py-0.5 rounded-full">OAuth attivo</span>
-            : <span data-testid="oauth-demo" className="text-[11px] font-bold uppercase bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">OAuth non configurato</span>)}
+          {oauth && (oauth.connected
+            ? <span data-testid="oauth-connected" className="text-[11px] font-bold uppercase bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Collegato</span>
+            : <span data-testid="oauth-disconnected" className="text-[11px] font-bold uppercase bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">Non collegato</span>)}
         </div>
-        <p className="text-[#6b5d52] text-sm">{oauth?.note}</p>
+
+        {oauthMsg && <div data-testid="oauth-msg" className="mb-3 text-sm bg-[#fbf7f2] border border-[#ecdfce] rounded-lg px-3 py-2 text-[#4a3d34]">{oauthMsg}</div>}
+
+        <div className="grid sm:grid-cols-2 gap-3">
+          <div className="text-sm text-[#4a3d34] space-y-1">
+            <div><span className="text-[#6b5d52]">Credenziali client:</span> {oauth?.client_configured
+              ? <span className="text-green-700 font-semibold">configurate</span>
+              : <span className="text-amber-700 font-semibold">mancanti (GOOGLE_OAUTH_CLIENT_ID/SECRET)</span>}</div>
+            {oauth?.connected && <>
+              <div><span className="text-[#6b5d52]">Canale autorizzato:</span> <b>{oauth?.channel_title || "—"}</b></div>
+              <div><span className="text-[#6b5d52]">Ultimo rinnovo:</span> {oauth?.last_refresh_at ? oauth.last_refresh_at.slice(0, 19).replace("T", " ") : "—"}</div>
+            </>}
+            {oauth?.last_error && <div className="text-red-600 text-xs">Ultimo errore: {oauth.last_error}</div>}
+            <div className="text-[#6b5d52] text-xs">Scope: <code className="bg-[#fbf7f2] px-1.5 py-0.5 rounded">youtube.force-ssl</code></div>
+          </div>
+          <div className="flex flex-col gap-2 sm:items-end">
+            {!oauth?.connected ? (
+              <button data-testid="oauth-connect-btn" onClick={connectYouTube} disabled={!oauth?.client_configured || busy === "oauth-connect"}
+                className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-50 transition-colors">
+                {busy === "oauth-connect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Link2 className="w-4 h-4" />} Connetti YouTube
+              </button>
+            ) : (
+              <div className="flex gap-2">
+                <button data-testid="oauth-reconnect-btn" onClick={connectYouTube} disabled={busy === "oauth-connect"}
+                  className="inline-flex items-center gap-2 bg-[#14100e] hover:bg-[#EA4E1B] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-50 transition-colors">
+                  {busy === "oauth-connect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Riconnetti
+                </button>
+                <button data-testid="oauth-disconnect-btn" onClick={disconnectYouTube} disabled={busy === "oauth-disconnect"}
+                  className="inline-flex items-center gap-2 border border-[#ecdfce] text-[#4a3d34] hover:bg-[#fbf7f2] text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-50 transition-colors">
+                  {busy === "oauth-disconnect" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Unlink className="w-4 h-4" />} Disconnetti
+                </button>
+              </div>
+            )}
+            {!oauth?.client_configured && <p className="text-[11px] text-[#9c8b7d] sm:text-right max-w-xs">Aggiungi prima GOOGLE_OAUTH_CLIENT_ID/SECRET, poi clicca Connetti.</p>}
+          </div>
+        </div>
+        <p className="text-[#6b5d52] text-sm mt-3">{oauth?.note}</p>
 
         {trans?.counts && (
           <div className="mt-3 flex flex-wrap gap-2">

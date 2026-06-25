@@ -4,6 +4,7 @@ from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
 import os
 import uuid
+import asyncio
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -527,6 +528,11 @@ async def admin_websub_status(admin: str = Depends(get_current_admin)):
     return await yt.websub_status()
 
 
+@api_router.get("/admin/youtube/exclusions")
+async def admin_youtube_exclusions(admin: str = Depends(get_current_admin)):
+    return await yt.exclusions_list()
+
+
 class WebsubIn(BaseModel):
     mode: str = "subscribe"
 
@@ -539,6 +545,35 @@ async def admin_websub_subscribe(payload: WebsubIn, admin: str = Depends(get_cur
 @api_router.get("/admin/youtube/oauth/status")
 async def admin_youtube_oauth_status(admin: str = Depends(get_current_admin)):
     return await yt.oauth_status()
+
+
+@api_router.get("/admin/youtube/oauth/start")
+async def admin_youtube_oauth_start(origin: str = Query(...), admin: str = Depends(get_current_admin)):
+    import youtube_oauth as yto
+    if not yto.client_configured():
+        return {"ok": False, "error": "GOOGLE_OAUTH_CLIENT_ID/SECRET non configurati."}
+    state = await yto.create_state(origin)
+    return {"ok": True, "auth_url": yto.build_auth_url(yto.callback_uri(origin), state)}
+
+
+@api_router.get("/admin/youtube/oauth/callback")
+async def admin_youtube_oauth_callback(code: str = Query(None), state: str = Query(None),
+                                       error: str = Query(None)):
+    import youtube_oauth as yto
+    st = await yto.consume_state(state) if state else None
+    origin = (st or {}).get("origin") or ""
+    dest = f"{origin}/admin/youtube" if origin else "/admin/youtube"
+    if error or not code or not st:
+        return RedirectResponse(url=f"{dest}?oauth=error", status_code=302)
+    res = await yto.handle_callback(code, st["redirect_uri"], asyncio.get_event_loop())
+    flag = "connected" if res.get("ok") else "error"
+    return RedirectResponse(url=f"{dest}?oauth={flag}", status_code=302)
+
+
+@api_router.post("/admin/youtube/oauth/disconnect")
+async def admin_youtube_oauth_disconnect(admin: str = Depends(get_current_admin)):
+    import youtube_oauth as yto
+    return await yto.disconnect()
 
 
 @api_router.get("/admin/youtube/transcripts")

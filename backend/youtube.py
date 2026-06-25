@@ -21,7 +21,8 @@ from config_db import (
     GOOGLE_OAUTH_CLIENT_ID, GOOGLE_OAUTH_CLIENT_SECRET, GOOGLE_OAUTH_REFRESH_TOKEN,
     WEBSUB_HUB, WEBSUB_SECRET,
 )
-from automations import classify_video, slugify, log_automation
+from automations import (classify_video, slugify, log_automation,
+                         classify_content, record_exclusion, is_excluded_video)
 
 ATOM_NS = {
     "atom": "http://www.w3.org/2005/Atom",
@@ -107,13 +108,22 @@ async def channel_stats() -> dict:
 # ----------------------- upsert singolo video (riusato da backfill e WebSub) -----------------------
 async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publish=True,
                         source="youtube_api", playlist=None):
-    kind = classify_video(title, desc, seconds)
-    if kind == "short":
-        return {"action": "skipped_short", "kind": "short", "youtube_id": youtube_id}
+    info = classify_content(title, desc, seconds)
+    if info["excluded"]:
+        await record_exclusion(youtube_id, title, info, seconds, published, source=source)
+        # rimuove eventuale record editoriale pregresso dello stesso video escluso
+        await db.episodes.delete_one({"youtube_id": youtube_id})
+        return {"action": "excluded", "editorial_type": info["editorial_type"],
+                "youtube_format": info["youtube_format"], "reason": info["reason"],
+                "youtube_id": youtube_id}
     existing = await db.episodes.find_one({"youtube_id": youtube_id})
+    etype = existing.get("type") if (existing and existing.get("type") in ("episodio", "intervista")) \
+        else info["editorial_type"]
     doc = {
         "slug": existing["slug"] if existing else slugify(title),
-        "type": existing.get("type") if existing else kind,
+        "type": etype,
+        "youtube_format": "long_form",
+        "editorial_type": etype,
         "title": title,
         "youtube_id": youtube_id,
         "published_at": published,
@@ -130,7 +140,7 @@ async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publis
         doc["duration_seconds"] = seconds
     if existing:
         await db.episodes.update_one({"youtube_id": youtube_id}, {"$set": doc})
-        return {"action": "updated", "kind": kind, "type": doc["type"],
+        return {"action": "updated", "kind": etype, "type": etype,
                 "status": existing.get("status"), "slug": doc["slug"], "youtube_id": youtube_id}
     # nuovo contenuto
     if not desc or len(desc) < 20:
@@ -140,7 +150,7 @@ async def _upsert_video(youtube_id, title, desc, published, seconds, auto_publis
     doc["transcription_status"] = "pending"
     doc["created_at"] = doc["updated_at"]
     await db.episodes.insert_one(dict(doc))
-    return {"action": "created", "kind": kind, "type": doc["type"],
+    return {"action": "created", "kind": etype, "type": etype,
             "status": doc["status"], "slug": doc["slug"], "youtube_id": youtube_id}
 
 
@@ -204,9 +214,14 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
             await log_automation("youtube_backfill", "warning", f"videos.list fallita (chunk): {e}")
 
     created = updated = skipped = upsert_errors = 0
+    excl_short = excl_clip = excl_teaser = excl_preskip = 0
     type_counts = {"episodio": 0, "intervista": 0}
     da_verificare = 0
     for x in items:
+        if await is_excluded_video(x["id"]):
+            excl_preskip += 1
+            skipped += 1
+            continue
         try:
             r = await _upsert_video(x["id"], x["title"], x["desc"], x["published"],
                                     dur_map.get(x["id"], 0), auto_publish, playlist=uploads)
@@ -215,8 +230,15 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
             await log_automation("youtube_backfill", "warning", f"Upsert fallito {x['id']}: {e}")
             continue
         a = r.get("action")
-        if a == "skipped_short":
+        if a == "excluded":
             skipped += 1
+            et = r.get("editorial_type")
+            if r.get("youtube_format") == "short" and et not in ("clip", "teaser"):
+                excl_short += 1
+            elif et == "teaser":
+                excl_teaser += 1
+            else:
+                excl_clip += 1
             continue
         created += a == "created"
         updated += a == "updated"
@@ -227,6 +249,7 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
             da_verificare += 1
 
     total_in_db = await db.episodes.count_documents({})
+    excluded_total = await db.youtube_exclusions.count_documents({})
     quota = {
         "channels_list": 1,
         "playlist_items_list": pages,
@@ -241,16 +264,21 @@ async def backfill(max_pages: int = 40, auto_publish: bool = True) -> dict:
         "uploads_playlist": uploads,
         "channel_video_count": info["video_count"],
         "fetched": len(items), "pages": pages,
-        "created": created, "updated": updated, "skipped_shorts": skipped,
-        "shorts": skipped, "episodi": type_counts["episodio"], "interviste": type_counts["intervista"],
+        "created": created, "updated": updated,
+        "skipped": skipped,
+        "excluded_shorts": excl_short, "excluded_clips": excl_clip, "excluded_teasers": excl_teaser,
+        "excluded_already": excl_preskip,
+        "episodi": type_counts["episodio"], "interviste": type_counts["intervista"],
         "non_classificati": da_verificare,
         "errors": page_errors + upsert_errors,
         "imported_total": total_in_db,
+        "exclusions_total": excluded_total,
         "quota": quota,
     }
     await log_automation("youtube_backfill", "ok",
                          f"Backfill REALE: {len(items)} trovati, {created} nuovi, {updated} aggiornati, "
-                         f"{skipped} short, {type_counts['episodio']} episodi, {type_counts['intervista']} interviste, "
+                         f"esclusi {excl_short} short/{excl_clip} clip/{excl_teaser} teaser, "
+                         f"{type_counts['episodio']} episodi, {type_counts['intervista']} interviste, "
                          f"quota {quota['total_units']} unità", summary)
     return summary
 
@@ -386,23 +414,16 @@ def _oauth_configured() -> bool:
 
 
 async def oauth_status() -> dict:
-    return {
-        "configured": _oauth_configured(),
-        "client_id": bool(GOOGLE_OAUTH_CLIENT_ID),
-        "client_secret": bool(GOOGLE_OAUTH_CLIENT_SECRET),
-        "refresh_token": bool(GOOGLE_OAUTH_REFRESH_TOKEN),
-        "scope": OAUTH_SCOPE,
-        "note": "OAuth necessario per scaricare i sottotitoli del proprio canale. "
-                "Configura GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN in env.",
-    }
+    import youtube_oauth as yto
+    return await yto.get_status()
 
 
-def _oauth_service_sync():
+def _oauth_service_sync(refresh_token: str):
     from google.oauth2.credentials import Credentials
     from googleapiclient.discovery import build
     creds = Credentials(
         token=None,
-        refresh_token=GOOGLE_OAUTH_REFRESH_TOKEN,
+        refresh_token=refresh_token,
         token_uri="https://oauth2.googleapis.com/token",
         client_id=GOOGLE_OAUTH_CLIENT_ID,
         client_secret=GOOGLE_OAUTH_CLIENT_SECRET,
@@ -411,8 +432,8 @@ def _oauth_service_sync():
     return build("youtube", "v3", credentials=creds, cache_discovery=False)
 
 
-def _fetch_captions_sync(video_id: str) -> dict:
-    yt = _oauth_service_sync()
+def _fetch_captions_sync(video_id: str, refresh_token: str) -> dict:
+    yt = _oauth_service_sync(refresh_token)
     listing = yt.captions().list(part="snippet", videoId=video_id).execute()
     tracks = listing.get("items", [])
     if not tracks:
@@ -420,7 +441,8 @@ def _fetch_captions_sync(video_id: str) -> dict:
     track = next((t for t in tracks if (t["snippet"].get("language") or "").startswith("it")), tracks[0])
     data = yt.captions().download(id=track["id"], tfmt="srt").execute()
     text = data.decode("utf-8") if isinstance(data, (bytes, bytearray)) else str(data)
-    return {"found": True, "language": track["snippet"].get("language"), "text": text}
+    return {"found": True, "language": track["snippet"].get("language"),
+            "track_id": track["id"], "text": text}
 
 
 async def fetch_transcript(slug: str) -> dict:
@@ -429,12 +451,15 @@ async def fetch_transcript(slug: str) -> dict:
         return {"ok": False, "error": "Contenuto non trovato"}
     if not ep.get("youtube_id"):
         return {"ok": False, "error": "Nessun video YouTube associato"}
-    if not _oauth_configured():
+    import youtube_oauth as yto
+    refresh = await yto.get_refresh_token() or GOOGLE_OAUTH_REFRESH_TOKEN
+    configured = bool(GOOGLE_OAUTH_CLIENT_ID and GOOGLE_OAUTH_CLIENT_SECRET and refresh)
+    if not configured:
         await db.episodes.update_one({"slug": slug}, {"$set": {"transcription_status": "pending"}})
         return {"ok": True, "demo": True, "transcription_status": "pending",
-                "note": "OAuth non configurato: la trascrizione resta 'pending'. Nessun testo inventato."}
+                "note": "OAuth non collegato: la trascrizione resta 'pending'. Nessun testo inventato."}
     try:
-        res = await asyncio.get_event_loop().run_in_executor(None, _fetch_captions_sync, ep["youtube_id"])
+        res = await asyncio.get_event_loop().run_in_executor(None, _fetch_captions_sync, ep["youtube_id"], refresh)
     except Exception as e:
         await log_automation("captions", "error", f"Download sottotitoli fallito ({slug}): {e}")
         await db.episodes.update_one({"slug": slug}, {"$set": {"transcription_status": "error"}})
@@ -463,4 +488,16 @@ async def transcripts_list() -> dict:
         e["transcription_status"] = st
         counts[st] = counts.get(st, 0) + 1
     eps.sort(key=lambda e: 0 if e["transcription_status"] == "pending" else 1)
-    return {"episodes": eps, "counts": counts, "oauth_configured": _oauth_configured()}
+    import youtube_oauth as yto
+    return {"episodes": eps, "counts": counts, "oauth_configured": await yto.is_connected()}
+
+
+
+async def exclusions_list(limit: int = 300) -> dict:
+    """Tabella tecnica di esclusione (Short/clip/teaser). Non sono contenuti editoriali."""
+    items = await db.youtube_exclusions.find({}, {"_id": 0}).sort("duration_seconds", 1).to_list(limit)
+    counts = {}
+    for it in items:
+        et = it.get("editorial_type") or "altro"
+        counts[et] = counts.get(et, 0) + 1
+    return {"items": items, "counts": counts, "total": len(items)}

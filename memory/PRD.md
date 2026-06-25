@@ -113,6 +113,13 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - Scheduler: `POST /api/cron/press?secret=&schedule=weekly|monthly` (weekly=30gg, monthly=90gg; backfill NON automatico). Storico in `press_runs`; log tecnico `press_rejected`; endpoint `/admin/press/runs` e `/admin/press/rejected`. UI: selettore finestra, statistiche esclusive, suggeriti con conferma, pannello "Ultime esecuzioni", "Log tecnico (scartati)".
 - SECONDO test reale (backfill, 14 query, sonar): grezzi 41 − dup 11 = 30 unici → social 0, non-articolo 6, irraggiungibili 3, FP 16, validi 5 (4 found auto-linkati Baclet/Ceravolo + 1 review Garritano). 0 menzioni reali perse. Costo REALE $0.074. Nessuna pubblicazione automatica. Modello resta `sonar` (A/B con sonar-pro solo se necessario).
 
+### [25/06/2026] Step 3 — Pulizia archivio (esclusione Short/clip/teaser) + Fase B OAuth (flusso). COMPLETATO.
+- Classificatore `classify_content` (automations.py): `youtube_format` (short|long_form, soglia ≤180s o #shorts) + `editorial_type` (episodio|intervista|clip|teaser|altro). Durata/formato prevalgono sulla parola "intervista". Ammessi sul sito solo episodio/intervista long_form.
+- Esclusione automatica in sync (backfill + WebSub + RSS): short/clip/teaser → tabella tecnica `youtube_exclusions` (no contenuto editoriale, no AI, no SEO, no pagine/sitemap) + skip reimport via `is_excluded_video`.
+- Backup DB: `/app/backups/backup_20260625_145312`. Pulizia eseguita (dry-run verificata): 13 conservati (11 episodi + 2 interviste, tutti >1600s) | 15 esclusi (13 clip + 2 teaser; 7 RSS pregressi + 8 API), 0 dubbi. Hard delete dalle collezioni editoriali. Endpoint `/admin/youtube/exclusions`.
+- Verifica: sitemap 13 URL / 0 shorts, video-sitemap 13 / 0 shorts, home/SSR/API pubbliche 0 shorts. Nessun duplicato.
+- Fase B OAuth implementata (`youtube_oauth.py`): flusso Authorization Code (access_type=offline, prompt=consent), token cifrati (Fernet da JWT_SECRET) in `db.youtube_oauth`, refresh automatico, verifica canale = YOUTUBE_CHANNEL_ID, status (connesso/canale/ultimo rinnovo/ultimo errore), endpoint start/callback/disconnect, UI admin (Connetti/Disconnetti/Riconnetti). Caption usa refresh token DB (fallback env). NESSUN refresh token incollato a mano. In attesa: GOOGLE_OAUTH_CLIENT_ID/SECRET dall'utente.
+
 ### [25/06/2026] Step 3 FASE A REALE — Import archivio YouTube (Data API v3). COMPLETATO + verificato.
 - YOUTUBE_API_KEY inserita in `.env`. Channel ID `UCN85Yle0zaIKue4ymUj1OCQ` verificato (canale "unoXdue", 54 video, 36 iscritti, playlist uploads `UUN85Yle0zaIKue4ymUj1OCQ`).
 - `youtube.py`: `_upsert_video` ora salva descrizione completa + `uploads_playlist`; `backfill` traccia errori, classificazione e quota reale; report arricchito.
