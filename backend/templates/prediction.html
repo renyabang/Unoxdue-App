@@ -16,24 +16,71 @@
     </script>
 {% endblock %}
 {% block main %}
-      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <a href="{{ site_url }}/pronostici/">Pronostici</a> &rsaquo; <span>{{ p.competition }} {{ p.season }} &mdash; {{ p.round }}a giornata</span></nav>
-      <span class="badge">Pronostici</span>
-      <h1>{{ p.h1 }}</h1>
-      <p class="meta">{{ p.competition }} &middot; Stagione {{ p.season }} &middot; {{ p.round }}a giornata{% if p.updated_at %} &middot; aggiornato il {{ p.updated_at }}{% endif %}</p>
-      <p class="lead">{{ p.intro }}</p>
-      {% if p.episode_url %}<p><a href="{{ p.episode_url }}">Guarda la puntata collegata &rarr;</a></p>{% endif %}
-      {% for pick in p.picks %}
-      <div class="slip">
-        <div class="head"><strong>{{ pick.tipster }}</strong><span>{{ pick.type }} ({{ pick.selections|length }})</span></div>
-        {% for s in pick.selections %}
-        <div class="row">
-          <div style="font-size:12px;color:#9c8b7d;text-transform:uppercase">{{ s.competition }} &middot; {{ s.date }}</div>
-          <strong>{{ s.match }}</strong>
-          <div class="mk"><span>{{ s.market }} &middot; {{ s.pick }}</span><span class="odds">{{ s.odds }}</span></div>
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e]">
+      <div class="pointer-events-none absolute -top-24 -right-10 w-[34rem] h-[34rem] rounded-full bg-[#EA4E1B]/15 blur-[130px]"></div>
+      <div class="pointer-events-none absolute -bottom-32 left-0 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
+      <div class="relative max-w-6xl mx-auto px-5 lg:px-8 pt-10 pb-10">
+        <nav class="flex items-center gap-2 text-xs text-white/50 flex-wrap" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <a href="{{ site_url }}/pronostici/" class="hover:text-white">Pronostici</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">{{ p.competition }} {{ p.season }} &middot; {{ p.round }}ª giornata</span>
+        </nav>
+        <span class="inline-flex items-center gap-2 mt-5 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.trending("w-4 h-4") }} Pronostici</span>
+        <h1 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">{{ p.h1 }}</h1>
+        <div class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#F6D9BF] bg-white/5 border border-white/10 rounded-full px-4 py-1.5">
+          <img src="{{ site_url }}/logo.jpg" alt="" class="w-5 h-5 rounded-full" />
+          {{ p.competition }} &middot; {{ p.season }} &middot; {{ p.round }}ª giornata{% if p.updated_at %} &middot; agg. {{ p.updated_at }}{% endif %}
         </div>
-        {% endfor %}
-        <div class="foot"><span>Quota totale</span><strong style="color:var(--orange);font-size:20px">{{ pick.total_odds }}</strong></div>
+        {% if p.intro %}<p class="text-white/60 text-base sm:text-lg mt-4 max-w-2xl">{{ p.intro }}</p>{% endif %}
+        {% if p.episode_url %}<p class="mt-4"><a href="{{ p.episode_url }}" class="inline-flex items-center gap-1.5 text-[#EA4E1B] font-bold uppercase tracking-wide text-sm">Guarda la puntata collegata {{ m.chevron("w-4 h-4") }}</a></p>{% endif %}
       </div>
-      {% endfor %}
-      <div class="disclaimer"><strong>18+ &middot; Gioca responsabilmente.</strong> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Le quote sono indicative al momento della pubblicazione e possono variare.</div>
+    </section>
+
+    <section class="relative bg-[#14100e] pb-16">
+      <div class="relative max-w-6xl mx-auto px-5 lg:px-8">
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-7 items-start">
+          {% for pick in p.picks %}
+          <article class="lift bg-white rounded-2xl overflow-hidden border border-white/10 shadow-xl flex flex-col">
+            <div class="bg-[#14100e] px-5 py-4 flex items-center justify-between gap-3">
+              <div class="flex items-center gap-3 min-w-0">
+                {% if pick.photo %}<img src="{{ pick.photo }}" alt="{{ pick.tipster }}" class="w-11 h-11 rounded-full object-cover object-top ring-2 ring-[#EA4E1B] flex-shrink-0" />{% endif %}
+                <div class="min-w-0">
+                  <p class="text-white font-archivo font-extrabold leading-tight truncate">{{ pick.tipster }}</p>
+                  <p class="text-[#EA4E1B] text-xs font-bold uppercase tracking-wide">{{ pick.type }} ({{ pick.selections|length }})</p>
+                </div>
+              </div>
+              {% if pick.status %}<span class="text-[10px] font-bold uppercase tracking-wide text-[#14100e] bg-[#F6D9BF] px-2.5 py-1 rounded-full flex-shrink-0">{{ pick.status }}</span>{% endif %}
+            </div>
+            <div class="flex-1 divide-y divide-[#efe4d6]">
+              {% for s in pick.selections %}
+              <div class="px-5 py-3.5">
+                <p class="text-[11px] text-[#9c8b7d] font-semibold uppercase tracking-wide">{{ s.competition }} &middot; {{ s.date }}</p>
+                <p class="font-archivo font-extrabold text-[#1a1411] mt-0.5">{{ s.match }}</p>
+                <div class="flex items-center justify-between mt-1.5 gap-3">
+                  <span class="text-sm text-[#6b5d52]">{{ s.market }}</span>
+                  <span class="inline-flex items-center gap-2 flex-shrink-0">
+                    <span class="text-sm font-semibold text-[#1a1411]">{{ s.pick }}</span>
+                    <span class="text-sm font-bold text-white bg-[#EA4E1B] px-2 py-0.5 rounded-md tabular-nums">{{ s.odds }}</span>
+                  </span>
+                </div>
+              </div>
+              {% endfor %}
+            </div>
+            <div class="bg-[#fbf7f2] border-t border-[#efe4d6] px-5 py-4 flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wide text-[#6b5d52]">Quota totale</span>
+              <span class="font-anton text-[#EA4E1B] text-2xl tabular-nums">{{ pick.total_odds }}</span>
+            </div>
+          </article>
+          {% endfor %}
+        </div>
+
+        <div class="mt-12 max-w-3xl mx-auto">
+          <div class="flex items-start gap-3 bg-white/[0.04] border border-white/10 rounded-2xl px-5 py-4">
+            {{ m.shield("w-5 h-5 text-[#EA4E1B] flex-shrink-0 mt-0.5") }}
+            <p class="text-white/55 text-sm leading-relaxed"><span class="font-bold text-white/80">18+ &middot; Gioca responsabilmente.</span> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Le quote sono indicative al momento della pubblicazione e possono variare.</p>
+          </div>
+        </div>
+      </div>
+    </section>
 {% endblock %}

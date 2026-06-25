@@ -278,6 +278,30 @@ frontend:
         -agent: "testing"
         -comment: "✅ COMPREHENSIVE E2E TEST PASSED (19/19 steps). Full admin panel tested with real browser automation at /admin. ALL FLOWS WORKING: (1) Login screen with logo/email/password/Entra button, (2) Wrong password shows 'Credenziali non valide' error, (3) Login with admin@unoxdue.net / Sportivo#UxD-2026! successful, (4) Forced password change screen appears on first login, (5) Password change to NuovaPwd#2026! successful with token invalidation, (6) Dashboard loads with sidebar (5 nav items), stat cards (16 contenuti, 3 interviste, 2 pagine pronostici, 11 da verificare), integrations status, and logs, (7) YouTube sync 'Sincronizza ora' works - returns 'Sync completato: 0 nuovi, 15 aggiornati, 15 trovati', (8) Contenuti page shows 16 items in table with title/type/status, (9) SSR preview link opens /api/seo/interviste/fabio-ceravolo-130-gol-carriera with proper <h1> tag, (10) Schedine/Pronostici page loads, (11) Image upload from /app/test_assets/slip.jpg successful with preview, (12) OCR 'Analizza schedina' extracts 6 selections with total_odds 17.63 via OpenAI Vision (gpt-5.4), (13) VERIFIED: NO sensitive data (importo/bonus/vincita/stake/saldo) in OCR output - correctly sanitized, (14) Prediction save with tipster='Il Marziano', season='2025-2026', round='38' successful with preview link, (15) Log automazioni shows 12 entries including youtube_sync and ocr_slip logs, (16) Integrazioni page shows 6 integrations with status (YouTube channel active, OCR Vision active, others in demo mode), (17) Press search 'Cerca menzioni' returns JSON demo response, (18) Logout 'Esci' returns to login screen, (19) Protected route /admin/contenuti redirects to login when not authenticated. Console: 1 expected 401 error (logout token check). Network: 1 CDN error (non-critical). All major admin features functional. Test credentials updated: new password NuovaPwd#2026! works, old password correctly rejected."
 
+  - task: "SSR design uniformato al frontend React (Step 2) — CSS condiviso locale + font locali"
+    implemented: true
+    working: true
+    file: "backend/templates/*.html, frontend/src/ssr.css, frontend/tailwind.ssr.config.js, backend/seo.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: true
+        -agent: "main"
+        -comment: |
+          [25/06/2026] Step 2 completato. Template Jinja2 riscritti con le STESSE classi Tailwind del React
+          (navbar dark sticky, hero con glow + marquee arancio, card rounded-2xl bordo crema, slip pronostici
+          identiche a SlipCard, pagina profilo team, footer 3 colonne, pagine statiche con tipografia .uxd-prose).
+          CSS compilato localmente via Tailwind CLI scansionando frontend/src/** + backend/templates/** ->
+          backend/static/css/unoxdue.css (minificato, classi inutilizzate rimosse, cache-busting ?v=mtime tramite
+          helper asset() in seo.py). Nessun Tailwind CDN. Font ospitati localmente in backend/static/fonts/
+          (Anton/Archivo/Inter, subset latin+latin-ext). Aggiunto mount /api/static in server.py.
+          AUTOTEST main agent: tutte le route SSR (home, il-podcast, parlano-di-noi, episodi, interviste,
+          pronostici, team, team/slug, pronostici/serie-a/..., episodi/slug) -> 200 con canonical+JSON-LD+H1+css.
+          404 corretto per slug inesistente. CSS e woff2 servono 200. Screenshot verificati: home, prediction,
+          episode, team member, pagina statica (pixel-match con React). Auth NON toccata: login 200.
+          Limite dev noto: le URL pulite restano instradate alla SPA React; SSR testato su /api/seo/... (nginx in prod).
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
@@ -397,5 +421,18 @@ agent_communication:
       - Old password: Sportivo#UxD-2026! (correctly rejected after change)
       
       All admin panel features fully functional. Ready for production use.
+    -agent: "main"
+    -message: |
+      [25/06/2026] STEP 2 COMPLETATO — Uniformare il design SSR al frontend React.
+      Approccio richiesto dall'utente: CSS compilato localmente e condiviso (NO Tailwind CDN, NO grandi blocchi inline).
+      - Build: frontend/tailwind.ssr.config.js scansiona frontend/src/** + backend/templates/** ->
+        backend/static/css/unoxdue.css (minificato, purge classi inutilizzate). Script: scripts/build_ssr_css.sh.
+      - Font locali: scripts/fetch_fonts.py scarica Anton/Archivo/Inter (latin+latin-ext) in backend/static/fonts/.
+      - Template Jinja2 riscritti con le stesse classi/colori/font/spaziature/radius del React, macro condivise in _macros.html.
+      - server.py: mount StaticFiles su /api/static. seo.py: helper asset() per cache-busting ?v=mtime.
+      Regressione self-test (curl + screenshot): tutte le route SSR 200 con canonical+JSON-LD+H1+CSS; 404 ok;
+      CSS/woff2 200; auth login 200 (NON modificata). Pixel-match verificato su home/pronostici/episodio/team/pagina statica.
+      NB: in questo fork la password admin valida è Sportivo#UxD-2026! (DB riseedato; NuovaPwd#2026! non più valida).
+      Prossimo: Step 3 (Archivio completo YouTube via Data API) — richiede YOUTUBE_API_KEY utente.
 
 

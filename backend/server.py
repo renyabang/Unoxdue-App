@@ -9,7 +9,7 @@ from datetime import datetime, timezone
 from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
-from config_db import db, client, SITE_URL, UPLOAD_DIR, CRON_SECRET, YOUTUBE_CHANNEL_ID
+from config_db import db, client, SITE_URL, UPLOAD_DIR, CRON_SECRET, YOUTUBE_CHANNEL_ID, ROOT_DIR
 from auth import auth_router, get_current_admin, ensure_admin
 import seo
 import automations as auto
@@ -302,7 +302,7 @@ async def ssr_episodi():
     cards = [{"url": f'{SITE_URL}/episodi/{i["slug"]}/', "title": i.get("title"), "kicker": "Episodio",
               "thumbnail": i.get("thumbnail")} for i in items]
     return HTMLResponse(seo.render_archive("Episodi",
-        "Tutti gli episodi del podcast UnoXdue dedicati alla Serie A.", "/episodi/", cards))
+        "Tutti gli episodi del podcast UnoXdue dedicati alla Serie A.", "/episodi/", cards, show_play=True))
 
 
 @api_router.get("/seo/interviste", response_class=HTMLResponse)
@@ -311,7 +311,7 @@ async def ssr_interviste():
     cards = [{"url": f'{SITE_URL}/interviste/{i["slug"]}/', "title": i.get("title"), "kicker": "Intervista",
               "thumbnail": i.get("thumbnail")} for i in items]
     return HTMLResponse(seo.render_archive("Interviste",
-        "Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano.", "/interviste/", cards))
+        "Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano.", "/interviste/", cards, show_play=True))
 
 
 @api_router.get("/seo/pronostici", response_class=HTMLResponse)
@@ -428,6 +428,8 @@ async def robots():
 app.include_router(api_router)
 app.include_router(auth_router)
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
+(ROOT_DIR / "static").mkdir(exist_ok=True)
+app.mount("/api/static", StaticFiles(directory=str(ROOT_DIR / "static")), name="static")
 
 app.add_middleware(
     CORSMiddleware,

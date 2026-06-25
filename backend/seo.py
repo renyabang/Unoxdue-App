@@ -5,10 +5,22 @@ from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from config_db import SITE_URL, ROOT_DIR
 
+STATIC_DIR = ROOT_DIR / "static"
+
 env = Environment(
     loader=FileSystemLoader(str(ROOT_DIR / "templates")),
     autoescape=select_autoescape(["html", "xml"]),
 )
+
+
+def asset(path: str) -> str:
+    """URL versionata di un asset statico servito dal backend (cache-busting)."""
+    f = STATIC_DIR / path
+    v = int(f.stat().st_mtime) if f.exists() else 0
+    return f"{SITE_URL}/api/static/{path}?v={v}"
+
+
+env.globals["asset"] = asset
 
 MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
         "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
@@ -83,12 +95,13 @@ def render_episode(ep: dict) -> str:
     )
 
 
-def render_archive(page_title, page_desc, canonical_path, items) -> str:
+def render_archive(page_title, page_desc, canonical_path, items, show_play=False) -> str:
     canonical = f"{SITE_URL}{canonical_path}"
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
     return env.get_template("archive.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical,
         items=items, site_url=SITE_URL, breadcrumb_jsonld=bc, year=_year(),
+        show_play=show_play,
     )
 
 
@@ -135,7 +148,7 @@ def render_team_member(m: dict, related) -> str:
         ("Home", f"{SITE_URL}/"), ("Il team", f"{SITE_URL}/team/"), (m["name"], canonical),
     ])
     return env.get_template("team_member.html").render(
-        m=m, canonical=canonical, site_url=SITE_URL, jsonld=jsonld,
+        m_=m, canonical=canonical, site_url=SITE_URL, jsonld=jsonld,
         breadcrumb_jsonld=bc, related=related, year=_year(),
     )
 

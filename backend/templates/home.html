@@ -13,24 +13,80 @@
     </script>
 {% endblock %}
 {% block main %}
-      <span class="badge">Podcast di calcio &amp; Serie A</span>
-      <h1>UnoXdue &mdash; il podcast del calcio italiano</h1>
-      <p class="lead">Analisi, pronostici e dibattito sulla Serie A con i tipster Sono Micuccio, il Ninja e il Marziano, condotti dall'host Antonello Santopaolo. In più, interviste esclusive ai protagonisti del calcio.</p>
-      <a class="cta" href="https://www.twitch.tv/unoxdue_">Segui su Twitch</a>
-      <a class="cta" href="https://www.youtube.com/@unoXdue">YouTube</a>
-
-      {% if episodes %}<h2>Ultimi episodi</h2><div class="grid">{% for it in episodes %}<a class="card" href="{{ it.url }}"><img src="{{ it.thumbnail }}" alt="{{ it.title }}" loading="lazy" /><div class="c"><span class="k">Episodio</span><h3>{{ it.title }}</h3></div></a>{% endfor %}</div>{% endif %}
-
-      {% if interviews %}<h2>Ultime interviste</h2><div class="grid">{% for it in interviews %}<a class="card" href="{{ it.url }}"><img src="{{ it.thumbnail }}" alt="{{ it.title }}" loading="lazy" /><div class="c"><span class="k">Intervista</span><h3>{{ it.title }}</h3></div></a>{% endfor %}</div>{% endif %}
-
-      <h2>Il team</h2>
-      <p>Un host e tre tipster: <a href="{{ site_url }}/team/">scopri il team di UnoXdue</a>.</p>
-      <h2>Esplora</h2>
-      <div class="related">
-        <a href="{{ site_url }}/il-podcast/">Il podcast</a>
-        <a href="{{ site_url }}/episodi/">Tutti gli episodi</a>
-        <a href="{{ site_url }}/interviste/">Tutte le interviste</a>
-        <a href="{{ site_url }}/pronostici/">Pronostici</a>
-        <a href="{{ site_url }}/parlano-di-noi/">Parlano di noi</a>
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e] pt-16 pb-0">
+      <div class="pointer-events-none absolute -top-32 -right-24 w-[36rem] h-[36rem] rounded-full bg-[#EA4E1B]/20 blur-[120px]"></div>
+      <div class="pointer-events-none absolute -bottom-40 -left-24 w-[34rem] h-[34rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
+      <div class="relative max-w-7xl mx-auto px-5 lg:px-8 grid lg:grid-cols-2 gap-10 items-center pb-16">
+        <div class="text-center lg:text-left">
+          <span class="inline-flex items-center gap-2 rounded-full border border-[#EA4E1B]/40 bg-[#EA4E1B]/10 px-4 py-1.5 text-[#F6D9BF] text-xs font-bold uppercase tracking-[0.2em]">Podcast di Calcio &amp; Serie A</span>
+          <h1 class="font-anton text-white text-6xl sm:text-7xl lg:text-8xl leading-[0.92] mt-6">Uno<span class="text-[#EA4E1B]">X</span>due</h1>
+          <p class="font-archivo font-extrabold uppercase tracking-wide text-white/90 text-xl sm:text-2xl mt-3">Il Podcast del Calcio Italiano</p>
+          <p class="text-white/65 text-base sm:text-lg leading-relaxed mt-5 max-w-xl mx-auto lg:mx-0">Analisi, pronostici e dibattito sulla Serie A con i tipster Sono Micuccio, il Ninja e il Marziano, condotti dall'host Antonello Santopaolo. In più, interviste esclusive ai protagonisti del calcio.</p>
+          <div class="flex flex-col sm:flex-row gap-4 mt-8 justify-center lg:justify-start">
+            <a href="https://www.twitch.tv/unoxdue_" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all hover:scale-[1.03]">{{ m.play("w-5 h-5") }} Ascolta su Twitch</a>
+            <a href="https://www.youtube.com/@unoXdue" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 border border-white/25 hover:border-white/60 text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all">{{ m.youtube("w-5 h-5") }} Segui su YouTube</a>
+          </div>
+          <div class="flex items-center gap-3 mt-9 justify-center lg:justify-start">
+            <a href="https://www.twitch.tv/unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="Twitch" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.twitch("w-5 h-5") }}</a>
+            <a href="https://www.youtube.com/@unoXdue" target="_blank" rel="noopener noreferrer" aria-label="YouTube" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.youtube("w-5 h-5") }}</a>
+            <a href="https://www.instagram.com/unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.instagram("w-5 h-5") }}</a>
+            <a href="https://www.tiktok.com/@unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="TikTok" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.tiktok("w-[18px] h-[18px]") }}</a>
+          </div>
+        </div>
+        <div class="flex justify-center lg:justify-end">
+          <div class="relative animate-floaty">
+            <div class="absolute inset-0 rounded-full bg-[#EA4E1B]/30 blur-3xl scale-110"></div>
+            <img src="{{ site_url }}/logo.jpg" alt="UnoXdue podcast logo" class="relative w-64 h-64 sm:w-80 sm:h-80 lg:w-[26rem] lg:h-[26rem] rounded-full object-cover ring-4 ring-[#EA4E1B]/30 shadow-2xl" />
+          </div>
+        </div>
       </div>
+      {{ m.marquee_strip() }}
+    </section>
+
+    {% if episodes %}
+    <section class="bg-[#f4ebe1] py-20 lg:py-28">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto">
+          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Contenuti recenti</span>
+          <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Ultimi episodi</h2>
+          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Rimani aggiornato con i nostri ultimi episodi dedicati alla Serie A.</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-7 mt-14">
+          {% for it in episodes %}{{ m.content_card(it.url, it.title, "Episodio", it.thumbnail, "YouTube", "#FF0000", true) }}{% endfor %}
+        </div>
+        <div class="text-center mt-12">
+          <a href="{{ site_url }}/episodi/" class="inline-flex items-center gap-2 bg-[#1a1411] hover:bg-[#EA4E1B] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">Vedi tutti gli episodi {{ m.chevron("w-4 h-4") }}</a>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {% if interviews %}
+    <section class="bg-[#fbf7f2] py-20 lg:py-28">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto">
+          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Esclusive</span>
+          <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Ultime interviste</h2>
+          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano.</p>
+        </div>
+        <div class="grid md:grid-cols-3 gap-7 mt-14">
+          {% for it in interviews %}{{ m.content_card(it.url, it.title, "Intervista", it.thumbnail, "YouTube", "#FF0000", true) }}{% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    <section class="relative bg-[#14100e] py-20 lg:py-24 overflow-hidden">
+      <div class="pointer-events-none absolute -bottom-32 right-0 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
+      <div class="relative max-w-5xl mx-auto px-5 lg:px-8 text-center">
+        <span class="inline-flex items-center gap-2 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.trending("w-4 h-4") }} Pronostici &amp; team</span>
+        <h2 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Vivi UnoXdue</h2>
+        <p class="text-white/60 text-base sm:text-lg mt-4 max-w-2xl mx-auto">Tre tipster e un host, le giocate per ogni giornata di Serie A e tutte le interviste esclusive.</p>
+        <div class="flex flex-col sm:flex-row gap-4 mt-8 justify-center">
+          <a href="{{ site_url }}/pronostici/" class="inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all hover:scale-[1.03]">Vai ai pronostici {{ m.chevron("w-4 h-4") }}</a>
+          <a href="{{ site_url }}/team/" class="inline-flex items-center justify-center gap-2 border border-white/25 hover:border-white/60 text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all">Scopri il team</a>
+        </div>
+      </div>
+    </section>
 {% endblock %}

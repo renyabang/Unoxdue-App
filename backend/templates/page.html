@@ -13,7 +13,22 @@
     </script>
 {% endblock %}
 {% block main %}
-      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <span>{{ page_title }}</span></nav>
-      <h1>{{ page_title }}</h1>
-      {{ body_html | safe }}
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e]">
+      <div class="pointer-events-none absolute -top-24 -right-16 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/15 blur-[120px]"></div>
+      <div class="relative max-w-3xl mx-auto px-5 lg:px-8 pt-10 pb-12">
+        <nav class="flex items-center gap-2 text-xs text-white/50" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">{{ page_title }}</span>
+        </nav>
+        <h1 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-5 leading-none">{{ page_title }}</h1>
+        <p class="text-white/60 text-base sm:text-lg mt-4">{{ page_desc }}</p>
+      </div>
+    </section>
+
+    <section class="bg-[#fbf7f2] py-12 lg:py-16">
+      <div class="uxd-prose max-w-3xl mx-auto px-5 lg:px-8">
+        {{ body_html | safe }}
+      </div>
+    </section>
 {% endblock %}

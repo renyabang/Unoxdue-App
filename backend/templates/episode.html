@@ -22,25 +22,48 @@
     </script>
 {% endblock %}
 {% block main %}
-      <nav class="crumbs" aria-label="breadcrumb">
-        <a href="{{ site_url }}/">Home</a> &rsaquo;
-        <a href="{{ site_url }}/{{ ep.section }}/">{{ ep.section_label }}</a> &rsaquo;
-        <span>{{ ep.title }}</span>
-      </nav>
-      <span class="badge">{{ ep.type_label }}</span>
-      <h1>{{ ep.h1 }}</h1>
-      <p class="meta">{% if ep.guest_name %}Ospite: <strong>{{ ep.guest_name }}</strong> &middot; {% endif %}Pubblicato il {{ ep.published_human }} &middot; Durata {{ ep.duration }}</p>
-      <img class="thumb" src="{{ ep.thumbnail }}" alt="{{ ep.title }}" width="980" height="551" />
-      <p class="lead">{{ ep.excerpt }}</p>
-      <h2>Di cosa si parla</h2>
-      {% for p in ep.summary %}<p>{{ p }}</p>{% endfor %}
-      {% if ep.topics %}<h2>Argomenti principali</h2><div class="chips">{% for t in ep.topics %}<span>{{ t }}</span>{% endfor %}</div>{% endif %}
-      {% if ep.chapters %}<h2>Capitoli</h2>{% for c in ep.chapters %}<div class="chapter"><span class="t">{{ c.time }}</span><span>{{ c.label }}</span></div>{% endfor %}{% endif %}
-      {% if ep.quotes %}<h2>Citazioni</h2>{% for q in ep.quotes %}<blockquote>{{ q }}</blockquote>{% endfor %}{% endif %}
-      {% if ep.participants %}<h2>Partecipanti</h2><ul>{% for pa in ep.participants %}<li><a href="{{ site_url }}/team/{{ pa.slug }}/">{{ pa.name }}</a>{% if pa.role %} &mdash; {{ pa.role }}{% endif %}</li>{% endfor %}</ul>{% endif %}
-      {% if ep.prediction_url %}<h2>Pronostici della puntata</h2><p><a href="{{ ep.prediction_url }}">Vai ai pronostici collegati a questo episodio &rarr;</a></p>{% endif %}
-      <h2>Guarda e ascolta</h2>
-      <a class="cta" href="https://www.youtube.com/watch?v={{ ep.youtube_id }}">Guarda su YouTube</a>
-      <a class="cta" href="https://www.twitch.tv/unoxdue_">Segui su Twitch</a>
-      {% if ep.related %}<h2>Contenuti correlati</h2><div class="related">{% for r in ep.related %}<a href="{{ site_url }}/{{ r.section }}/{{ r.slug }}/">{{ r.title }}</a>{% endfor %}</div>{% endif %}
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e]">
+      <div class="pointer-events-none absolute -top-24 -right-16 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/15 blur-[120px]"></div>
+      <div class="relative max-w-4xl mx-auto px-5 lg:px-8 pt-10 pb-12">
+        <nav class="flex items-center gap-2 text-xs text-white/50 flex-wrap" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <a href="{{ site_url }}/{{ ep.section }}/" class="hover:text-white">{{ ep.section_label }}</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">{{ ep.title }}</span>
+        </nav>
+        <span class="inline-flex items-center mt-5 bg-[#EA4E1B] text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{{ ep.type_label }}</span>
+        <h1 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-4 leading-[1.03]">{{ ep.h1 }}</h1>
+        <p class="text-white/55 text-sm mt-5 flex items-center gap-2 flex-wrap">{% if ep.guest_name %}<span>Ospite: <strong class="text-white/80">{{ ep.guest_name }}</strong></span> &middot; {% endif %}<span>Pubblicato il {{ ep.published_human }}</span> &middot; <span class="inline-flex items-center gap-1">{{ m.clock("w-3.5 h-3.5") }} {{ ep.duration }}</span></p>
+      </div>
+    </section>
+
+    <section class="bg-[#fbf7f2] py-12 lg:py-16">
+      <div class="max-w-4xl mx-auto px-5 lg:px-8">
+        <a href="https://www.youtube.com/watch?v={{ ep.youtube_id }}" target="_blank" rel="noopener noreferrer" class="group relative block rounded-2xl overflow-hidden border border-[#ecdfce] shadow-lg bg-[#14100e]">
+          <img src="{{ ep.thumbnail }}" alt="{{ ep.title }}" width="980" height="551" class="w-full aspect-video object-cover transition-transform duration-500 group-hover:scale-[1.03]" />
+          <span class="absolute inset-0 flex items-center justify-center"><span class="w-16 h-16 rounded-full bg-[#EA4E1B] flex items-center justify-center shadow-xl transition-transform group-hover:scale-110">{{ m.play("w-7 h-7 text-white ml-1") }}</span></span>
+        </a>
+
+        {% if ep.excerpt %}<p class="text-[#4a3d34] text-lg sm:text-xl leading-relaxed mt-8">{{ ep.excerpt }}</p>{% endif %}
+
+        {% if ep.summary %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-3 leading-tight">Di cosa si parla</h2>{% for p in ep.summary %}<p class="text-[#4a3d34] text-base sm:text-lg leading-relaxed mt-3">{{ p }}</p>{% endfor %}{% endif %}
+
+        {% if ep.topics %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-4 leading-tight">Argomenti principali</h2><div class="flex flex-wrap gap-2.5">{% for t in ep.topics %}<span class="inline-block bg-white border border-[#ecdfce] rounded-full px-4 py-2 text-sm text-[#4a3d34]">{{ t }}</span>{% endfor %}</div>{% endif %}
+
+        {% if ep.chapters %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-4 leading-tight">Capitoli</h2><div class="bg-white border border-[#ecdfce] rounded-2xl overflow-hidden divide-y divide-[#efe4d6]">{% for c in ep.chapters %}<div class="flex items-center gap-4 px-5 py-3.5"><span class="text-[#EA4E1B] font-bold tabular-nums min-w-[56px]">{{ c.time }}</span><span class="text-[#4a3d34]">{{ c.label }}</span></div>{% endfor %}</div>{% endif %}
+
+        {% if ep.quotes %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-4 leading-tight">Citazioni</h2>{% for q in ep.quotes %}<blockquote class="bg-white border-l-4 border-[#EA4E1B] rounded-r-xl px-5 py-4 italic text-[#4a3d34] mt-3 shadow-sm">&ldquo;{{ q }}&rdquo;</blockquote>{% endfor %}{% endif %}
+
+        {% if ep.participants %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-10 mb-4 leading-tight">Partecipanti</h2><div class="flex flex-wrap gap-3">{% for pa in ep.participants %}<a href="{{ site_url }}/team/{{ pa.slug }}/" class="inline-flex items-center gap-2 bg-white border border-[#ecdfce] hover:border-[#EA4E1B]/50 rounded-full px-4 py-2 text-sm font-semibold text-[#1a1411] transition-colors">{{ pa.name }}{% if pa.role %} <span class="text-[#9c8b7d] font-normal">— {{ pa.role }}</span>{% endif %}</a>{% endfor %}</div>{% endif %}
+
+        {% if ep.prediction_url %}<div class="mt-10 bg-[#14100e] rounded-2xl p-6 flex items-center justify-between gap-4 flex-wrap"><div><p class="text-[#EA4E1B] text-xs font-bold uppercase tracking-wide">Pronostici della puntata</p><p class="text-white font-archivo font-extrabold text-lg mt-1">Vai ai pronostici collegati</p></div><a href="{{ ep.prediction_url }}" class="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide text-sm px-5 py-3 rounded-full transition-colors">Apri {{ m.chevron("w-4 h-4") }}</a></div>{% endif %}
+
+        <div class="flex flex-col sm:flex-row gap-4 mt-10">
+          <a href="https://www.youtube.com/watch?v={{ ep.youtube_id }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">{{ m.youtube("w-5 h-5") }} Guarda su YouTube</a>
+          <a href="https://www.twitch.tv/unoxdue_" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 border border-[#1a1411]/20 hover:border-[#EA4E1B] text-[#1a1411] font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">{{ m.twitch("w-5 h-5") }} Segui su Twitch</a>
+        </div>
+
+        {% if ep.related %}<h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mt-12 mb-4 leading-tight">Contenuti correlati</h2><div class="grid sm:grid-cols-2 gap-3">{% for r in ep.related %}<a href="{{ site_url }}/{{ r.section }}/{{ r.slug }}/" class="block bg-white border border-[#ecdfce] hover:border-[#EA4E1B]/50 rounded-xl px-5 py-4 font-semibold text-[#1a1411] transition-colors">{{ r.title }}</a>{% endfor %}</div>{% endif %}
+      </div>
+    </section>
 {% endblock %}

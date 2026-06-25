@@ -1,14 +1,14 @@
 {% extends "base.html" %}
-{% block title %}{{ m.name }} | Team UnoXdue{% endblock %}
+{% block title %}{{ m_.name }} | Team UnoXdue{% endblock %}
 {% block head %}
-    <meta name="description" content="{{ m.meta_description }}" />
+    <meta name="description" content="{{ m_.meta_description }}" />
     <link rel="canonical" href="{{ canonical }}" />
     <meta name="robots" content="index, follow" />
     <meta property="og:type" content="profile" />
-    <meta property="og:title" content="{{ m.name }} | UnoXdue" />
-    <meta property="og:description" content="{{ m.meta_description }}" />
+    <meta property="og:title" content="{{ m_.name }} | UnoXdue" />
+    <meta property="og:description" content="{{ m_.meta_description }}" />
     <meta property="og:url" content="{{ canonical }}" />
-    <meta property="og:image" content="{{ m.photo_abs }}" />
+    <meta property="og:image" content="{{ m_.photo_abs }}" />
     <script type="application/ld+json">
 {{ jsonld | safe }}
     </script>
@@ -17,12 +17,42 @@
     </script>
 {% endblock %}
 {% block main %}
-      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <a href="{{ site_url }}/team/">Il team</a> &rsaquo; <span>{{ m.name }}</span></nav>
-      <span class="badge">{{ m.badge }}</span>
-      <h1>{{ m.name }}</h1>
-      <p class="meta">{{ m.role }}</p>
-      <img class="thumb" src="{{ m.photo_abs }}" alt="{{ m.name }}" style="max-width:360px" />
-      <p class="lead">{{ m.bio }}</p>
-      {% if m.instagram %}<p><a class="cta" href="{{ m.instagram }}">Instagram</a></p>{% endif %}
-      {% if related %}<h2>Contenuti in cui compare</h2><div class="related">{% for r in related %}<a href="{{ site_url }}/{{ r.section }}/{{ r.slug }}/">{{ r.title }}</a>{% endfor %}</div>{% endif %}
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e]">
+      <div class="pointer-events-none absolute -top-24 -right-16 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/15 blur-[120px]"></div>
+      <div class="relative max-w-5xl mx-auto px-5 lg:px-8 pt-10 pb-12">
+        <nav class="flex items-center gap-2 text-xs text-white/50 flex-wrap" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <a href="{{ site_url }}/team/" class="hover:text-white">Il team</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">{{ m_.name }}</span>
+        </nav>
+        <div class="grid md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-8 lg:gap-12 items-center mt-6">
+          <div class="relative">
+            <div class="absolute -inset-3 rounded-[2rem] bg-[#EA4E1B]/20 blur-2xl"></div>
+            <img src="{{ m_.photo_abs }}" alt="{{ m_.name }}" class="relative w-full aspect-[4/5] object-cover object-top rounded-[2rem] ring-1 ring-white/10 shadow-2xl max-w-sm mx-auto md:mx-0" />
+          </div>
+          <div>
+            {% if m_.badge %}<span class="inline-flex items-center bg-[#EA4E1B] text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{{ m_.badge }}</span>{% endif %}
+            <h1 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-4 leading-none">{{ m_.name }}</h1>
+            {% if m_.role %}<div class="flex items-center gap-2 mt-3 text-[#F6D9BF]">{{ m.mic("w-4 h-4 text-[#EA4E1B]") }}<span class="text-sm font-semibold uppercase tracking-wide">{{ m_.role }}</span></div>{% endif %}
+            <div class="relative mt-6">
+              {{ m.quote("absolute -left-1 -top-2 w-8 h-8 text-[#EA4E1B]/25") }}
+              <p class="text-white/70 text-base sm:text-lg leading-relaxed pl-7">{{ m_.bio }}</p>
+            </div>
+            {% if m_.instagram %}<a href="{{ m_.instagram }}" target="_blank" rel="noopener noreferrer" class="mt-7 inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide text-sm px-5 py-3 rounded-full transition-colors">{{ m.instagram("w-4 h-4") }} Segui su Instagram</a>{% endif %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {% if related %}
+    <section class="bg-[#fbf7f2] py-14 lg:py-20">
+      <div class="max-w-5xl mx-auto px-5 lg:px-8">
+        <h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl mb-5 leading-tight">Contenuti in cui compare</h2>
+        <div class="grid sm:grid-cols-2 gap-3">
+          {% for r in related %}<a href="{{ site_url }}/{{ r.section }}/{{ r.slug }}/" class="block bg-white border border-[#ecdfce] hover:border-[#EA4E1B]/50 rounded-xl px-5 py-4 font-semibold text-[#1a1411] transition-colors">{{ r.title }}</a>{% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
 {% endblock %}
