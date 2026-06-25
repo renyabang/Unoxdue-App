@@ -148,15 +148,23 @@ class PickIn(BaseModel):
     total_odds: str = ""
     selections: List[dict] = []
     intro: Optional[str] = None
+    source_image: Optional[str] = None
+    ocr_upload_id: Optional[str] = None
+    mapping_version: Optional[str] = None
+    needs_review: bool = False
 
 
 @api_router.post("/admin/predictions/add-pick")
 async def add_pick(payload: PickIn, admin: str = Depends(get_current_admin)):
     """Aggiunge/aggiorna la giocata di UN tipster nella pagina della giornata.
-    Vincolo: una sola giocata per tipster per giornata."""
+    Vincolo: una sola giocata per tipster per giornata.
+    Le quote restano quelle rilevate dalla grafica del team (mai aggiornate da API esterne)."""
     key = {"competition": payload.competition, "season": payload.season, "round": payload.round}
     pick = {"tipster": payload.tipster, "type": payload.type,
-            "total_odds": payload.total_odds, "selections": payload.selections}
+            "total_odds": payload.total_odds, "selections": payload.selections,
+            "source_image": payload.source_image, "ocr_upload_id": payload.ocr_upload_id,
+            "mapping_version": payload.mapping_version, "needs_review": payload.needs_review,
+            "odds_disclaimer": auto.ODDS_DISCLAIMER}
     now = datetime.now(timezone.utc).strftime("%d/%m/%Y %H:%M")
     doc = await db.predictions.find_one(key)
     if not doc:
@@ -167,6 +175,11 @@ async def add_pick(payload: PickIn, admin: str = Depends(get_current_admin)):
         picks = [p for p in doc.get("picks", []) if p.get("tipster") != payload.tipster]
         picks.append(pick)
         await db.predictions.update_one(key, {"$set": {"picks": picks, "updated_at": now}})
+    # marca l'upload OCR come confermato
+    if payload.ocr_upload_id:
+        await db.slip_uploads.update_one({"id": payload.ocr_upload_id},
+                                         {"$set": {"status": "confermato",
+                                                   "confirmed_at": datetime.now(timezone.utc).isoformat()}})
     url = f'{SITE_URL}/pronostici/serie-a/{payload.season}/giornata-{payload.round}/'
     await auto.log_automation("prediction", "ok", f"Giocata di {payload.tipster} salvata (giornata {payload.round})")
     return {"ok": True, "public_url": url}
@@ -174,19 +187,43 @@ async def add_pick(payload: PickIn, admin: str = Depends(get_current_admin)):
 
 @api_router.post("/admin/predictions/ocr")
 async def predictions_ocr(image: UploadFile = File(...), admin: str = Depends(get_current_admin)):
-    """Carica l'immagine della schedina -> OCR Vision -> dati strutturati (senza dati sensibili)."""
+    """Carica la grafica comparativa -> OCR Vision -> dati strutturati (quote per bookmaker, senza dati sensibili).
+    Persiste immagine sorgente + testo OCR + dati normalizzati + versione mapping."""
     content = await image.read()
     mime = image.content_type or "image/jpeg"
-    # salva file caricato
     ext = ".png" if "png" in mime else ".jpg"
     fname = f"slip-{uuid.uuid4().hex[:10]}{ext}"
     (UPLOAD_DIR / fname).write_bytes(content)
+    image_url = f"/api/uploads/{fname}"
     result = await auto.ocr_slip(content, mime)
-    result["uploaded_file"] = f"/api/uploads/{fname}"
+    upload_id = str(uuid.uuid4())
+    upload_doc = {
+        "id": upload_id,
+        "image_path": image_url,
+        "ocr_raw": result.get("raw_text", "") if result.get("ok") else result.get("raw", ""),
+        "extracted": result.get("data") if result.get("ok") else None,
+        "mapping_version": auto.MAPPING_VERSION,
+        "ok": bool(result.get("ok")),
+        "error": result.get("error"),
+        "status": "da_verificare",
+        "uploaded_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.slip_uploads.insert_one(dict(upload_doc))
+    result["uploaded_file"] = image_url
+    result["upload_id"] = upload_id
+    result["disclaimer"] = auto.ODDS_DISCLAIMER
     if result.get("ok"):
-        # suggerisci stagione
-        result["suggested_season"] = auto.compute_season(datetime.now())
+        if not (result["data"].get("round")):
+            result["suggested_season"] = auto.compute_season(datetime.now())
+        else:
+            result["suggested_season"] = auto.compute_season(datetime.now())
     return result
+
+
+@api_router.get("/admin/slip-uploads")
+async def admin_slip_uploads(limit: int = 30, admin: str = Depends(get_current_admin)):
+    items = await db.slip_uploads.find({}, {"_id": 0}).sort("uploaded_at", -1).to_list(limit)
+    return items
 
 
 # ============================ Admin: team & press ============================

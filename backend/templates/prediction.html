@@ -56,7 +56,7 @@
               {% for s in pick.selections %}
               <div class="px-5 py-3.5">
                 <p class="text-[11px] text-[#9c8b7d] font-semibold uppercase tracking-wide">{{ s.competition }} &middot; {{ s.date }}</p>
-                <p class="font-archivo font-extrabold text-[#1a1411] mt-0.5">{{ s.match }}</p>
+                <p class="font-archivo font-extrabold text-[#1a1411] mt-0.5">{{ s.match }}{% if s.needs_review %} <span class="align-middle text-[10px] font-bold uppercase tracking-wide text-[#c2410c] bg-[#fde7d6] px-2 py-0.5 rounded-full">Da verificare</span>{% endif %}</p>
                 <div class="flex items-center justify-between mt-1.5 gap-3">
                   <span class="text-sm text-[#6b5d52]">{{ s.market }}</span>
                   <span class="inline-flex items-center gap-2 flex-shrink-0">
@@ -64,6 +64,18 @@
                     <span class="text-sm font-bold text-white bg-[#EA4E1B] px-2 py-0.5 rounded-md tabular-nums">{{ s.odds }}</span>
                   </span>
                 </div>
+                {% if s.bookmakers and s.bookmakers|length > 0 %}
+                <div class="mt-2.5 flex flex-wrap gap-1.5">
+                  {% for b in s.bookmakers %}
+                  {% if b.bookmaker or b.odds %}
+                  <span class="inline-flex items-center gap-1.5 text-[11px] bg-[#fbf7f2] border border-[#efe4d6] rounded-full px-2 py-0.5">
+                    <span class="text-[#6b5d52] font-semibold">{{ b.bookmaker }}</span>
+                    <span class="text-[#1a1411] font-bold tabular-nums">{{ b.odds or '—' }}</span>
+                  </span>
+                  {% endif %}
+                  {% endfor %}
+                </div>
+                {% endif %}
               </div>
               {% endfor %}
             </div>
@@ -78,7 +90,7 @@
         <div class="mt-12 max-w-3xl mx-auto">
           <div class="flex items-start gap-3 bg-white/[0.04] border border-white/10 rounded-2xl px-5 py-4">
             {{ m.shield("w-5 h-5 text-[#EA4E1B] flex-shrink-0 mt-0.5") }}
-            <p class="text-white/55 text-sm leading-relaxed"><span class="font-bold text-white/80">18+ &middot; Gioca responsabilmente.</span> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Le quote sono indicative al momento della pubblicazione e possono variare.</p>
+            <p class="text-white/55 text-sm leading-relaxed"><span class="font-bold text-white/80">18+ &middot; Gioca responsabilmente.</span> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Quote rilevate dalla grafica comparativa fornita dal team al momento della pubblicazione. Le quote possono variare.</p>
           </div>
         </div>
       </div>

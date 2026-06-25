@@ -1,0 +1,25 @@
+{
+  "summary": "Step 7A (Schedine/Pronostici - OCR comparative slip upload) frontend flow tested end-to-end and passed 100%. Login admin -> /admin/schedine -> upload /tmp/test_comparativa.png -> 'Analizza grafica' (real OpenAI Vision via Emergent LLM key, ~15s) -> 3 selections con 3 bookmaker (Snai/Sisal/Bet365) prefillati, tipster='Sono Micuccio', stagione='2025-2026', giornata='38'. Privacy verificata (no IMPORTO/BONUS/VINCITA nel pannello selezioni). Editing quote selezione/bookmaker, add/remove bookmaker, toggle testo OCR raw, salvataggio con round=95 e verifica pagina pubblica SSR (status 200, disclaimer esatto + chip Snai/Sisal/Bet365 presenti). Non-regression /admin, /admin/grafiche, /admin/youtube OK (no JS errors).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "SlipUploader.jsx (222 lines) ben strutturato, tutti i data-testid presenti come da spec.",
+    "Disclaimer hardcoded in due posti (SlipUploader.jsx riga 6 + template prediction.html): tenere sincronizzato. Suggerimento: esportare da automations.ODDS_DISCLAIMER e leggere via /api/config in frontend per single source of truth.",
+    "Il flag s.needs_review viene resettato a false anche quando si modifica il bookmaker (updateBook resetta needs_review della singola riga bookmaker, comportamento corretto), e quando l'utente cambia la quota della selezione (updateSel imposta needs_review=false sulla selezione): comportamento atteso e coerente con UX.",
+    "Anchor 'Anteprima pagina' apre /api/seo/... (SSR HTML) in nuova tab: corretto per audit, ma valutare se in futuro è meglio puntare alla rotta SPA pubblica.",
+    "Nessun loading/disabled state sul pulsante 'Salva giocata' durante il save -> doppio click possibile. Minor: aggiungere disabled durante richiesta."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
+  "test_credentials": "Admin: admin@unoxdue.net / ADMIN_PASSWORD da /app/backend/.env (mascherata)",
+  "seed_data_creation": "Salvata 1 giocata di test con season=2025-2026, round=95 (round alto per non sovrascrivere dati reali) via flusso UI normale.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Step 7A passato. Selezioni mostrano confidence 96-99%, 3 selezioni con bookmaker rows pre-popolati Snai/Sisal/Bet365. Per selezioni con quota principale vuota viene mostrato il badge 'Da verificare' + warning slip-review-warning (confermato 3 'Da verificare' nel test perche' la grafica ha quote singole vuote ma bookmaker pieni). Pagina SSR pubblica /api/seo/pronostici/serie-a/2025-2026/giornata-95 status 200 con disclaimer esatto + chip bookmaker."
+}

@@ -247,7 +247,7 @@ async def build_html(pred: dict, pick: dict, fmt: str, photo_uri, logo_uri, qr_u
   <div class="total"><span class="tl">Quota totale</span>{total_html}</div>
   <div class="foot">
     <div class="qr">{f'<img src="{qr_uri}" alt="QR">' if qr_uri else ''}<div class="ql">{_esc(qr_label)}</div></div>
-    <div class="disc"><b>18+ &middot; Gioca responsabilmente.</b><br>Quote indicative, possono variare.{(' &middot; Agg. ' + _esc(updated)) if updated else ''}</div>
+    <div class="disc"><b>18+ &middot; Gioca responsabilmente.</b><br>Quote rilevate dalla grafica comparativa fornita dal team al momento della pubblicazione. Le quote possono variare.{(' &middot; Agg. ' + _esc(updated)) if updated else ''}</div>
   </div>
 </div></div></body></html>"""
 

@@ -142,17 +142,39 @@ async def youtube_sync(channel_id: str = None, auto_publish: bool = True) -> dic
     return summary
 
 
-# ----------------------- OCR schedine (OpenAI Vision via Emergent) -----------------------
-SENSITIVE_KEYS = {"importo", "puntata", "bonus", "vincita", "saldo", "stake", "payout", "winnings", "balance"}
+# ----------------------- OCR grafiche comparative (OpenAI Vision via Emergent) -----------------------
+# Dati VIETATI (rimossi sempre dall'output, mai pubblicati nelle grafiche UnoXdue):
+SENSITIVE_KEYS = {"importo", "puntata", "bonus", "vincita", "saldo", "stake", "payout",
+                  "winnings", "balance", "vincita_potenziale", "vincita_attesa", "deposito"}
+
+# Soglia confidence sotto la quale il campo va marcato "Da verificare" (mai inventare il valore).
+LOW_CONF = 0.6
+
+# Versione corrente dello schema di mapping OCR (per audit/persistenza).
+MAPPING_VERSION = "1.0"
+
+# Disclaimer obbligatorio: le quote provengono dalla grafica del team al momento della pubblicazione.
+ODDS_DISCLAIMER = ("Quote rilevate dalla grafica comparativa fornita dal team al momento della "
+                   "pubblicazione. Le quote possono variare.")
 
 OCR_PROMPT = (
-    "Sei un estrattore di dati da schedine di scommesse sportive. "
-    "Analizza l'immagine ed estrai SOLO i dati sportivi in JSON valido. "
-    "IGNORA e NON includere: importo giocato, puntata, bonus, vincita potenziale, "
-    "saldo, dati personali, numeri identificativi e il logo/branding dell'operatore. "
-    "Restituisci esclusivamente questo JSON: "
-    '{"type": "Multipla|Singola", "selections": [{"competition": "", "date": "", "match": "", "market": "", "pick": "", "odds": ""}], "total_odds": ""}. '
-    "Non aggiungere testo prima o dopo il JSON."
+    "Sei un estrattore di dati da GRAFICHE COMPARATIVE di pronostici sportivi (confronto quote tra bookmaker). "
+    "Analizza l'immagine ed estrai SOLO dati sportivi in JSON valido. "
+    "IGNORA e NON includere MAI: importo giocato/puntata, bonus, vincita potenziale o attesa, saldo, "
+    "dati personali, numeri identificativi della schedina e il branding dell'operatore della schedina originale. "
+    "Estrai, quando presenti: tipster (chi propone la giocata), competition (es. Serie A), "
+    "round (numero giornata, intero se presente), type (Multipla|Singola), total_odds (quota complessiva), "
+    "e selections (lista). Ogni selection ha: match (Squadra1 - Squadra2), date, market (es. Esito finale, "
+    "Over/Under, GG/NG), pick (selezione scelta es. 1, X, 2, Over 2.5, GG), odds (quota proposta per la selezione), "
+    "confidence (0..1, tua stima di affidabilità della lettura della riga), e bookmakers: il confronto quote tra "
+    "operatori per QUESTA selezione, ognuno con bookmaker (nome operatore es. Snai, Sisal, Bet365, Eurobet, Goldbet, "
+    "Lottomatica, Planetwin), odds (quota), confidence (0..1) e bbox ([x,y,w,h] normalizzati 0..1 se ricavabile, altrimenti null). "
+    "REGOLE: non inventare valori; se non leggi un dato usa stringa vuota o null e confidence bassa. "
+    "Includi anche raw_text: il testo letto dall'immagine (verbatim, per audit). "
+    "Restituisci ESCLUSIVAMENTE questo JSON, senza testo prima o dopo: "
+    '{"tipster":"","competition":"","round":null,"type":"Multipla","total_odds":"","raw_text":"",'
+    '"selections":[{"match":"","date":"","market":"","pick":"","odds":"","confidence":0.0,'
+    '"bookmakers":[{"bookmaker":"","odds":"","confidence":0.0,"bbox":null}]}]}'
 )
 
 
@@ -164,34 +186,101 @@ def _strip_json(text: str) -> str:
     return text.strip()
 
 
+def _to_float(v):
+    try:
+        return float(v)
+    except (TypeError, ValueError):
+        return None
+
+
+def _normalize_extracted(data: dict) -> dict:
+    """Pulisce i dati sensibili (a ogni livello), normalizza i tipi e calcola i flag 'da verificare'.
+    NON inventa valori: i campi mancanti restano vuoti."""
+    def strip_sensitive(d: dict):
+        for k in list(d.keys()):
+            if k.lower() in SENSITIVE_KEYS:
+                d.pop(k, None)
+
+    strip_sensitive(data)
+    out_sels = []
+    for sel in (data.get("selections") or []):
+        if not isinstance(sel, dict):
+            continue
+        strip_sensitive(sel)
+        conf = _to_float(sel.get("confidence"))
+        books = []
+        low_book = False
+        for b in (sel.get("bookmakers") or []):
+            if not isinstance(b, dict):
+                continue
+            strip_sensitive(b)
+            bconf = _to_float(b.get("confidence"))
+            odds = str(b.get("odds") or "").strip()
+            needs = (bconf is not None and bconf < LOW_CONF) or not odds or not str(b.get("bookmaker") or "").strip()
+            low_book = low_book or needs
+            books.append({
+                "bookmaker": str(b.get("bookmaker") or "").strip(),
+                "odds": odds,
+                "confidence": bconf,
+                "bbox": b.get("bbox") if isinstance(b.get("bbox"), list) else None,
+                "needs_review": needs,
+            })
+        odds = str(sel.get("odds") or "").strip()
+        needs_review = (conf is not None and conf < LOW_CONF) or not odds or low_book
+        out_sels.append({
+            "match": str(sel.get("match") or "").strip(),
+            "date": str(sel.get("date") or "").strip(),
+            "market": str(sel.get("market") or "").strip(),
+            "pick": str(sel.get("pick") or "").strip(),
+            "odds": odds,
+            "competition": str(sel.get("competition") or data.get("competition") or "").strip(),
+            "confidence": conf,
+            "bookmakers": books,
+            "needs_review": needs_review,
+        })
+    rnd = data.get("round")
+    try:
+        rnd = int(rnd) if rnd not in (None, "") else None
+    except (TypeError, ValueError):
+        rnd = None
+    return {
+        "tipster": str(data.get("tipster") or "").strip(),
+        "competition": str(data.get("competition") or "Serie A").strip() or "Serie A",
+        "round": rnd,
+        "type": str(data.get("type") or "Multipla").strip() or "Multipla",
+        "total_odds": str(data.get("total_odds") or "").strip(),
+        "raw_text": str(data.get("raw_text") or "").strip(),
+        "selections": out_sels,
+        "needs_review": any(s["needs_review"] for s in out_sels),
+        "mapping_version": MAPPING_VERSION,
+    }
+
+
 async def ocr_slip(image_bytes: bytes, mime: str = "image/jpeg") -> dict:
     if not EMERGENT_LLM_KEY:
         return {"ok": False, "demo": True, "error": "EMERGENT_LLM_KEY non configurata"}
+    raw = ""
     try:
         from emergentintegrations.llm.chat import LlmChat, UserMessage, ImageContent
         b64 = base64.b64encode(image_bytes).decode("utf-8")
         chat = LlmChat(
             api_key=EMERGENT_LLM_KEY,
             session_id=f"ocr-{uuid.uuid4().hex[:8]}",
-            system_message="Estrai dati strutturati da immagini di schedine. Rispondi solo con JSON.",
+            system_message="Estrai dati strutturati da grafiche comparative di pronostici. Rispondi solo con JSON.",
         ).with_model("openai", VISION_MODEL)
         msg = UserMessage(text=OCR_PROMPT, file_contents=[ImageContent(image_base64=b64)])
         resp = await chat.send_message(msg)
         raw = resp if isinstance(resp, str) else str(resp)
-        data = json.loads(_strip_json(raw))
-        # sanitizzazione difensiva
-        for sel in data.get("selections", []):
-            for k in list(sel.keys()):
-                if k.lower() in SENSITIVE_KEYS:
-                    sel.pop(k, None)
-        data.pop("importo", None)
-        data.pop("bonus", None)
-        data.pop("vincita", None)
-        await log_automation("ocr_slip", "ok", f"Estratte {len(data.get('selections', []))} selezioni")
-        return {"ok": True, "data": data}
+        parsed = json.loads(_strip_json(raw))
+        data = _normalize_extracted(parsed)
+        await log_automation("ocr_slip", "ok",
+                             f"Estratte {len(data['selections'])} selezioni"
+                             + (" (alcuni campi da verificare)" if data["needs_review"] else ""),
+                             {"mapping_version": data["mapping_version"], "needs_review": data["needs_review"]})
+        return {"ok": True, "data": data, "raw_text": data.get("raw_text", "")}
     except json.JSONDecodeError as e:
         await log_automation("ocr_slip", "error", f"JSON non valido dall'OCR: {e}")
-        return {"ok": False, "error": "Risposta OCR non interpretabile", "raw": raw if 'raw' in dir() else ""}
+        return {"ok": False, "error": "Risposta OCR non interpretabile", "raw": raw}
     except Exception as e:
         await log_automation("ocr_slip", "error", f"OCR fallito: {e}")
         return {"ok": False, "error": str(e)}
