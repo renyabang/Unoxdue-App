@@ -1,0 +1,196 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{{ ep.seo_title }}</title>
+    <meta name="description" content="{{ ep.meta_description }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+
+    <!-- Open Graph -->
+    <meta property="og:type" content="video.episode" />
+    <meta property="og:title" content="{{ ep.seo_title }}" />
+    <meta property="og:description" content="{{ ep.meta_description }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ ep.thumbnail }}" />
+    <meta property="og:site_name" content="UnoXdue" />
+
+    <!-- Twitter -->
+    <meta name="twitter:card" content="summary_large_image" />
+    <meta name="twitter:title" content="{{ ep.seo_title }}" />
+    <meta name="twitter:description" content="{{ ep.meta_description }}" />
+    <meta name="twitter:image" content="{{ ep.thumbnail }}" />
+
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link
+      href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap"
+      rel="stylesheet"
+    />
+
+    <!-- Dati strutturati generati dinamicamente dal database -->
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+
+    <style>
+      :root {
+        --orange: #ea4e1b;
+        --dark: #14100e;
+        --cream: #fbf7f2;
+      }
+      * { box-sizing: border-box; }
+      body {
+        margin: 0;
+        font-family: "Inter", -apple-system, BlinkMacSystemFont, sans-serif;
+        background: var(--cream);
+        color: #1a1411;
+        line-height: 1.65;
+      }
+      a { color: var(--orange); text-decoration: none; }
+      a:hover { text-decoration: underline; }
+      .topbar {
+        background: var(--dark);
+        padding: 16px 0;
+      }
+      .wrap { max-width: 860px; margin: 0 auto; padding: 0 20px; }
+      .brand {
+        display: inline-flex; align-items: center; gap: 10px;
+        font-family: "Anton", sans-serif; color: #fff; font-size: 26px;
+        letter-spacing: 1px;
+      }
+      .brand img { width: 40px; height: 40px; border-radius: 50%; }
+      .brand .x { color: var(--orange); }
+      nav.crumbs { font-size: 13px; color: #6b5d52; margin: 24px 0 8px; }
+      nav.crumbs a { color: #6b5d52; }
+      h1 {
+        font-family: "Anton", sans-serif; font-weight: 400;
+        font-size: clamp(30px, 6vw, 52px); line-height: 1.05;
+        margin: 6px 0 14px;
+      }
+      .meta { font-size: 14px; color: #6b5d52; margin-bottom: 20px; }
+      .badge {
+        display: inline-block; background: var(--orange); color: #fff;
+        font-size: 12px; font-weight: 700; text-transform: uppercase;
+        padding: 4px 12px; border-radius: 999px; letter-spacing: .5px;
+      }
+      .thumb { width: 100%; border-radius: 16px; display: block; margin: 8px 0 24px; }
+      h2 {
+        font-family: "Anton", sans-serif; font-weight: 400;
+        font-size: 26px; margin: 34px 0 12px;
+      }
+      ul { padding-left: 20px; }
+      .chips span {
+        display: inline-block; background: #fff; border: 1px solid #ecdfce;
+        border-radius: 999px; padding: 6px 14px; margin: 0 8px 8px 0; font-size: 14px;
+      }
+      .chapter { display: flex; gap: 12px; padding: 8px 0; border-bottom: 1px solid #ecdfce; }
+      .chapter .t { color: var(--orange); font-weight: 700; min-width: 56px; }
+      blockquote {
+        margin: 14px 0; padding: 14px 18px; background: #fff;
+        border-left: 4px solid var(--orange); border-radius: 8px; font-style: italic;
+      }
+      .cta {
+        display: inline-block; background: var(--orange); color: #fff;
+        font-weight: 700; text-transform: uppercase; padding: 12px 22px;
+        border-radius: 999px; margin: 6px 8px 6px 0; letter-spacing: .4px;
+      }
+      .cta:hover { text-decoration: none; }
+      .related a { display: block; padding: 10px 0; border-bottom: 1px solid #ecdfce; font-weight: 600; color: #1a1411; }
+      footer { background: var(--dark); color: #b8a99c; margin-top: 50px; padding: 28px 0; font-size: 13px; }
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="wrap">
+        <a class="brand" href="{{ site_url }}/">
+          <img src="{{ site_url }}/logo.jpg" alt="UnoXdue" />
+          Uno<span class="x">X</span>due
+        </a>
+      </div>
+    </header>
+
+    <main class="wrap">
+      <nav class="crumbs" aria-label="breadcrumb">
+        <a href="{{ site_url }}/">Home</a> ›
+        <a href="{{ site_url }}/{{ ep.section }}/">{{ ep.section_label }}</a> ›
+        <span>{{ ep.title }}</span>
+      </nav>
+
+      <span class="badge">{{ ep.type_label }}</span>
+      <h1>{{ ep.h1 }}</h1>
+      <p class="meta">
+        {% if ep.guest_name %}Ospite: <strong>{{ ep.guest_name }}</strong> · {% endif %}
+        Pubblicato il {{ ep.published_human }} · Durata {{ ep.duration }}
+      </p>
+
+      <img class="thumb" src="{{ ep.thumbnail }}" alt="{{ ep.title }}" width="860" height="484" />
+
+      <p>{{ ep.excerpt }}</p>
+
+      <h2>Di cosa si parla</h2>
+      {% for p in ep.summary %}
+      <p>{{ p }}</p>
+      {% endfor %}
+
+      {% if ep.topics %}
+      <h2>Argomenti principali</h2>
+      <div class="chips">
+        {% for t in ep.topics %}<span>{{ t }}</span>{% endfor %}
+      </div>
+      {% endif %}
+
+      {% if ep.chapters %}
+      <h2>Capitoli</h2>
+      {% for c in ep.chapters %}
+      <div class="chapter"><span class="t">{{ c.time }}</span><span>{{ c.label }}</span></div>
+      {% endfor %}
+      {% endif %}
+
+      {% if ep.quotes %}
+      <h2>Citazioni</h2>
+      {% for q in ep.quotes %}
+      <blockquote>{{ q }}</blockquote>
+      {% endfor %}
+      {% endif %}
+
+      {% if ep.participants %}
+      <h2>Partecipanti</h2>
+      <ul>
+        {% for pa in ep.participants %}
+        <li><a href="{{ site_url }}/team/{{ pa.slug }}/">{{ pa.name }}</a>{% if pa.role %} — {{ pa.role }}{% endif %}</li>
+        {% endfor %}
+      </ul>
+      {% endif %}
+
+      {% if ep.prediction_url %}
+      <h2>Pronostici della puntata</h2>
+      <p><a href="{{ ep.prediction_url }}">Vai ai pronostici collegati a questo episodio →</a></p>
+      {% endif %}
+
+      <h2>Guarda e ascolta</h2>
+      <a class="cta" href="https://www.youtube.com/watch?v={{ ep.youtube_id }}">Guarda su YouTube</a>
+      <a class="cta" href="https://www.twitch.tv/unoxdue_">Segui su Twitch</a>
+
+      {% if ep.related %}
+      <h2>Contenuti correlati</h2>
+      <div class="related">
+        {% for r in ep.related %}
+        <a href="{{ site_url }}/{{ r.section }}/{{ r.slug }}/">{{ r.title }}</a>
+        {% endfor %}
+      </div>
+      {% endif %}
+    </main>
+
+    <footer>
+      <div class="wrap">
+        © {{ year }} UnoXdue · Il podcast del calcio italiano · Serie A ·
+        Pronostici · Interviste
+      </div>
+    </footer>
+  </body>
+</html>
