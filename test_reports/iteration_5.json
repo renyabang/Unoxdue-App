@@ -1,0 +1,23 @@
+{
+  "summary": "Targeted RETEST of the MEDIUM UI bug from iteration_4 (pick-msg not appearing after 'Salva dati' on /admin/grafiche). FIX VERIFIED: After clicking pick-edit-2025-2026-38-0, editing 'Quota totale' from 15.75 -> 16.50, and clicking pick-save-2025-2026-38-0, the editor closes correctly AND <p data-testid='pick-msg-2025-2026-38-0'> now appears in the DOM within ~200ms with the exact expected text 'Dati aggiornati. Ora puoi rigenerare.', AND it remains visible for 2+ seconds (verified by re-query after wait). Non-regression also PASS: predictions list count stable (2 preds, 4 pick-cards, 3 fmt previews) before and after save - the list no longer collapses/reloads empty, previously generated graphics previews remain visible during the parent reload. Original quota value 15.75 restored at end of test. Backend testing skipped per request.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_5.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Graphics.jsx fix is correct: the previous gate '!loading && preds.length > 0 && preds.map(...)' was unmounting PickCard children during parent load() refresh, wiping the local msg state. Current code at lines 204-215 always renders preds.map and only conditionally shows loader/empty placeholder, so PickCard remains mounted across the onChanged() reload and the local setMsg() survives. Good fix.",
+    "Note (non-blocking, carried over from iter_4): PickCard still uses key={i} (index) inside picks; works because backend keeps pick order stable. Recommendation only - not a bug."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100% (2/2 targeted checks PASS)"},
+  "test_credentials": "admin@unoxdue.net / **** (ADMIN_PASSWORD read from /app/backend/.env, NOT modified, masked in report).",
+  "seed_data_creation": "None. Reused existing pronostico season=2025-2026 round=38 pick index 0 (Sono Micuccio). Test value temporarily changed Quota totale 15.75 -> 16.50 then restored to 15.75 at the end of the test.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Iteration_4's single MEDIUM UI bug is now FIXED and verified. Flow on /admin/grafiche: open pick-editor -> change Quota totale -> click pick-save -> pick-msg with text 'Dati aggiornati. Ora puoi rigenerare.' appears within ~200ms inside <p data-testid='pick-msg-2025-2026-38-0'>, persists 2s+, editor closes, and the predictions list (preds=2, picks=4, fmt previews=3) remains mounted with previously generated graphics still visible - no flash of empty list during reload. All other flows from iteration_4 (login, LiveCard target switch, generate/rigenera all 3 formats, Contents filter + reprocess) were already PASS and were NOT retested per request.",
+  "rca_of_the_issue": "Root cause was correctly identified in iteration_4 and confirmed by this retest: parent Graphics component used '!loading && preds.length > 0 && preds.map(...)' so during load() triggered by onChanged() in saveEdit, loading=true caused PickCard to fully unmount, discarding its local msg state set just before. Fix applied in Graphics.jsx renders preds.map unconditionally (loader only when preds is empty), so PickCard stays mounted across the reload and local msg state survives. Verified by Playwright: msg present after 200ms, still present after additional 2s wait, list integrity preserved."
+}

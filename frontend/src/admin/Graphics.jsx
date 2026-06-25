@@ -201,9 +201,9 @@ export default function Graphics() {
       <div className="mt-6"><LiveCard /></div>
 
       <div className="mt-8 space-y-8">
-        {loading && <p className="text-[#9c8b7d]">Caricamento...</p>}
+        {loading && preds.length === 0 && <p className="text-[#9c8b7d]">Caricamento...</p>}
         {!loading && preds.length === 0 && <p className="text-[#9c8b7d]">Nessun pronostico disponibile.</p>}
-        {!loading && preds.map((p) => (
+        {preds.map((p) => (
           <div key={`${p.season}-${p.round}`} data-testid={`pred-${p.season}-${p.round}`}>
             <h2 className="font-archivo font-extrabold text-[#1a1411] text-lg mb-3">{p.competition || "Serie A"} · {p.season} · {p.round}ª giornata</h2>
             <div className="space-y-4">
