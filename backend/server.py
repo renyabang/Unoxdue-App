@@ -10,7 +10,7 @@ from typing import List, Optional
 from pydantic import BaseModel, Field, ConfigDict
 
 from config_db import db, client, SITE_URL, UPLOAD_DIR, CRON_SECRET, YOUTUBE_CHANNEL_ID
-from auth import auth_router, get_current_admin
+from auth import auth_router, get_current_admin, ensure_admin
 import seo
 import automations as auto
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
@@ -441,6 +441,7 @@ app.add_middleware(
 @app.on_event("startup")
 async def seed_all():
     try:
+        await ensure_admin()
         if await db.episodes.count_documents({}) == 0:
             for ep in SEED_EPISODES:
                 d = dict(ep); d["status"] = "pubblicato"

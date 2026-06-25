@@ -28,6 +28,8 @@ export const api = {
   base: API,
   login: (email, password) => req("/admin/login", { method: "POST", body: { email, password } }),
   me: () => req("/admin/me"),
+  changePassword: (current_password, new_password) =>
+    req("/admin/change-password", { method: "POST", body: { current_password, new_password } }),
   episodes: () => req("/admin/episodes"),
   deleteEpisode: (slug) => req(`/admin/episodes/${slug}`, { method: "DELETE" }),
   syncYoutube: () => req("/admin/sync/youtube", { method: "POST" }),

@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -22,9 +22,9 @@ function Login({ onLogged }) {
     try {
       const r = await api.login(email, password);
       setToken(r.token);
-      onLogged();
+      onLogged(!!r.must_change_password);
     } catch (e) {
-      setErr("Credenziali non valide");
+      setErr(e.message === "429" ? "Troppi tentativi, riprova più tardi" : "Credenziali non valide");
     } finally {
       setLoading(false);
     }
@@ -50,6 +50,47 @@ function Login({ onLogged }) {
   );
 }
 
+function ChangePassword({ onDone }) {
+  const [current, setCurrent] = useState("");
+  const [next, setNext] = useState("");
+  const [confirm, setConfirm] = useState("");
+  const [err, setErr] = useState("");
+  const [loading, setLoading] = useState(false);
+
+  const submit = async (e) => {
+    e.preventDefault();
+    setErr("");
+    if (next !== confirm) { setErr("Le password non coincidono"); return; }
+    if (next.length < 8) { setErr("Minimo 8 caratteri"); return; }
+    setLoading(true);
+    try {
+      const r = await api.changePassword(current, next);
+      setToken(r.token);
+      onDone();
+    } catch (e) { setErr(e.message || "Errore"); }
+    finally { setLoading(false); }
+  };
+
+  return (
+    <div className="min-h-screen bg-[#14100e] flex items-center justify-center px-5">
+      <form onSubmit={submit} className="w-full max-w-sm bg-white/[0.04] border border-white/10 rounded-2xl p-8">
+        <div className="flex items-center gap-3 mb-2">
+          <KeyRound className="w-6 h-6 text-[#EA4E1B]" />
+          <span className="font-anton text-white text-xl">Cambia password</span>
+        </div>
+        <p className="text-white/55 text-sm mb-5">Per sicurezza devi impostare una nuova password al primo accesso.</p>
+        <input type="password" placeholder="Password attuale" value={current} onChange={(e) => setCurrent(e.target.value)} className="w-full mb-3 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
+        <input type="password" placeholder="Nuova password" value={next} onChange={(e) => setNext(e.target.value)} className="w-full mb-3 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
+        <input type="password" placeholder="Conferma nuova password" value={confirm} onChange={(e) => setConfirm(e.target.value)} className="w-full mb-4 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
+        {err && <p className="text-red-400 text-sm mb-3">{err}</p>}
+        <button disabled={loading} className="w-full inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-5 py-3 rounded-lg transition-colors disabled:opacity-60">
+          {loading ? "Salvataggio..." : "Aggiorna password"}
+        </button>
+      </form>
+    </div>
+  );
+}
+
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/contenuti", label: "Contenuti", icon: FileVideo },
@@ -60,15 +101,22 @@ const nav = [
 
 export default function AdminApp() {
   const [authed, setAuthed] = useState(!!getToken());
+  const [mustChange, setMustChange] = useState(false);
+  const [checked, setChecked] = useState(!getToken());
   const navigate = useNavigate();
 
   useEffect(() => {
     if (getToken()) {
-      api.me().then(() => setAuthed(true)).catch(() => { clearToken(); setAuthed(false); });
+      api.me()
+        .then((m) => { setAuthed(true); setMustChange(!!m.must_change_password); })
+        .catch(() => { clearToken(); setAuthed(false); })
+        .finally(() => setChecked(true));
     }
   }, []);
 
-  if (!authed) return <Login onLogged={() => setAuthed(true)} />;
+  if (!checked) return <div className="min-h-screen bg-[#14100e]" />;
+  if (!authed) return <Login onLogged={(mc) => { setAuthed(true); setMustChange(mc); }} />;
+  if (mustChange) return <ChangePassword onDone={() => setMustChange(false)} />;
 
   const logout = () => { clearToken(); setAuthed(false); navigate("/admin"); };
 

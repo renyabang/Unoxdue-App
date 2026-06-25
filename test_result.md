@@ -138,6 +138,39 @@ backend:
         -working: true
         -agent: "testing"
         -comment: "✅ PASSED. All auth flows working correctly: (1) Login with correct credentials returns 200 + JWT token, (2) Login with wrong password returns 401, (3) GET /admin/me without token returns 403, (4) GET /admin/me with Bearer token returns 200 with email and role=admin, (5) Protected endpoint /admin/episodes without token returns 403. JWT authentication fully functional."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ SECURITY REFACTOR VERIFIED (32/32 tests passed). OLD password 'unoxdue2026' correctly rejected with 401. NEW password 'Sportivo#UxD-2026!' works. must_change_password flag present in login and /me responses. Token invalidation working: old tokens rejected after password change. Rate limiting triggers 429 after 5 failed attempts. NO password/password_hash in any response. All regression tests pass (YouTube sync, settings, logs, SSR pages, sitemaps). Test file: /app/backend_test_security.py"
+
+  - task: "Admin password change endpoint with token invalidation"
+    implemented: true
+    working: true
+    file: "backend/auth.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "POST /api/admin/change-password (auth) with {current_password, new_password}. Returns new token. Old tokens become invalid (token_version increment). Validates: current password correct, new password >= 8 chars, new != current."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ PASSED. POST /api/admin/change-password works correctly: (1) With correct current_password returns 200 + new token, (2) Old token becomes INVALID (401), (3) New token works, (4) must_change_password becomes false after change, (5) Wrong current_password returns 400, (6) New password < 8 chars returns 400, (7) NO password/password_hash in response. Token invalidation mechanism fully functional."
+
+  - task: "Admin rate limiting and account lockout"
+    implemented: true
+    working: true
+    file: "backend/auth.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        -working: "NA"
+        -agent: "main"
+        -comment: "Rate limiting on /api/admin/login per IP+email. After 5 failed attempts, return 429 with lockout message. Lockout duration 5 minutes. Does not affect other users."
+        -working: true
+        -agent: "testing"
+        -comment: "✅ PASSED. Rate limiting triggers HTTP 429 'Troppi tentativi' after 5 failed login attempts. Lockout message includes wait time. Real admin login still works after rate limit test (isolation confirmed). Rate limiting working correctly per IP+email combination."
 
   - task: "SSR pagine pubbliche (episodio/intervista/pronostici/team/archivi/home/il-podcast/parlano-di-noi)"
     implemented: true
@@ -245,7 +278,7 @@ frontend:
 metadata:
   created_by: "main_agent"
   version: "1.0"
-  test_sequence: 1
+  test_sequence: 2
   run_ui: false
 
 test_plan:
@@ -282,4 +315,34 @@ agent_communication:
       
       No critical issues found. No warnings. Backend MVP fully functional.
       Test file: /app/backend_test.py (can be re-run anytime)
+    -agent: "main"
+    -message: |
+      Security refactor completato per admin auth. Password admin ruotata da 'unoxdue2026' a 'Sportivo#UxD-2026!' (env).
+      Implementati: (1) hash pbkdf2 in DB, (2) must_change_password flag, (3) POST /api/admin/change-password con
+      token_version per invalidare i token precedenti, (4) rate limiting (5 tentativi -> 429 per 5 minuti),
+      (5) nessuna password nei log o nelle risposte. Testing agent: verificare OLD password fail, NEW password ok,
+      token invalidation, rate limiting, no password leak, regression (YouTube sync, settings, SSR, sitemaps).
+    -agent: "testing"
+    -message: |
+      ✅ SECURITY REFACTOR TESTING COMPLETE - ALL TESTS PASSED (32/32)
+      
+      Comprehensive security testing completed after admin auth refactor. All security features verified:
+      
+      SECURITY TESTS (6 tests):
+      1. ✅ OLD password 'unoxdue2026' correctly rejected with 401
+      2. ✅ NEW password 'Sportivo#UxD-2026!' works, returns token + must_change_password flag
+      3. ✅ GET /admin/me with token shows must_change_password, email, role
+      4. ✅ Protected endpoints without token return 401/403 (tested /admin/me, /admin/episodes)
+      5. ✅ Token invalidation: old token invalid after password change, new token works, must_change_password becomes false
+      6. ✅ Rate limiting: 429 triggered after 5 failed attempts, real admin login still works
+      7. ✅ NO password/password_hash in any API response (login, /me, change-password)
+      
+      REGRESSION TESTS (4 tests):
+      8. ✅ YouTube sync still works (15 videos found/updated, idempotent)
+      9. ✅ Settings and logs still work (integrations show demo mode)
+      10. ✅ SSR pages still work (home, episodi, pronostici, team - all with H1, canonical, JSON-LD)
+      11. ✅ Sitemaps still work (sitemap.xml, video-sitemap.xml valid)
+      
+      All 32 tests passed. No critical issues. Security refactor successful.
+      Test file: /app/backend_test_security.py (can be re-run anytime)
 
