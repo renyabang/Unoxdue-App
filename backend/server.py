@@ -1,4 +1,4 @@
-from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query
+from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File, Form, Query, Request
 from fastapi.responses import HTMLResponse, Response, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
@@ -15,6 +15,7 @@ import seo
 import automations as auto
 import ai_content as ai
 import graphics as gfx
+import youtube as yt
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -217,6 +218,7 @@ async def get_settings(admin: str = Depends(get_current_admin)):
     integrations = {
         "youtube_channel": bool(YOUTUBE_CHANNEL_ID),
         "youtube_api_key": bool(auto.YOUTUBE_API_KEY),
+        "youtube_oauth": bool(yt._oauth_configured()),
         "vision_ocr": bool(auto.EMERGENT_LLM_KEY),
         "odds_api": bool(auto.ODDS_API_URL and auto.ODDS_API_KEY),
         "perplexity": bool(auto.PERPLEXITY_API_KEY),
@@ -366,6 +368,73 @@ async def admin_press_search(q: str = "UnoXdue podcast", admin: str = Depends(ge
 @api_router.get("/admin/odds")
 async def admin_odds(match: str, market: str, pick: str, admin: str = Depends(get_current_admin)):
     return await auto.get_odds(match, market, pick)
+
+
+# ============================ Admin: YouTube archivio/WebSub/OAuth (Step 3) ============================
+@api_router.get("/admin/youtube/stats")
+async def admin_youtube_stats(admin: str = Depends(get_current_admin)):
+    return await yt.channel_stats()
+
+
+class BackfillIn(BaseModel):
+    max_pages: int = 40
+    auto_publish: bool = True
+
+
+@api_router.post("/admin/youtube/backfill")
+async def admin_youtube_backfill(payload: BackfillIn, admin: str = Depends(get_current_admin)):
+    res = await yt.backfill(payload.max_pages, payload.auto_publish)
+    try:
+        res["ai_autorun"] = await ai.maybe_autorun_after_sync(res)
+    except Exception as e:
+        logger.error("AI autorun error: %s", e)
+    return res
+
+
+@api_router.get("/admin/youtube/websub")
+async def admin_websub_status(admin: str = Depends(get_current_admin)):
+    return await yt.websub_status()
+
+
+class WebsubIn(BaseModel):
+    mode: str = "subscribe"
+
+
+@api_router.post("/admin/youtube/websub/subscribe")
+async def admin_websub_subscribe(payload: WebsubIn, admin: str = Depends(get_current_admin)):
+    return await yt.websub_subscribe(payload.mode)
+
+
+@api_router.get("/admin/youtube/oauth/status")
+async def admin_youtube_oauth_status(admin: str = Depends(get_current_admin)):
+    return await yt.oauth_status()
+
+
+@api_router.get("/admin/youtube/transcripts")
+async def admin_youtube_transcripts(admin: str = Depends(get_current_admin)):
+    return await yt.transcripts_list()
+
+
+@api_router.post("/admin/youtube/transcript/{slug}")
+async def admin_youtube_transcript(slug: str, admin: str = Depends(get_current_admin)):
+    return await yt.fetch_transcript(slug)
+
+
+# ---- WebSub callback PUBBLICO (senza auth: lo chiama l'hub PubSubHubbub) ----
+@api_router.get("/youtube/websub/callback")
+async def websub_callback_verify(request: Request):
+    challenge = await yt.websub_verify(dict(request.query_params))
+    if challenge is None:
+        raise HTTPException(status_code=400, detail="hub.challenge mancante")
+    return Response(challenge, media_type="text/plain")
+
+
+@api_router.post("/youtube/websub/callback")
+async def websub_callback_notify(request: Request):
+    body = await request.body()
+    sig = request.headers.get("X-Hub-Signature")
+    res = await yt.websub_notify(body, sig)
+    return JSONResponse(res, status_code=200)
 
 
 # ============================ Cron protetto (scheduler esterno) ============================

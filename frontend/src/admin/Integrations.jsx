@@ -5,7 +5,8 @@ import { api } from "./api";
 const ROWS = [
   { key: "youtube_channel", label: "Canale YouTube (feed pubblico)", env: "YOUTUBE_CHANNEL_ID", real: "Sync nuovi video dal feed RSS (attivo)." },
   { key: "vision_ocr", label: "OCR schedine (OpenAI Vision)", env: "EMERGENT_LLM_KEY", real: "Lettura schedine via Emergent LLM key (attivo)." },
-  { key: "youtube_api_key", label: "YouTube Data API", env: "YOUTUBE_API_KEY", real: "Dettagli extra (durata, playlist). Opzionale." },
+  { key: "youtube_api_key", label: "YouTube Data API", env: "YOUTUBE_API_KEY", real: "Archivio completo + durate + WebSub. Senza chiave: solo feed RSS recente." },
+  { key: "youtube_oauth", label: "YouTube OAuth (sottotitoli)", env: "GOOGLE_OAUTH_CLIENT_ID / SECRET / REFRESH_TOKEN", real: "Download sottotitoli ufficiali per le trascrizioni reali." },
   { key: "odds_api", label: "Comparatore quote", env: "ODDS_API_URL / ODDS_API_KEY", real: "Quote reali dal comparatore." },
   { key: "perplexity", label: "Rassegna stampa (Perplexity)", env: "PERPLEXITY_API_KEY", real: "Ricerca automatica menzioni stampa." },
   { key: "audio_transcription", label: "Trascrizione audio", env: "OPENAI_AUDIO_API_KEY", real: "Trascrizione quando mancano i sottotitoli." },

@@ -52,4 +52,11 @@ export const api = {
   editPick: (body) => req("/admin/predictions/pick", { method: "PUT", body }),
   getLive: () => req("/admin/live"),
   setLive: (body) => req("/admin/live", { method: "PUT", body }),
+  youtubeStats: () => req("/admin/youtube/stats"),
+  youtubeBackfill: (body) => req("/admin/youtube/backfill", { method: "POST", body }),
+  websubStatus: () => req("/admin/youtube/websub"),
+  websubSubscribe: (mode = "subscribe") => req("/admin/youtube/websub/subscribe", { method: "POST", body: { mode } }),
+  oauthStatus: () => req("/admin/youtube/oauth/status"),
+  transcripts: () => req("/admin/youtube/transcripts"),
+  fetchTranscript: (slug) => req(`/admin/youtube/transcript/${slug}`, { method: "POST" }),
 };

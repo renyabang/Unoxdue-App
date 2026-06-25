@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -11,6 +11,7 @@ import Logs from "./Logs";
 import Integrations from "./Integrations";
 import AIGen from "./AIGen";
 import Graphics from "./Graphics";
+import YouTube from "./YouTube";
 
 function Login({ onLogged }) {
   const [email, setEmail] = useState("admin@unoxdue.net");
@@ -96,6 +97,7 @@ function ChangePassword({ onDone }) {
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/contenuti", label: "Contenuti", icon: FileVideo },
+  { to: "/admin/youtube", label: "YouTube", icon: Youtube },
   { to: "/admin/ai", label: "AI / SEO", icon: Sparkles },
   { to: "/admin/schedine", label: "Schedine / Pronostici", icon: Ticket },
   { to: "/admin/grafiche", label: "Grafiche", icon: ImageIcon },
@@ -147,6 +149,7 @@ export default function AdminApp() {
         <Routes>
           <Route index element={<Dashboard />} />
           <Route path="contenuti" element={<Contents />} />
+          <Route path="youtube" element={<YouTube />} />
           <Route path="ai" element={<AIGen />} />
           <Route path="schedine" element={<SlipUploader />} />
           <Route path="grafiche" element={<Graphics />} />

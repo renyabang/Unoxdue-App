@@ -35,5 +35,12 @@ PERPLEXITY_API_KEY = os.environ.get("PERPLEXITY_API_KEY", "")
 OPENAI_AUDIO_API_KEY = os.environ.get("OPENAI_AUDIO_API_KEY", "")
 CRON_SECRET = os.environ.get("CRON_SECRET", "")
 
+# YouTube OAuth (sottotitoli/trascrizioni) e WebSub (PubSubHubbub)
+GOOGLE_OAUTH_CLIENT_ID = os.environ.get("GOOGLE_OAUTH_CLIENT_ID", "")
+GOOGLE_OAUTH_CLIENT_SECRET = os.environ.get("GOOGLE_OAUTH_CLIENT_SECRET", "")
+GOOGLE_OAUTH_REFRESH_TOKEN = os.environ.get("GOOGLE_OAUTH_REFRESH_TOKEN", "")
+WEBSUB_HUB = os.environ.get("WEBSUB_HUB", "https://pubsubhubbub.appspot.com/subscribe")
+WEBSUB_SECRET = os.environ.get("WEBSUB_SECRET", "")
+
 UPLOAD_DIR = ROOT_DIR / "uploads"
 UPLOAD_DIR.mkdir(exist_ok=True)

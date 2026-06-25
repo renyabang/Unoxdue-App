@@ -1,0 +1,23 @@
+{
+  "summary": "Step 3 (Archivio YouTube / WebSub / OAuth trascrizioni) testato in MODALITA' DEMO via Playwright sul preview pubblico. Login admin OK, navigazione sidebar -> /admin/youtube OK, tutti i data-testid richiesti presenti, demo badge visibile, backfill RSS funzionante (15 aggiornati, nota demo), toggle auto-publish cliccabile, WebSub callback corretto con dominio preview, subscribe -> HTTP 202 dall'hub + evento registrato senza crash, OAuth non configurato con badge corretto, tabella trascrizioni con 17 righe e click su 'Recupera' lascia stato 'IN ATTESA'. Non-regressione su /admin, /admin/contenuti, /admin/grafiche, /admin/integrazioni tutti OK; la riga 'YouTube OAuth (sottotitoli)' compare in Integrazioni. Zero errori JS in console.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Login form inputs in /app/frontend/src/admin/AdminApp.jsx non hanno type='email' né data-testid (es. login-email-input, login-password-input, login-submit-btn); aggiungerli aiuta i test automatici e l'accessibilità.",
+    "YouTube.jsx (235 righe) e AdminApp.jsx contengono sia routing che login: valutare estrarre Login in file dedicato per leggibilità.",
+    "In runBackfill/subscribe/getTranscript i catch silenziano gli errori: utile log lato UI (toast) almeno in dev per debug futuro."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net / ADMIN_PASSWORD da /app/backend/.env (mascherata)",
+  "seed_data_creation": "Nessun seed creato. Backfill RSS demo ha aggiornato 15 record esistenti.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Step 3 YouTube/WebSub/OAuth ha superato il test 100% in demo. Quando si configurerà YOUTUBE_API_KEY e/o OAuth credentials, ritestare: 1) stats reali (yt-video-count/subs/views numerici), 2) backfill paginato (skipped_shorts/pages valorizzati), 3) transcript completate (status='done'). Selector login: per ora usare page.locator('form input').nth(0/1) + button:has-text('Entra')."
+}
