@@ -41,11 +41,11 @@ function Login({ onLogged }) {
           <span className="font-anton text-white text-2xl">Uno<span className="text-[#EA4E1B]">X</span>due <span className="text-sm text-white/50">admin</span></span>
         </div>
         <label className="block text-white/70 text-xs font-semibold uppercase tracking-wide">Email</label>
-        <input value={email} onChange={(e) => setEmail(e.target.value)} className="w-full mt-1 mb-4 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
+        <input value={email} onChange={(e) => setEmail(e.target.value)} data-testid="login-email-input" type="email" className="w-full mt-1 mb-4 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
         <label className="block text-white/70 text-xs font-semibold uppercase tracking-wide">Password</label>
-        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} className="w-full mt-1 mb-5 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
+        <input type="password" value={password} onChange={(e) => setPassword(e.target.value)} data-testid="login-password-input" className="w-full mt-1 mb-5 bg-[#14100e] border border-white/15 rounded-lg px-3 py-2.5 text-white text-sm focus:border-[#EA4E1B] outline-none" />
         {err && <p className="text-red-400 text-sm mb-3">{err}</p>}
-        <button disabled={loading} className="w-full inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-5 py-3 rounded-lg transition-colors disabled:opacity-60">
+        <button disabled={loading} data-testid="login-submit-btn" className="w-full inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-5 py-3 rounded-lg transition-colors disabled:opacity-60">
           <Lock className="w-4 h-4" /> {loading ? "Accesso..." : "Entra"}
         </button>
       </form>

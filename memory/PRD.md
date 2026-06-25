@@ -73,17 +73,35 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
   - Testato: testing_agent frontend 10/11 -> dopo fix 11/11 (retest 100%); backend verificato via curl + screenshot reali dei 3 formati e casi limite.
   - Docker: `Dockerfile.backend` installa Chromium (`playwright install --with-deps chromium`); asset brand in `backend/static/public/`.
 
-## Backlog (ordine stretto richiesto dall'utente, messaggio #205)
-- **P1 — Step 3: Archivio completo YouTube** via Data API (backfill paginato playlist Uploads,
-  anti-duplicati, gestione stati video, webhook PubSubHubbub/WebSub per i futuri video). Richiede YOUTUBE_API_KEY utente.
-- **P1 — Step 4: Classificazione AI + generazione automatica** ✅ COMPLETATO (25/06/2026).
-  Nota: trascrizioni/citazioni/capitoli reali rimandati allo Step 3 (sottotitoli via YouTube OAuth o audio autorizzato),
-  poi rielaborazione automatica che sostituisce il sommario provvisorio (transcription_status: pending → done).
-- **P1 — Step 5: Generazione automatica grafica pronostici** ✅ COMPLETATO (25/06/2026).
-- **P2 — Step 6: Risultati, storico e pubblicazione condizionata** (aggiornamento risultati,
-  stato complessivo schedina, log storico, auto-pubblicazione).
-- **P2 — Step 7: Integrazioni Rassegna stampa (Perplexity) e comparatore quote (Odds API)**,
-  in Demo finché l'utente non fornisce le chiavi.
+## Backlog (ordine stretto richiesto dall'utente, messaggio #205 + #342)
+- **P0 — Step 3: Archivio completo YouTube / WebSub / OAuth / trascrizioni** ✅ COMPLETATO + testato (giugno 2026, demo).
+- **P1 — Step 7A: Comparatore quote reale** (verifica struttura provider: ID stabile, settlement, eventi sospesi;
+  connettore separato SPORT_RESULTS_API se manca il settlement). PROSSIMO.
+- **P2 — Step 6: Risultati, storico e pubblicazione condizionata** (storico quote, override manuali,
+  calcolo esito vinta/persa/void, auto-pubblicazione condizionata).
+- **P2 — Step 7B: Rassegna stampa (Perplexity)** — news rilevanti UnoXdue + ospiti.
+- **P3 — Refactoring finale**: split server.py in routes/services/models/integrations/jobs/utility
+  (solo tecnico, senza cambiare comportamento testato).
+
+### [giugno 2026] Step 3 — Archivio YouTube completo, WebSub, OAuth, trascrizioni (P0). COMPLETATO + testato (demo).
+- Nuovo modulo `backend/youtube.py`: connettore Data API v3 (channels.list -> uploads playlist,
+  playlistItems.list paginato, videos.list batch 50 per durata ISO8601), upsert anti-duplicati,
+  classificazione (short esclusi). Senza YOUTUBE_API_KEY -> fallback feed RSS marcato `demo:true`.
+- WebSub/PubSubHubbub: subscribe/unsubscribe verso hub, callback PUBBLICO `/api/youtube/websub/callback`
+  (GET echo hub.challenge, POST parse Atom + verifica firma HMAC sha1/sha256), log eventi + stato sottoscrizioni.
+- OAuth (struttura) per sottotitoli: `GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN`; captions.list+download (it preferito),
+  transcription_status pending->done SOLO con sottotitoli reali (mai inventati); unavailable/error gestiti.
+- Endpoint admin: `/api/admin/youtube/stats|backfill|websub|websub/subscribe|oauth/status|transcripts|transcript/{slug}`.
+- Admin UI nuova pagina "YouTube" (`frontend/src/admin/YouTube.jsx`): statistiche canale, backfill+toggle auto-publish,
+  pannello WebSub (callback/topic, iscrivi/disiscrivi, eventi), OAuth+tabella trascrizioni con stato e "Recupera".
+  Voce di menu + route in AdminApp; riga "YouTube OAuth" in Integrazioni.
+- Env aggiunte: GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN, WEBSUB_HUB, WEBSUB_SECRET.
+- Dipendenze: google-api-python-client, google-auth, google-auth-oauthlib (in requirements.txt).
+- Testato: backend via curl (stats demo, backfill RSS 15, websub GET/POST+HMAC valida/non valida, oauth, transcripts);
+  frontend testing_agent 100% (iteration_6.json), zero errori JS, non-regressione admin OK.
+- BLOCCATO da credenziali utente: stats/backfill reali (YOUTUBE_API_KEY) e trascrizioni reali (GOOGLE_OAUTH_*).
+
+
 
 ## File chiave
 - `backend/auth.py` (sicurezza), `backend/seo.py` (+helper `asset()` versioning), `backend/server.py`
