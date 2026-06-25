@@ -70,6 +70,8 @@ export const api = {
   pressConfig: () => req("/admin/press/config"),
   pressSetConfig: (config) => req("/admin/press/config", { method: "POST", body: { config } }),
   pressList: (status) => req(`/admin/press/list${status ? `?status=${status}` : ""}`),
+  pressRejected: (category) => req(`/admin/press/rejected${category ? `?category=${category}` : ""}`),
+  pressRuns: (limit = 10) => req(`/admin/press/runs?limit=${limit}`),
   pressSetStatus: (id, status) => req("/admin/press/set-status", { method: "POST", body: { id, status } }),
   pressLink: (body) => req("/admin/press/link", { method: "POST", body }),
   pressLinkOptions: () => req("/admin/press/link-options"),

@@ -3,23 +3,20 @@
 Regole di generazione query, finestre temporali, esclusioni e pertinenza implementate
 ALLA LETTERA secondo le specifiche dell'utente (configurazione modificabile dall'admin).
 
-- PressProvider: interfaccia astratta `search(query, date_filter)`.
-- FixturePressProvider: dataset deterministico (demo).
-- PerplexityPressProvider: ricerca reale (Sonar `chat/completions`) con domain denylist,
-  filtri data (recency/after) e structured output JSON. Attivo SOLO con PERPLEXITY_API_KEY.
-- Modello dati: testata, titolo, url, canonical_url, data, sintesi originale (NO testo integrale),
-  contenuto UnoXdue collegato, query, data di rilevamento, stato, confidence.
-- Dedup per URL canonica + titolo (copie/syndication), verifica raggiungibilità, associazione,
-  regola di pertinenza (false positive se manca il collegamento al podcast), NESSUNA pubblicazione automatica.
+Pipeline a categorie ESCLUSIVE:
+  grezzi -> (duplicati) -> (social esclusi) -> (pagine non-articolo) -> (irraggiungibili)
+  -> reachable: falsi positivi | validi -> validi salvati in revisione (cap).
+I falsi positivi / non-articolo / irraggiungibili NON entrano nell'editoriale: vanno nel log tecnico `press_rejected`.
+Auto-associazione solo con menzione esplicita UnoXdue + corrispondenza DB ANCORATA AL TITOLO + confidence >= soglia.
+NESSUNA pubblicazione automatica. Storico esecuzioni in `press_runs` (riepilogo admin).
 """
 import re
-import json
 import uuid
+import html
 import calendar
 import asyncio
 from abc import ABC, abstractmethod
 from datetime import datetime, timezone, timedelta
-
 from urllib.parse import urlparse, urlunparse
 
 import requests
@@ -29,13 +26,15 @@ import automations as auto
 
 ALLOWED_STATUS = {"found", "verified", "review", "published", "discarded", "error"}
 CURATED = {"published", "discarded", "verified"}  # non sovrascritti dal re-run
-LOW_CONF = 0.6
 SECTION = {"episode": "episodi", "interview": "interviste", "team": "team"}
 LINK_LABEL = {"episode": "Episodio collegato", "interview": "Intervista collegata",
               "team": "Membro del team collegato"}
-BRAND_TERMS = ["unoxdue", "uno x due", "uno per due"]
-
+BRAND_TERMS = ["unoxdue", "uno x due"]
 PERPLEXITY_URL = "https://api.perplexity.ai/chat/completions"
+# parole di taccuino/tassonomia che identificano pagine NON-articolo
+TAXONOMY = ["/tag/", "/tags/", "/category/", "/categoria/", "/categorie/", "/argomenti/", "/argomento/",
+            "/topics/", "/topic/", "/search/", "/cerca/", "/ricerca/", "/archivio/", "/archive/",
+            "/sezione/", "/sezioni/", "/author/", "/autore/", "/page/", "/pagina/", "/feed/", "/rss/", "/amp/"]
 
 # ----------------------- Configurazione (admin-modificabile) -----------------------
 DEFAULT_CONFIG = {
@@ -48,14 +47,16 @@ DEFAULT_CONFIG = {
         '"UnoXdue" pronostici',
     ],
     "team_members": ["Sono Micuccio", "Il Ninja", "Il Marziano", "Antonello Santopaolo"],
-    "excluded_domains": ["unoxdue.net", "youtube.com", "twitch.tv", "instagram.com", "tiktok.com"],
+    # social + dominio proprio esclusi (Facebook incluso)
+    "excluded_domains": ["unoxdue.net", "facebook.com", "youtube.com", "twitch.tv",
+                         "instagram.com", "tiktok.com", "x.com", "twitter.com"],
     "model": "sonar",
     "max_results_per_run": 10,
     "max_queries_per_run": 14,
     "recent_content_limit": 4,
+    "auto_link_min_confidence": 0.85,
     "auto_publish": False,
     "historical_backfill_done": False,
-    # tariffe per stima costo (USD per 1M token + costo/richiesta). Modificabili dall'admin.
     "cost_rates": {
         "sonar": {"in": 1.0, "out": 1.0, "req": 0.005},
         "sonar-pro": {"in": 3.0, "out": 15.0, "req": 0.005},
@@ -102,9 +103,8 @@ def _norm_title(t: str) -> str:
 
 
 def _clean_title_for_query(t: str) -> str:
-    """Rimuove emoji/hashtag e rumore da un titolo per usarlo come frase di ricerca."""
     t = re.sub(r"#\w+", "", t or "")
-    t = re.sub(r"[^\w\sàèéìòùÀÈÉÌÒÙ'\-]", "", t)  # via emoji e simboli
+    t = re.sub(r"[^\w\sàèéìòùÀÈÉÌÒÙ'\-]", "", t)
     t = re.sub(r"\bEP\.?\s*\d+\b", "", t, flags=re.IGNORECASE)
     t = re.sub(r"\s+", " ", t).strip()
     return t[:90]
@@ -119,9 +119,33 @@ def _domain_of(u: str) -> str:
 
 
 def _pub_name(u: str) -> str:
-    """Nome testata leggibile derivato dal dominio (es. calabria7.news -> Calabria7.news)."""
     d = _domain_of(u)
     return d.split(".")[0].capitalize() + ("." + ".".join(d.split(".")[1:]) if "." in d else "") if d else u
+
+
+def _is_excluded_domain(url: str, excluded: list) -> bool:
+    dom = _domain_of(url)
+    return any(dom == d or dom.endswith("." + d) for d in excluded)
+
+
+def _is_non_article(url: str):
+    """Riconosce homepage, pagine tassonomia (tag/categoria/archivio/ricerca) e sezioni generiche."""
+    try:
+        p = urlparse(url)
+    except Exception:
+        return True, "url non valido"
+    path = (p.path or "/")
+    low = (path + "/").lower()
+    segs = [s for s in path.split("/") if s]
+    if not segs:
+        return True, "homepage"
+    if any(t in low for t in TAXONOMY):
+        return True, "pagina tassonomia (tag/categoria/archivio/ricerca)"
+    last = segs[-1]
+    words = [w for w in re.split(r"[-_]", last) if w]
+    if len(segs) <= 2 and len(words) <= 3 and not any(c.isdigit() for c in last):
+        return True, "sezione/categoria generica"
+    return False, None
 
 
 # ----------------------- finestre temporali -----------------------
@@ -163,13 +187,11 @@ async def _guest_names() -> list:
 
 
 async def _recent_contents(limit: int) -> list:
-    eps = await db.episodes.find({}, {"_id": 0, "title": 1, "guest_name": 1, "type": 1}).sort(
+    return await db.episodes.find({}, {"_id": 0, "title": 1, "guest_name": 1, "type": 1}).sort(
         "published_at", -1).to_list(limit)
-    return eps
 
 
 async def build_queries(cfg: dict, mode: str = "ordinary") -> list:
-    """Costruisce l'insieme di query secondo le regole (brand, team, ospiti, contenuti recenti)."""
     out = []
 
     def add(q, kind):
@@ -177,17 +199,13 @@ async def build_queries(cfg: dict, mode: str = "ordinary") -> list:
         if q and not any(x["q"] == q for x in out):
             out.append({"q": q, "kind": kind})
 
-    # Brand
     for q in cfg.get("brand_queries", []):
         add(q, "brand")
-    # Membri del team (mai cercati da soli)
     for name in cfg.get("team_members", []):
         add(f'"{name}" "UnoXdue"', "team")
-    # Ospiti dinamici
     for g in await _guest_names():
         add(f'"{g}" "UnoXdue"', "guest")
         add(f'"{g}" intervista "UnoXdue"', "guest")
-    # Contenuti recenti (NON tutto l'archivio)
     for c in await _recent_contents(cfg.get("recent_content_limit", 4)):
         ct = _clean_title_for_query(c.get("title", ""))
         if len(ct) >= 12:
@@ -205,29 +223,18 @@ class PressProvider(ABC):
 
 
 class FixturePressProvider(PressProvider):
-    """Dataset demo deterministico (menzioni UnoXdue + membri team + un URL non raggiungibile)."""
     name = "fixture"
-
     RESULTS = [
         {"source": "La Gazzetta dello Sport",
          "title": "UnoXdue, il podcast Serie A di Sono Micuccio conquista il pubblico",
-         "url": "https://www.gazzetta.it/", "date": "2026-05-20",
+         "url": "https://www.gazzetta.it/calcio/podcast/unoxdue-sono-micuccio-12345", "date": "2026-05-20",
          "summary": "Il podcast UnoXdue cresce negli ascolti grazie alle analisi di Sono Micuccio.",
          "confidence": 0.9},
         {"source": "Tuttomercatoweb",
-         "title": "L'ospite di UnoXdue parla di calciomercato: le dichiarazioni",
-         "url": "https://www.tuttomercatoweb.com/", "date": "2026-05-18",
+         "title": "L'ospite di UnoXdue parla di calciomercato",
+         "url": "https://www.tuttomercatoweb.com/serie-a/unoxdue-ospite-mercato-67890", "date": "2026-05-18",
          "summary": "Nell'ultima puntata di UnoXdue l'ospite ha commentato il mercato di Serie A.",
          "confidence": 0.78},
-        {"source": "Corriere dello Sport",
-         "title": "Il Ninja e Il Marziano analizzano la giornata su UnoXdue",
-         "url": "https://www.corrieredellosport.it/", "date": "2026-05-15",
-         "summary": "I tipster Il Ninja e Il Marziano di UnoXdue discutono i pronostici della giornata.",
-         "confidence": 0.82},
-        {"source": "Blog demo",
-         "title": "Pronostici della settimana",
-         "url": "https://nonexistent-uxd-demo.invalid/articolo", "date": "2026-05-10",
-         "summary": "Articolo senza menzione diretta del podcast.", "confidence": 0.3},
     ]
 
     async def search(self, query: str, date_filter: dict = None) -> dict:
@@ -235,7 +242,6 @@ class FixturePressProvider(PressProvider):
 
 
 class PerplexityPressProvider(PressProvider):
-    """Ricerca reale Perplexity Sonar. Usa `search_results` (URL realmente trovati) + domain denylist + filtri data."""
     name = "perplexity"
 
     def __init__(self, cfg: dict):
@@ -250,19 +256,15 @@ class PerplexityPressProvider(PressProvider):
                 f"Trova articoli di testate giornalistiche/siti di informazione online che parlano di: {query}. "
                 "Elenca solo articoli con testata, titolo e URL. Escludi social network e duplicati."
             )
-            body = {
-                "model": self.model,
-                "messages": [{"role": "user", "content": prompt}],
-                "stream": False,
-            }
+            body = {"model": self.model,
+                    "messages": [{"role": "user", "content": prompt}], "stream": False}
             if self.excluded:
                 body["search_domain_filter"] = [f"-{d}" for d in self.excluded][:20]
             if date_filter:
                 body.update(date_filter)
             return requests.post(
                 PERPLEXITY_URL,
-                headers={"Authorization": f"Bearer {PERPLEXITY_API_KEY}",
-                         "Content-Type": "application/json"},
+                headers={"Authorization": f"Bearer {PERPLEXITY_API_KEY}", "Content-Type": "application/json"},
                 json=body, timeout=45)
 
         loop = asyncio.get_event_loop()
@@ -274,14 +276,9 @@ class PerplexityPressProvider(PressProvider):
             url = (s.get("url") or "").strip()
             if not url:
                 continue
-            out.append({
-                "source": _pub_name(url),
-                "title": s.get("title", ""),
-                "url": url,
-                "date": s.get("date") or "",
-                "summary": (s.get("snippet") or "")[:240],
-                "confidence": None,  # calcolata dalla pipeline in base ai segnali di pertinenza
-            })
+            out.append({"source": _pub_name(url), "title": s.get("title", ""), "url": url,
+                        "date": s.get("date") or "", "summary": (s.get("snippet") or "")[:240],
+                        "confidence": None})
         return {"results": out, "usage": data.get("usage", {}) or {}}
 
 
@@ -300,36 +297,54 @@ def provider_status() -> dict:
                      "Modalità fixture (demo). Inserisci PERPLEXITY_API_KEY per la ricerca reale.")}
 
 
-# ----------------------- reachability -----------------------
-def _reach_sync(url: str):
-    headers = {"User-Agent": "UnoXdueBot/1.0 (+https://unoxdue.net)"}
+# ----------------------- fetch pagina (raggiungibilità + testo per pertinenza) -----------------------
+def _fetch_sync(url: str):
+    """GET unico: ritorna (status_code, reachable, page_text_lower).
+    403/405/429 (blocco bot) = raggiungibile (ma senza testo). 404/410/5xx/errore = no."""
+    headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 "
+                             "(KHTML, like Gecko) Chrome/124.0 Safari/537.36",
+               "Accept-Language": "it-IT,it;q=0.9"}
     try:
-        r = requests.head(url, timeout=8, allow_redirects=True, headers=headers)
-        if r.status_code >= 400:
-            r = requests.get(url, timeout=8, allow_redirects=True, headers=headers, stream=True)
-        return r.status_code, r.status_code < 400
+        r = requests.get(url, timeout=9, allow_redirects=True, headers=headers, stream=False)
+        code = r.status_code
+        reachable = code < 500 and code not in (404, 410)
+        text = ""
+        if code < 400:
+            ct = (r.headers.get("Content-Type") or "").lower()
+            if "html" in ct or "text" in ct or not ct:
+                body = r.text[:400000]
+                body = re.sub(r"<script.*?</script>|<style.*?</style>", " ", body, flags=re.DOTALL | re.I)
+                body = re.sub(r"<[^>]+>", " ", body)
+                text = re.sub(r"\s+", " ", html.unescape(body)).lower()[:40000]
+        return code, reachable, text
     except Exception:
-        return None, False
+        return None, False, ""
 
 
-# ----------------------- associazione contenuti (multipla) -----------------------
-async def _associate_all(text: str):
-    """Trova TUTTI i contenuti pertinenti (team, episodi, interviste) menzionati nel testo."""
-    t = (text or "").lower()
-    out = []
-    team = await db.team.find({}, {"_id": 0, "slug": 1, "name": 1}).to_list(100)
+# ----------------------- associazione + pertinenza -----------------------
+def _mentions_brand(text: str) -> bool:
+    low = (text or "").lower()
+    return any(b in low for b in BRAND_TERMS)
+
+
+def _associate_rich(title_low: str, text_low: str, team: list, eps: list) -> list:
+    """Collegamenti DB trovati nel testo, con flag in_title (ancoraggio al titolo)."""
+    links = []
     for m in team:
         nm = (m.get("name") or "").lower()
-        if nm and len(nm) > 3 and nm in t:
-            out.append({"type": "team", "slug": m.get("slug"), "title": m.get("name"), "source": "auto"})
-    eps = await db.episodes.find({}, {"_id": 0, "slug": 1, "title": 1, "type": 1, "guest_name": 1}).to_list(2000)
+        if nm and len(nm) > 3 and nm in text_low:
+            links.append({"type": "team", "slug": m.get("slug"), "title": m.get("name"),
+                          "source": "auto", "in_title": nm in title_low})
     for e in eps:
         gn = (e.get("guest_name") or "").lower()
-        if gn and len(gn) > 3 and gn in t:
-            out.append({"type": "interview" if e.get("type") == "intervista" else "episode",
-                        "slug": e.get("slug"), "title": e.get("title"), "source": "auto"})
+        if gn and len(gn) > 3 and gn in text_low:
+            toks = [t for t in re.split(r"\s+", gn) if len(t) >= 5]
+            in_t = any(t in title_low for t in toks)
+            links.append({"type": "interview" if e.get("type") == "intervista" else "episode",
+                          "slug": e.get("slug"), "title": e.get("title"),
+                          "source": "auto", "in_title": in_t})
     seen, ded = set(), []
-    for l in out:
+    for l in links:
         k = (l["type"], l["slug"])
         if k in seen:
             continue
@@ -338,57 +353,66 @@ async def _associate_all(text: str):
     return ded
 
 
-def _merge_links(existing_links, auto_links):
-    """Mantiene i collegamenti manuali esistenti e fonde gli auto, dedup per (type, slug)."""
-    manual = [l for l in (existing_links or []) if l.get("source") == "manual"]
-    seen, merged = set(), []
-    for l in manual + auto_links:
-        k = (l.get("type"), l.get("slug"))
-        if k in seen:
-            continue
-        seen.add(k)
-        merged.append(l)
-    return merged
-
-
-# ----------------------- pertinenza -----------------------
-def _mentions_brand(text: str) -> bool:
-    low = (text or "").lower()
-    return any(b in low for b in BRAND_TERMS)
-
-
-async def _content_title_hit(text: str) -> bool:
-    """True se l'articolo riprende il titolo di un contenuto UnoXdue."""
-    low = (text or "").lower()
-    eps = await db.episodes.find({}, {"_id": 0, "title": 1}).to_list(2000)
+def _content_title_hit(title_low: str, eps: list) -> bool:
+    cleaned = re.sub(r"[^\w\s]", "", title_low)
     for e in eps:
         nt = _norm_title(e.get("title", ""))
-        if len(nt) >= 18 and nt in re.sub(r"[^\w\s]", "", low):
+        if len(nt) >= 18 and nt in cleaned:
             return True
     return False
 
 
-def _decide_status(reachable, relevant, confidence, linked):
-    if not reachable:
-        return "error"
+def _assess(title: str, summary: str, page_text: str, team: list, eps: list, min_conf: float) -> dict:
+    title_low = (title or "").lower()
+    body_low = f"{title or ''} {summary or ''} {page_text or ''}".lower()
+    brand_in_title = _mentions_brand(title_low)
+    brand_in_body = _mentions_brand(body_low)
+    brand = brand_in_title or brand_in_body
+    links = _associate_rich(title_low, body_low, team, eps)
+    has_match = bool(links)
+    has_title_anchor = any(l["in_title"] for l in links)
+    tch = _content_title_hit(title_low, eps)
+    relevant = brand or tch
     if not relevant:
-        return "review"  # falso positivo: non associato, non pubblicabile
-    c = confidence if confidence is not None else 0.5
-    if c < LOW_CONF or not linked:
-        return "review"
-    return "found"  # nessuna pubblicazione automatica
+        return {"relevant": False, "confidence": 0.3, "links": [], "suggested": [],
+                "reason": "falso positivo: nessuna menzione esplicita di UnoXdue né corrispondenza con i contenuti"}
+    if tch and has_title_anchor:
+        conf = 0.92
+    elif tch:
+        conf = 0.9
+    elif brand_in_title and has_title_anchor:
+        conf = 0.92
+    elif (brand_in_title and has_match) or (has_title_anchor and brand):
+        conf = 0.88
+    elif brand and has_match:
+        conf = 0.78
+    else:
+        conf = 0.6
+    auto_ok = brand and conf >= min_conf and (has_title_anchor or tch)
+    if auto_ok:
+        auto_links = [l for l in links if l["in_title"]] or links
+        suggested = [l for l in links if l not in auto_links]
+        reason = "cita UnoXdue + corrispondenza DB ancorata al titolo"
+    else:
+        auto_links = []
+        suggested = links
+        reason = ("cita UnoXdue; associazione da confermare manualmente"
+                  if has_match else "cita UnoXdue; nessun contenuto DB corrispondente")
+    return {"relevant": True, "confidence": conf, "links": auto_links,
+            "suggested": suggested, "reason": reason}
 
 
 # ----------------------- pipeline -----------------------
 async def run_search(query: str = None, mode: str = "ordinary", actor: str = "admin",
-                     max_queries: int = None, max_results: int = None) -> dict:
+                     trigger: str = "manual", max_queries: int = None, max_results: int = None) -> dict:
     cfg = await get_config()
     provider = await get_provider(cfg)
+    excluded = cfg.get("excluded_domains", [])
+    min_conf = float(cfg.get("auto_link_min_confidence", 0.85))
     max_results = max_results or cfg.get("max_results_per_run", 10)
     max_queries = max_queries or cfg.get("max_queries_per_run", 14)
     date_filter = date_filter_for(mode)
 
-    # 1) insieme query
     if query and query.strip():
         queries = [{"q": query.strip(), "kind": "manual"}]
     else:
@@ -396,7 +420,7 @@ async def run_search(query: str = None, mode: str = "ordinary", actor: str = "ad
     if not queries:
         return {"ok": False, "error": "Nessuna query generata"}
 
-    # 2) esecuzione (concorrente, con semaforo)
+    # esecuzione concorrente
     sem = asyncio.Semaphore(4)
     usage_total = {"prompt_tokens": 0, "completion_tokens": 0, "total_tokens": 0}
     real_cost = 0.0
@@ -405,19 +429,16 @@ async def run_search(query: str = None, mode: str = "ordinary", actor: str = "ad
     async def _one(qm):
         async with sem:
             try:
-                res = await provider.search(qm["q"], date_filter)
-                return qm, res
+                return qm, await provider.search(qm["q"], date_filter)
             except Exception as e:
                 query_errors.append({"q": qm["q"], "error": str(e)})
                 return qm, {"results": [], "usage": {}}
 
     runs = await asyncio.gather(*[_one(q) for q in queries])
 
-    raw_found = 0
-    by_canonical = {}
-    by_title = set()
-    duplicates = 0
-    domain_excluded = 0
+    # dedup (URL canonica + titolo) + esclusione social
+    raw_found = duplicates = social_excluded = 0
+    by_canonical, by_title = {}, set()
     for qm, res in runs:
         u = res.get("usage") or {}
         for k in usage_total:
@@ -428,9 +449,8 @@ async def run_search(query: str = None, mode: str = "ordinary", actor: str = "ad
             url = (it.get("url") or "").strip()
             if not url:
                 continue
-            dom = _domain_of(url)
-            if any(dom == d or dom.endswith("." + d) for d in cfg.get("excluded_domains", [])):
-                domain_excluded += 1
+            if _is_excluded_domain(url, excluded):
+                social_excluded += 1
                 continue
             cu = canonical_url(url)
             nt = _norm_title(it.get("title", ""))
@@ -441,60 +461,70 @@ async def run_search(query: str = None, mode: str = "ordinary", actor: str = "ad
             if nt:
                 by_title.add(nt)
 
-    # 3) valutazione (raggiungibilità + pertinenza + associazione)
-    loop = asyncio.get_event_loop()
-    uniques = list(by_canonical.items())
-    reach_results = await asyncio.gather(
-        *[loop.run_in_executor(None, _reach_sync, cu) for cu, _ in uniques])
-
-    candidates = []
-    unreachable = false_positives = 0
-    for (cu, info), (status_code, reachable) in zip(uniques, reach_results):
+    # filtro pagine non-articolo (prima della rete)
+    candidates, non_article = [], 0
+    rejected = []  # log tecnico
+    for cu, info in by_canonical.items():
         it = info["item"]
-        text = f"{it.get('title', '')} {it.get('summary', '')}"
-        brand = _mentions_brand(text)
-        title_hit = await _content_title_hit(text) if not brand else False
-        relevant = brand or title_hit
-        if relevant:
-            reason = "cita UnoXdue" if brand else "riprende un contenuto UnoXdue"
-            auto_links = await _associate_all(text)
-        else:
-            reason = "solo nome ospite/team senza collegamento al podcast (falso positivo)"
-            auto_links = []
-        conf = it.get("confidence")
-        try:
-            conf = float(conf) if conf is not None else None
-        except (TypeError, ValueError):
-            conf = None
-        if conf is None:  # confidence euristica deterministica dai segnali di pertinenza
-            low = text.lower()
-            title_low = (it.get("title", "") or "").lower()
-            if any(b in title_low for b in BRAND_TERMS):
-                conf = 0.9
-            elif brand:
-                conf = 0.75
-            elif title_hit:
-                conf = 0.65
-            else:
-                conf = 0.35
-        status = _decide_status(reachable, relevant, conf, bool(auto_links))
-        if status == "error":
+        is_na, na_reason = _is_non_article(it.get("url", ""))
+        if is_na:
+            non_article += 1
+            rejected.append({"item": it, "query": info["query"], "category": "non_article",
+                             "reason": na_reason, "reachable": None, "http_status": None, "confidence": None})
+            continue
+        candidates.append((cu, info))
+
+    # raggiungibilità + testo pagina (un solo GET per candidato)
+    loop = asyncio.get_event_loop()
+    fetched = await asyncio.gather(*[loop.run_in_executor(None, _fetch_sync, cu) for cu, _ in candidates])
+
+    # dati DB per associazione (una sola volta)
+    team = await db.team.find({}, {"_id": 0, "slug": 1, "name": 1}).to_list(100)
+    eps = await db.episodes.find({}, {"_id": 0, "slug": 1, "title": 1, "type": 1, "guest_name": 1}).to_list(3000)
+
+    valids, unreachable, false_positives = [], 0, 0
+    for (cu, info), (code, reachable, page_text) in zip(candidates, fetched):
+        it = info["item"]
+        if not reachable:
             unreachable += 1
-        if not relevant:
+            rejected.append({"item": it, "query": info["query"], "category": "unreachable",
+                             "reason": f"URL irraggiungibile (HTTP {code})", "reachable": False,
+                             "http_status": code, "confidence": None})
+            continue
+        a = _assess(it.get("title", ""), it.get("summary", ""), page_text, team, eps, min_conf)
+        if not a["relevant"]:
             false_positives += 1
-        candidates.append({
+            rejected.append({"item": it, "query": info["query"], "category": "false_positive",
+                             "reason": a["reason"], "reachable": True, "http_status": code,
+                             "confidence": a["confidence"]})
+            continue
+        valids.append({
             "url": it.get("url", ""), "canonical_url": cu, "source": it.get("source", ""),
-            "title": it.get("title", ""), "date": it.get("date", ""),
-            "summary": it.get("summary", ""), "links": auto_links, "confidence": conf,
-            "reachable": reachable, "http_status": status_code, "status": status,
-            "relevant": relevant, "reason": reason, "query": info["query"], "kind": info["kind"],
+            "title": it.get("title", ""), "date": it.get("date", ""), "summary": it.get("summary", ""),
+            "links": a["links"], "suggested": a["suggested"], "confidence": a["confidence"],
+            "reachable": True, "http_status": code,
+            "status": "found" if a["links"] else "review",
+            "relevant": True, "reason": a["reason"], "query": info["query"], "kind": info["kind"],
         })
 
-    # 4) cap risultati salvati (priorità: found > review > error)
-    order = {"found": 0, "review": 1, "error": 2}
-    candidates.sort(key=lambda c: (order.get(c["status"], 3), -(c["confidence"] or 0)))
-    to_save = candidates[:max_results]
+    # cap: validi salvati in revisione (priorità found > review, confidence desc)
+    order = {"found": 0, "review": 1}
+    valids.sort(key=lambda c: (order.get(c["status"], 2), -(c["confidence"] or 0)))
+    to_save = valids[:max_results]
 
+    # salva log tecnico rejected (upsert per URL canonica)
+    for r in rejected:
+        it = r["item"]
+        cu = canonical_url(it.get("url", ""))
+        await db.press_rejected.update_one({"canonical_url": cu}, {"$set": {
+            "id": str(uuid.uuid4()), "canonical_url": cu, "url": it.get("url", ""),
+            "source": it.get("source", "") or _pub_name(it.get("url", "")), "title": it.get("title", ""),
+            "date": it.get("date", ""), "summary": it.get("summary", ""), "query": r["query"],
+            "category": r["category"], "reason": r["reason"], "reachable": r["reachable"],
+            "http_status": r["http_status"], "confidence": r["confidence"], "detected_at": _now(),
+        }}, upsert=True)
+
+    # salva editoriale (solo validi)
     saved_items = []
     for c in to_save:
         existing = await db.press.find_one({"canonical_url": c["canonical_url"]}) \
@@ -506,61 +536,74 @@ async def run_search(query: str = None, mode: str = "ordinary", actor: str = "ad
             "id": existing["id"] if existing else str(uuid.uuid4()),
             "source": c["source"], "title": c["title"], "url": c["url"],
             "canonical_url": c["canonical_url"], "date": c["date"], "summary": c["summary"],
-            "links": links, "query": c["query"], "provider": provider.name,
+            "links": links, "suggested": c["suggested"], "query": c["query"], "provider": provider.name,
             "detected_at": existing.get("detected_at") if existing else _now(),
             "updated_at": _now(), "reachable": c["reachable"], "http_status": c["http_status"],
-            "confidence": c["confidence"], "status": c["status"], "relevant": c["relevant"],
+            "confidence": c["confidence"], "status": c["status"], "relevant": True,
             "status_reason": c["reason"],
         }
         await db.press.update_one({"id": doc["id"]}, {"$set": doc}, upsert=True)
         saved_items.append({**c, "id": doc["id"], "links": links})
 
-    # 5) costo (reale dalle API Perplexity; fallback stima da tariffe)
-    rates = cfg.get("cost_rates", {}).get(provider_model(cfg, provider), {"in": 1.0, "out": 1.0, "req": 0.005})
-    n_req = len(queries) if provider.name == "perplexity" else 0
-    if real_cost > 0:
-        cost = real_cost
-    else:
-        cost = (usage_total["prompt_tokens"] / 1e6 * rates["in"]
-                + usage_total["completion_tokens"] / 1e6 * rates["out"]
-                + n_req * rates["req"]) if provider.name == "perplexity" else 0.0
+    # costo
+    cost = real_cost if real_cost > 0 else 0.0
 
-    valid = sum(1 for c in candidates if c["relevant"] and c["reachable"])
+    # verifica funnel esclusivo: unici = social + non_article + unreachable + false_pos + valid
+    uniques = len(by_canonical)
     stats = {
         "queries_executed": len(queries),
         "raw_found": raw_found,
-        "unique_after_dedup": len(uniques),
-        "duplicates_excluded": duplicates,
-        "domain_excluded": domain_excluded,
+        "duplicates": duplicates,
+        "unique": uniques,
+        "social_excluded": social_excluded,
+        "non_article_excluded": non_article,
         "unreachable": unreachable,
-        "valid": valid,
         "false_positives": false_positives,
-        "saved": len(saved_items),
+        "valid": len(valids),
+        "saved_in_review": len(saved_items),
         "tokens": usage_total,
-        "requests": n_req,
+        "requests": len(queries) if provider.name == "perplexity" else 0,
         "cost_usd": round(cost, 5),
-        "estimated_cost_usd": round(cost, 5),
-        "cost_source": "reale (Perplexity)" if real_cost > 0 else "stima",
+        "cost_source": "reale (Perplexity)" if real_cost > 0 else "n/d",
+        "funnel_balanced": (social_excluded + non_article + unreachable + false_positives + len(valids)) == uniques,
     }
     summary = {
         "ok": True, "provider": provider.name, "demo": provider.name == "fixture",
-        "mode": mode, "window_label": WINDOW_LABEL.get(mode, mode),
+        "mode": mode, "trigger": trigger, "window_label": WINDOW_LABEL.get(mode, mode),
         "queries": [q["q"] for q in queries], "query_errors": query_errors,
-        "items": saved_items, "all_candidates": candidates, "stats": stats,
-        "found": len(saved_items),
+        "items": saved_items, "stats": stats,
     }
+    await _record_run(summary)
     await auto.log_automation(
         "press", "ok",
-        f"Rassegna stampa REALE ({provider.name}, {mode}): {len(queries)} query, "
-        f"{len(saved_items)} salvati, {false_positives} falsi positivi, ~${stats['estimated_cost_usd']}",
+        f"Rassegna {provider.name}/{mode}/{trigger}: {len(queries)} query, {len(saved_items)} salvati, "
+        f"{false_positives} FP, {non_article} non-articolo, {unreachable} irragg., ~${stats['cost_usd']}",
         stats)
     return summary
 
 
-def provider_model(cfg: dict, provider) -> str:
-    return cfg.get("model", "sonar") if provider.name == "perplexity" else "fixture"
+def _merge_links(existing_links, auto_links):
+    manual = [l for l in (existing_links or []) if l.get("source") == "manual"]
+    seen, merged = set(), []
+    for l in manual + auto_links:
+        k = (l.get("type"), l.get("slug"))
+        if k in seen:
+            continue
+        seen.add(k)
+        merged.append(l)
+    return merged
 
 
+async def _record_run(summary: dict):
+    await db.press_runs.insert_one({
+        "id": str(uuid.uuid4()), "at": _now(), "mode": summary.get("mode"),
+        "trigger": summary.get("trigger"), "window_label": summary.get("window_label"),
+        "queries_count": len(summary.get("queries", [])), "errors": summary.get("query_errors", []),
+        "stats": summary.get("stats", {}),
+    })
+
+
+# ----------------------- gestione editoriale -----------------------
 async def set_status(item_id: str, status: str, actor: str = "admin") -> dict:
     if status not in ALLOWED_STATUS:
         return {"ok": False, "error": f"Stato non valido: {status}"}
@@ -577,11 +620,11 @@ async def set_status(item_id: str, status: str, actor: str = "admin") -> dict:
 
 
 async def set_link(item_id: str, action: str, ltype: str, slug: str, title: str) -> dict:
-    """Aggiunge o rimuove un collegamento manuale (senza eliminare l'articolo)."""
     doc = await db.press.find_one({"id": item_id})
     if not doc:
         return {"ok": False, "error": "Articolo non trovato"}
     links = list(doc.get("links") or [])
+    suggested = list(doc.get("suggested") or [])
     if action == "remove":
         links = [l for l in links if not (l.get("slug") == slug and l.get("type") == ltype)]
     else:
@@ -589,13 +632,14 @@ async def set_link(item_id: str, action: str, ltype: str, slug: str, title: str)
             return {"ok": False, "error": "Tipo/slug mancanti"}
         if not any(l.get("slug") == slug and l.get("type") == ltype for l in links):
             links.append({"type": ltype, "slug": slug, "title": title, "source": "manual"})
-    await db.press.update_one({"id": item_id}, {"$set": {"links": links, "updated_at": _now()}})
+        suggested = [s for s in suggested if not (s.get("slug") == slug and s.get("type") == ltype)]
+    await db.press.update_one({"id": item_id},
+                              {"$set": {"links": links, "suggested": suggested, "updated_at": _now()}})
     await auto.log_automation("press", "info", f"Associazione {action} ({ltype}:{slug})", {"id": item_id})
-    return {"ok": True, "links": links}
+    return {"ok": True, "links": links, "suggested": suggested}
 
 
 async def link_options() -> dict:
-    """Contenuti selezionabili per l'associazione manuale (episodi/interviste/team)."""
     opts = []
     eps = await db.episodes.find({}, {"_id": 0, "slug": 1, "title": 1, "type": 1}).sort("published_at", -1).to_list(500)
     for e in eps:
@@ -608,7 +652,6 @@ async def link_options() -> dict:
 
 
 async def published_for(slug: str):
-    """Articoli pubblicati + raggiungibili collegati a uno specifico contenuto (dedup per URL canonica, recenti)."""
     items = await db.press.find(
         {"status": "published", "reachable": True, "links.slug": slug}, {"_id": 0}).to_list(50)
     seen, out = set(), []
@@ -623,7 +666,6 @@ async def published_for(slug: str):
 
 
 async def published_archive():
-    """Tutti gli articoli pubblicati per la pagina 'Parlano di noi', con link interni puliti (dedup)."""
     items = await db.press.find({"status": "published"}, {"_id": 0}).sort("date", -1).to_list(200)
     seen, out = set(), []
     for it in items:
@@ -651,3 +693,18 @@ async def list_all(status: str = None, limit: int = 100) -> dict:
         s = it.get("status") or "found"
         counts[s] = counts.get(s, 0) + 1
     return {"items": items, "counts": counts}
+
+
+async def list_rejected(category: str = None, limit: int = 200) -> dict:
+    q = {} if not category else {"category": category}
+    items = await db.press_rejected.find(q, {"_id": 0}).sort("detected_at", -1).to_list(limit)
+    counts = {}
+    for it in await db.press_rejected.find({}, {"_id": 0, "category": 1}).to_list(5000):
+        c = it.get("category") or "other"
+        counts[c] = counts.get(c, 0) + 1
+    return {"items": items, "counts": counts}
+
+
+async def list_runs(limit: int = 20) -> dict:
+    items = await db.press_runs.find({}, {"_id": 0}).sort("at", -1).to_list(limit)
+    return {"runs": items}

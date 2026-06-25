@@ -476,6 +476,26 @@ async def admin_press_link_options(admin: str = Depends(get_current_admin)):
     return await press.link_options()
 
 
+@api_router.get("/admin/press/rejected")
+async def admin_press_rejected(category: Optional[str] = None, limit: int = 200,
+                               admin: str = Depends(get_current_admin)):
+    return await press.list_rejected(category, limit)
+
+
+@api_router.get("/admin/press/runs")
+async def admin_press_runs(limit: int = 20, admin: str = Depends(get_current_admin)):
+    return await press.list_runs(limit)
+
+
+# Cron protetto (scheduler esterno). schedule: weekly=30gg, monthly=90gg. Backfill NON automatico.
+@api_router.post("/cron/press")
+async def cron_press(secret: str = Query(...), schedule: str = Query("weekly")):
+    if not CRON_SECRET or secret != CRON_SECRET:
+        raise HTTPException(status_code=403, detail="Cron secret non valido")
+    mode = "weekly" if schedule == "monthly" else "ordinary"  # monthly->90gg, weekly->30gg
+    return await press.run_search(mode=mode, actor="cron", trigger=f"cron:{schedule}")
+
+
 @api_router.get("/admin/odds")
 async def admin_odds(match: str, market: str, pick: str, admin: str = Depends(get_current_admin)):
     return await auto.get_odds(match, market, pick)

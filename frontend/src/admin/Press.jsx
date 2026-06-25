@@ -1,6 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Newspaper, Search, Loader2, ExternalLink, CheckCircle2, XCircle, AlertTriangle, Link2, Eye,
+  History, Ban, ChevronDown, Plus,
 } from "lucide-react";
 import { api } from "./api";
 
@@ -30,19 +31,28 @@ export default function Press() {
   const [runRes, setRunRes] = useState(null);
   const [preview, setPreview] = useState(null);
   const [linkOptions, setLinkOptions] = useState([]);
+  const [runs, setRuns] = useState([]);
+  const [rejected, setRejected] = useState([]);
+  const [rejCounts, setRejCounts] = useState({});
+  const [showRejected, setShowRejected] = useState(false);
 
   const loadStatus = () => api.pressStatus().then((s) => { setStatus(s.provider); setCounts(s.counts || {}); }).catch(() => {});
   const loadList = (f) => api.pressList(f).then((d) => { setItems(d.items || []); setCounts(d.counts || {}); }).catch(() => {});
+  const loadRuns = () => api.pressRuns(8).then((d) => setRuns(d.runs || [])).catch(() => {});
+  const loadRejected = () => api.pressRejected().then((d) => { setRejected(d.items || []); setRejCounts(d.counts || {}); }).catch(() => {});
   const refresh = async () => {
     try {
       const d = await api.pressList(filter);
       setItems(d.items || []); setCounts(d.counts || {});
       setPreview((prev) => prev ? ((d.items || []).find((x) => x.id === prev.id) || prev) : prev);
     } catch (e) { /* noop */ }
-    loadStatus();
+    loadStatus(); loadRuns(); loadRejected();
   };
 
-  useEffect(() => { loadStatus(); loadList(""); api.pressLinkOptions().then((d) => setLinkOptions(d.options || [])).catch(() => {}); }, []);
+  useEffect(() => {
+    loadStatus(); loadList(""); loadRuns(); loadRejected();
+    api.pressLinkOptions().then((d) => setLinkOptions(d.options || [])).catch(() => {});
+  }, []);
   useEffect(() => { loadList(filter); /* eslint-disable-next-line */ }, [filter]);
 
   const run = async () => {
@@ -72,6 +82,12 @@ export default function Press() {
   const removeLink = async (item, l) => {
     setBusy(`link-${item.id}`);
     try { await api.pressLink({ id: item.id, action: "remove", type: l.type, slug: l.slug }); await refresh(); } catch (e) { /* noop */ }
+    setBusy("");
+  };
+
+  const confirmSuggested = async (item, l) => {
+    setBusy(`link-${item.id}`);
+    try { await api.pressLink({ id: item.id, action: "add", type: l.type, slug: l.slug, title: l.title }); await refresh(); } catch (e) { /* noop */ }
     setBusy("");
   };
 
@@ -122,13 +138,15 @@ export default function Press() {
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
                   {[
                     ["Query eseguite", runRes.stats?.queries_executed],
-                    ["Trovati (grezzi)", runRes.stats?.raw_found],
-                    ["Duplicati esclusi", runRes.stats?.duplicates_excluded],
+                    ["Risultati grezzi", runRes.stats?.raw_found],
+                    ["Duplicati", runRes.stats?.duplicates],
+                    ["Social esclusi", runRes.stats?.social_excluded],
+                    ["Pagine non-articolo", runRes.stats?.non_article_excluded],
                     ["URL irraggiungibili", runRes.stats?.unreachable],
-                    ["Validi", runRes.stats?.valid],
                     ["Falsi positivi", runRes.stats?.false_positives],
-                    ["Salvati", runRes.stats?.saved],
-                    [`Costo (${runRes.stats?.cost_source || "stima"})`, `$${runRes.stats?.cost_usd ?? 0}`],
+                    ["Validi", runRes.stats?.valid],
+                    ["Salvati in revisione", runRes.stats?.saved_in_review],
+                    [`Costo (${runRes.stats?.cost_source || "n/d"})`, `$${runRes.stats?.cost_usd ?? 0}`],
                   ].map(([k, v]) => (
                     <div key={k} className="bg-white rounded-lg border border-[#ecdfce] px-3 py-2">
                       <p className="text-[10px] uppercase tracking-wide text-[#9c8b7d]">{k}</p>
@@ -136,6 +154,7 @@ export default function Press() {
                     </div>
                   ))}
                 </div>
+                <p className="text-[11px] text-[#9c8b7d] mt-2">Categorie esclusive: grezzi − duplicati = unici = social + non-articolo + irraggiungibili + falsi positivi + validi. {runRes.stats?.funnel_balanced ? "✓ funnel coerente" : "⚠ verifica funnel"}</p>
               </div>
             ) : <span className="text-red-600">Errore: {runRes.error}</span>}
           </div>
@@ -216,6 +235,20 @@ export default function Press() {
                   <option value="">+ Aggiungi collegamento manuale…</option>
                   {linkOptions.map((o) => <option key={`${o.type}|${o.slug}`} value={`${o.type}|${o.slug}`}>{`[${o.type}] ${o.title}`}</option>)}
                 </select>
+
+                {(preview.suggested || []).length > 0 && (
+                  <div className="mt-3" data-testid="press-suggested">
+                    <p className="text-xs font-semibold text-[#6b5d52] uppercase tracking-wide mb-1.5">Suggeriti (da confermare)</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {preview.suggested.map((l, i) => (
+                        <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-amber-50 text-amber-800 border border-amber-200 rounded-full pl-2.5 pr-1 py-0.5" data-testid={`press-suggested-${l.type}-${l.slug}`}>
+                          {l.title}
+                          <button onClick={() => confirmSuggested(preview, l)} disabled={busy === `link-${preview.id}`} className="ml-0.5 text-amber-600 hover:text-green-600" title="Conferma collegamento" data-testid={`press-suggested-confirm-${l.type}-${l.slug}`}><Plus className="w-3.5 h-3.5" /></button>
+                        </span>
+                      ))}
+                    </div>
+                  </div>
+                )}
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">
@@ -232,6 +265,81 @@ export default function Press() {
             </div>
           )}
         </div>
+      </div>
+
+      {/* Riepilogo esecuzioni */}
+      <div className="mt-6 bg-white rounded-xl border border-[#ecdfce] p-5" data-testid="press-runs">
+        <div className="flex items-center gap-2 mb-3">
+          <History className="w-4 h-4 text-[#EA4E1B]" />
+          <h2 className="font-archivo font-extrabold text-[#1a1411] text-sm uppercase tracking-wide">Ultime esecuzioni</h2>
+        </div>
+        {runs.length === 0 && <p className="text-[#9c8b7d] text-sm">Nessuna esecuzione registrata.</p>}
+        {runs.length > 0 && (
+          <div className="overflow-x-auto">
+            <table className="w-full text-xs">
+              <thead className="text-[#9c8b7d] text-left">
+                <tr>
+                  <th className="py-1.5 pr-3 font-semibold">Quando</th>
+                  <th className="py-1.5 pr-3 font-semibold">Finestra</th>
+                  <th className="py-1.5 pr-3 font-semibold">Trigger</th>
+                  <th className="py-1.5 pr-3 font-semibold">Query</th>
+                  <th className="py-1.5 pr-3 font-semibold">Validi</th>
+                  <th className="py-1.5 pr-3 font-semibold">Falsi pos.</th>
+                  <th className="py-1.5 pr-3 font-semibold">Salvati</th>
+                  <th className="py-1.5 pr-3 font-semibold">Errori</th>
+                  <th className="py-1.5 pr-3 font-semibold">Costo</th>
+                </tr>
+              </thead>
+              <tbody>
+                {runs.map((r) => (
+                  <tr key={r.id} className="border-t border-[#f0e7da]">
+                    <td className="py-1.5 pr-3 text-[#4a3d34]">{(r.at || "").slice(0, 16).replace("T", " ")}</td>
+                    <td className="py-1.5 pr-3">{r.window_label}</td>
+                    <td className="py-1.5 pr-3">{r.trigger}</td>
+                    <td className="py-1.5 pr-3">{r.queries_count}</td>
+                    <td className="py-1.5 pr-3 font-semibold">{r.stats?.valid ?? 0}</td>
+                    <td className="py-1.5 pr-3">{r.stats?.false_positives ?? 0}</td>
+                    <td className="py-1.5 pr-3">{r.stats?.saved_in_review ?? 0}</td>
+                    <td className="py-1.5 pr-3">{(r.errors || []).length}</td>
+                    <td className="py-1.5 pr-3">${r.stats?.cost_usd ?? 0}</td>
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+        )}
+      </div>
+
+      {/* Log tecnico scartati */}
+      <div className="mt-4 bg-white rounded-xl border border-[#ecdfce] p-5" data-testid="press-rejected">
+        <button onClick={() => setShowRejected((v) => !v)} className="w-full flex items-center justify-between" data-testid="press-rejected-toggle">
+          <span className="flex items-center gap-2">
+            <Ban className="w-4 h-4 text-[#9c8b7d]" />
+            <span className="font-archivo font-extrabold text-[#1a1411] text-sm uppercase tracking-wide">Log tecnico (scartati)</span>
+            <span className="text-xs text-[#9c8b7d]">
+              {Object.entries(rejCounts).map(([k, v]) => `${k}: ${v}`).join(" · ") || "vuoto"}
+            </span>
+          </span>
+          <ChevronDown className={`w-4 h-4 text-[#9c8b7d] transition-transform ${showRejected ? "rotate-180" : ""}`} />
+        </button>
+        {showRejected && (
+          <div className="mt-3 max-h-80 overflow-y-auto">
+            <p className="text-[11px] text-[#9c8b7d] mb-2">Risultati non editoriali (falsi positivi, pagine non-articolo, URL irraggiungibili). Solo per audit tecnico, non mostrati nel sito.</p>
+            <table className="w-full text-xs">
+              <tbody>
+                {rejected.slice(0, 100).map((r) => (
+                  <tr key={r.id} className="border-t border-[#f0e7da]" data-testid={`press-rejected-row-${r.id}`}>
+                    <td className="py-1.5 pr-2"><span className="text-[10px] font-bold uppercase px-1.5 py-0.5 rounded bg-gray-100 text-gray-600">{r.category}</span></td>
+                    <td className="py-1.5 pr-2 text-[#6b5d52] whitespace-nowrap">{r.source}</td>
+                    <td className="py-1.5 pr-2 text-[#4a3d34]">{(r.title || "").slice(0, 70)}</td>
+                    <td className="py-1.5 pr-2 text-[#9c8b7d]">{r.reason}</td>
+                  </tr>
+                ))}
+                {rejected.length === 0 && <tr><td className="py-2 text-[#9c8b7d]">Nessun elemento scartato.</td></tr>}
+              </tbody>
+            </table>
+          </div>
+        )}
       </div>
     </div>
   );

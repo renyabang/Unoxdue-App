@@ -107,6 +107,12 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
   10 salvati (3 Trovato auto-linkati: Cosenzachannel→Baclet×2, Parmalive→Ceravolo; 7 Da revisionare). Costo REALE $0.0745. Nessuna pubblicazione automatica.
 - Smoke test UI superato (login, lista 10, badge falso positivo + motivo, collegamenti auto). API e2e verificate via curl.
 
+### [25/06/2026] Step 7B — Correzioni precisione (msg utente) + SECONDO test reale. COMPLETATO + verificato.
+- (1) Facebook/x.com/twitter.com aggiunti ai domini esclusi. (2) Esclusione pagine non-articolo (homepage, tag/categoria/archivio/ricerca, sezioni generiche tipo `/reggio-calabria/`). (3) Soglia auto-link alzata a 0.85 (`auto_link_min_confidence`). (4) Auto-link SOLO con menzione esplicita UnoXdue + corrispondenza DB ANCORATA AL TITOLO. (5) Garritano (Baclet solo nel teaser) → revisione, non auto-link. (6) "Reggio Calabria Notizie"/pagine-lista → scartate come non-articolo. (7) Falsi positivi NON in editoriale: solo nel log tecnico `press_rejected`. (8) Funnel a categorie ESCLUSIVE (grezzi−duplicati=unici=social+non-articolo+irraggiungibili+FP+validi), con flag `funnel_balanced`.
+- Pertinenza ora sul TESTO della pagina (un solo GET per candidato: raggiungibilità + contenuto), non sullo snippet variabile di Perplexity → recupera menzioni reali senza perdere precisione. Termini brand ristretti a `unoxdue`/`uno x due` (rimosso "uno per due" che generava falsi match).
+- Scheduler: `POST /api/cron/press?secret=&schedule=weekly|monthly` (weekly=30gg, monthly=90gg; backfill NON automatico). Storico in `press_runs`; log tecnico `press_rejected`; endpoint `/admin/press/runs` e `/admin/press/rejected`. UI: selettore finestra, statistiche esclusive, suggeriti con conferma, pannello "Ultime esecuzioni", "Log tecnico (scartati)".
+- SECONDO test reale (backfill, 14 query, sonar): grezzi 41 − dup 11 = 30 unici → social 0, non-articolo 6, irraggiungibili 3, FP 16, validi 5 (4 found auto-linkati Baclet/Ceravolo + 1 review Garritano). 0 menzioni reali perse. Costo REALE $0.074. Nessuna pubblicazione automatica. Modello resta `sonar` (A/B con sonar-pro solo se necessario).
+
 ### [giugno 2026] Step 7B BIDIREZIONALE — Collegamento rassegna stampa ⇄ contenuti (P2). COMPLETATO + testato (fixture, e2e).
 - `press.py`: `links` come LISTA (auto + manuale), `_associate_all` (multi-match team/episodi/interviste), `_merge_links`
   (preserva i manuali al re-run), `set_link(action add/remove)` (rimozione/correzione senza eliminare l'articolo), `link_options`,
