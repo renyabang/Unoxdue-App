@@ -1,0 +1,194 @@
+[
+  {
+    "_id": {
+      "$oid": "6a3cf03e19a5755d2ebead0f"
+    },
+    "round": 38,
+    "season": "2025-2026",
+    "competition": "Serie A",
+    "episode_url": null,
+    "intro": "Le giocate del nostro team per l'ultima giornata di Serie A. Quote indicative al momento della pubblicazione: possono variare.",
+    "picks": [
+      {
+        "tipster": "Sono Micuccio",
+        "type": "Multipla",
+        "total_odds": "15.75",
+        "selections": [
+          {
+            "competition": "Serie A",
+            "date": "24/05 20:45",
+            "match": "Inter - Torino",
+            "market": "1X2",
+            "pick": "1",
+            "odds": "1.40"
+          },
+          {
+            "competition": "Serie A",
+            "date": "23/05 18:00",
+            "match": "Bologna - Sassuolo",
+            "market": "Over 2,5",
+            "pick": "Over",
+            "odds": "1.72"
+          },
+          {
+            "competition": "Serie A",
+            "date": "24/05 20:45",
+            "match": "Juventus - Milan",
+            "market": "Goal/No Goal",
+            "pick": "Goal",
+            "odds": "1.70"
+          }
+        ],
+        "graphics": {
+          "formats": {
+            "horizontal": {
+              "png": "https://sportivo.preview.emergentagent.com/api/uploads/graphics/2025-2026/38/sono-micuccio/horizontal.png",
+              "webp": "https://sportivo.preview.emergentagent.com/api/uploads/graphics/2025-2026/38/sono-micuccio/horizontal.webp",
+              "w": 1200,
+              "h": 630
+            },
+            "square": {
+              "png": "https://sportivo.preview.emergentagent.com/api/uploads/graphics/2025-2026/38/sono-micuccio/square.png",
+              "webp": "https://sportivo.preview.emergentagent.com/api/uploads/graphics/2025-2026/38/sono-micuccio/square.webp",
+              "w": 1080,
+              "h": 1080
+            },
+            "vertical": {
+              "png": "https://sportivo.preview.emergentagent.com/api/uploads/graphics/2025-2026/38/sono-micuccio/vertical.png",
+              "webp": "https://sportivo.preview.emergentagent.com/api/uploads/graphics/2025-2026/38/sono-micuccio/vertical.webp",
+              "w": 1080,
+              "h": 1920
+            }
+          },
+          "errors": {},
+          "generated_at": "2026-06-25T11:07:53.161218+00:00",
+          "qr_url": "https://sportivo.preview.emergentagent.com/pronostici/serie-a/2025-2026/giornata-38/"
+        }
+      },
+      {
+        "tipster": "Il Ninja",
+        "type": "Multipla",
+        "total_odds": "4.18",
+        "selections": [
+          {
+            "competition": "Serie A",
+            "date": "24/05 20:45",
+            "match": "Atalanta - Parma",
+            "market": "1X2",
+            "pick": "1",
+            "odds": "1.45"
+          },
+          {
+            "competition": "Serie A",
+            "date": "23/05 20:45",
+            "match": "Roma - Empoli",
+            "market": "Multigol Casa 1-3",
+            "pick": "Si",
+            "odds": "1.36"
+          },
+          {
+            "competition": "Serie A",
+            "date": "24/05 18:00",
+            "match": "Como - Cagliari",
+            "market": "Under 3,5",
+            "pick": "Under",
+            "odds": "2.12"
+          }
+        ]
+      },
+      {
+        "tipster": "Il Marziano",
+        "type": "Multipla",
+        "total_odds": "17.63",
+        "selections": [
+          {
+            "competition": "Italia | Serie A",
+            "date": "22/05/2026 20:45",
+            "match": "Fiorentina - Atalanta",
+            "market": "MG 2-4",
+            "pick": "SI",
+            "odds": "1.49"
+          },
+          {
+            "competition": "Italia | Serie A",
+            "date": "23/05/2026 20:45",
+            "match": "Lazio - Pisa",
+            "market": "MG 1-2 - 1\u00b0T",
+            "pick": "SI",
+            "odds": "1.55"
+          },
+          {
+            "competition": "Italia | Serie A",
+            "date": "24/05/2026 18:00",
+            "match": "Napoli - Udinese",
+            "market": "1X2 + U/O 3,5",
+            "pick": "1 + UN",
+            "odds": "2.09"
+          },
+          {
+            "competition": "Italia | Serie A",
+            "date": "24/05/2026 20:45",
+            "match": "Lecce - Genoa",
+            "market": "MultiGoal Casa 1 3",
+            "pick": "SI",
+            "odds": "1.35"
+          },
+          {
+            "competition": "Italia | Serie A",
+            "date": "24/05/2026 20:45",
+            "match": "Cremonese - Como",
+            "market": "GG/NG",
+            "pick": "Goal",
+            "odds": "1.78"
+          },
+          {
+            "competition": "Italia | Serie A",
+            "date": "24/05/2026 20:45",
+            "match": "Verona - Roma",
+            "market": "1X2 + U/O 1,5",
+            "pick": "2 + OV",
+            "odds": "1.52"
+          }
+        ]
+      }
+    ],
+    "status": "pubblicato",
+    "updated_at": "25/06/2026 11:12"
+  },
+  {
+    "_id": {
+      "$oid": "6a3cf2dcaec28711109e3996"
+    },
+    "competition": "Serie A",
+    "season": "2026-2027",
+    "round": 38,
+    "intro": "Pronostici Serie A 2026-2027 \u2014 38\u00aa giornata.",
+    "picks": [
+      {
+        "tipster": "Il Marziano",
+        "type": "Multipla",
+        "total_odds": "5.00",
+        "selections": [
+          {
+            "competition": "Serie A",
+            "date": "2027-05-30",
+            "match": "Juventus - Inter",
+            "market": "1X2",
+            "pick": "1",
+            "odds": "2.50"
+          },
+          {
+            "competition": "Serie A",
+            "date": "2027-05-30",
+            "match": "Milan - Roma",
+            "market": "1X2",
+            "pick": "1",
+            "odds": "2.00"
+          }
+        ]
+      }
+    ],
+    "status": "pubblicato",
+    "updated_at": "25/06/2026 09:20"
+  }
+]

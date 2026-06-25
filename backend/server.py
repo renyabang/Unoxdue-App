@@ -840,7 +840,7 @@ async def ssr_team_member(slug: str):
 async def ssr_episode(slug: str):
     ep = await db.episodes.find_one({"slug": slug})
     if not ep:
-        red = await _slug_redirect(slug, "trascrizione" not in slug)
+        red = await _slug_redirect(slug)
         if red:
             return red
         raise HTTPException(status_code=404, detail="Contenuto non trovato")
