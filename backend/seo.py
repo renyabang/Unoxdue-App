@@ -30,6 +30,18 @@ def _year():
     return datetime.now().year
 
 
+def _t2s(t: str) -> int:
+    try:
+        parts = [int(x) for x in str(t).split(":")]
+    except Exception:
+        return 0
+    if len(parts) == 2:
+        return parts[0] * 60 + parts[1]
+    if len(parts) == 3:
+        return parts[0] * 3600 + parts[1] * 60 + parts[2]
+    return 0
+
+
 def enrich(ep: dict) -> dict:
     ep = dict(ep)
     ep.pop("_id", None)
@@ -52,6 +64,26 @@ def enrich(ep: dict) -> dict:
     ep.setdefault("duration", "\u2014")
     for k in ("summary", "topics", "chapters", "quotes", "participants", "related"):
         ep.setdefault(k, [])
+    # deep-link dei capitoli al timestamp YouTube
+    yid = ep.get("youtube_id")
+    norm_ch = []
+    for c in ep["chapters"]:
+        if isinstance(c, dict) and c.get("time"):
+            sec = _t2s(c["time"])
+            cc = {"time": c["time"], "label": c.get("label") or c.get("title", ""),
+                  "description": c.get("description", ""), "seconds": sec}
+            if yid:
+                cc["yt_url"] = f"https://www.youtube.com/watch?v={yid}&t={sec}s"
+            norm_ch.append(cc)
+    ep["chapters"] = norm_ch
+    # normalizza quotes: accetta stringa o dict {text, speaker, time}
+    norm_q = []
+    for q in ep["quotes"]:
+        if isinstance(q, str):
+            norm_q.append({"text": q})
+        elif isinstance(q, dict) and q.get("text"):
+            norm_q.append(q)
+    ep["quotes"] = norm_q
     return ep
 
 
@@ -67,6 +99,14 @@ def episode_jsonld(ep: dict) -> str:
         "contentUrl": f'https://www.youtube.com/watch?v={ep.get("youtube_id", "")}',
         "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
     }
+    if ep.get("chapters"):
+        data["hasPart"] = [
+            {"@type": "Clip", "name": c["label"], "startOffset": c.get("seconds", 0),
+             "url": f'{canonical}#t-{c.get("seconds", 0)}'}
+            for c in ep["chapters"] if c.get("label")
+        ]
+    if ep.get("has_transcript_page"):
+        data["transcript"] = f'{canonical}trascrizione/'
     return json.dumps(data, ensure_ascii=False, indent=2)
 
 
@@ -183,4 +223,48 @@ def render_page(page_title, page_desc, canonical_path, body_html) -> str:
     return env.get_template("page.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical,
         body_html=body_html, site_url=SITE_URL, breadcrumb_jsonld=bc, year=_year(),
+    )
+
+
+def _paragraphs(text: str, target: int = 700) -> list:
+    """Spezza il testo pulito in paragrafi leggibili (~target caratteri) sui confini di frase."""
+    import re
+    text = (text or "").strip()
+    if not text:
+        return []
+    sentences = re.split(r"(?<=[.!?…])\s+", text)
+    paras, buf = [], ""
+    for s in sentences:
+        if len(buf) + len(s) + 1 > target and buf:
+            paras.append(buf.strip())
+            buf = ""
+        buf = f"{buf} {s}".strip()
+    if buf:
+        paras.append(buf.strip())
+    return paras
+
+
+def render_transcript(ep: dict, clean: str, chapters: list) -> str:
+    ep = enrich(ep)
+    canonical = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/trascrizione/'
+    episode_url = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/'
+    paras = _paragraphs(clean)
+    bc = breadcrumb_jsonld([
+        ("Home", f"{SITE_URL}/"),
+        (ep["section_label"], f'{SITE_URL}/{ep["section"]}/'),
+        (ep["title"], episode_url),
+        ("Trascrizione", canonical),
+    ])
+    jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "Article",
+        "headline": f'Trascrizione — {ep["title"]}',
+        "description": f'Trascrizione completa della puntata: {ep["title"]}.',
+        "url": canonical, "inLanguage": "it", "isPartOf": episode_url,
+        "datePublished": ep.get("published_at"),
+        "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
+    }, ensure_ascii=False, indent=2)
+    return env.get_template("transcript.html").render(
+        ep=ep, canonical=canonical, episode_url=episode_url, site_url=SITE_URL,
+        paragraphs=paras, chapters=ep.get("chapters", []), jsonld=jsonld,
+        breadcrumb_jsonld=bc, year=_year(),
     )

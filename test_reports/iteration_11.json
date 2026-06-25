@@ -1,0 +1,41 @@
+{
+  "summary": "Feature P1 'Trascrizioni SEO' (route /admin/trascrizioni) testata end-to-end sul frontend admin. Login OK, navigazione dalla voce di menu 'Trascrizioni SEO' OK, pagina carica con 13 righe (Contenuto/Tipo/Stato SEO/Azioni), 3 righe con badge 'Pubblicato' (allan-baclet-playoff-cosenza, decimo-appuntamento-..., quinto-appuntamento-...) e 10 con 'Da generare'. Apertura anteprima su riga 'Pubblicato' (Baclet) OK: modale mostra tutti i campi richiesti (H1, SEO title con conteggio caratteri (51), meta description con conteggio (123), Introduzione, Sommario esteso multi-paragrafo, Argomenti, Entità persone/squadre/competizioni, Capitoli con timestamp reali, Citazioni verificate) + meta badges (modello gpt-5.4-mini, ~$0.0079, 12 capitoli, 6 citazioni). Pulsanti seo-publish-btn, seo-regen-btn, seo-close-btn presenti. Click 'Pubblica anteprima' chiude il modale senza errori e ricarica la lista. Pulsante 'Genera anteprime mancanti' (seo-batch-btn) presente in alto. Smoke test non-regressione su tutte le 10 altre voci di menu admin (Dashboard, Contenuti, YouTube, AI/SEO, Schedine, Grafiche, Risultati, Rassegna stampa, Log, Integrazioni) - tutte caricano senza errori DOM. Nessun JS error, nessun '.error/[class*=error]' rilevato.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "login": "OK (admin@unoxdue.net + UxdTest!2026 da test_credentials.md).",
+    "menu_navigation": "Click su /admin/trascrizioni dalla sidebar OK; voce 'Trascrizioni SEO' presente con icona FileText.",
+    "page_load": "data-testid='transcript-seo-page' presente; tabella con 13 righe (3 Pubblicato + 10 Da generare). Header tabella: Contenuto/Tipo/Stato SEO/Azioni.",
+    "batch_button": "data-testid='seo-batch-btn' (Genera anteprime mancanti) visibile in alto a destra. Non cliccato per evitare attese LLM lunghe.",
+    "preview_open": "Click seo-view-allan-baclet-playoff-cosenza apre seo-preview-modal entro 10s. seo-preview-content caricato con dati reali.",
+    "preview_fields_populated": "Tutti i campi richiesti popolati: Tipo/Ospite ('intervista · Alan Buckley'), H1, SEO title (51 char), Meta description (123 char), Introduzione, Sommario esteso (4 paragrafi), Argomenti (chip), Entità (Persone/Squadre/Competizioni), Capitoli (12 con timestamp clock icon), Citazioni (6 con blockquote).",
+    "preview_meta_badges": "Mostrati: Modello 'gpt-5.4-mini', ~$0.0079, 12 capitoli, 6 citazioni. Nessun badge 'Fallback' o 'Da verificare' per questa riga.",
+    "publish_button": "data-testid='seo-publish-btn' presente, etichetta 'Pubblica anteprima', verde, abilitato. Click chiude il modale (detached entro 15s) e ricarica la lista. Nessun errore.",
+    "regen_button": "data-testid='seo-regen-btn' presente. Non cliccato (eviterebbe attese LLM).",
+    "close_button": "data-testid='seo-close-btn' presente.",
+    "js_errors": "Nessun pageerror, nessun console error, DOM error selectors vuoti.",
+    "smoke_non_regression": "10/10 pagine admin caricano senza errori: /admin, /admin/contenuti, /admin/youtube, /admin/ai, /admin/schedine, /admin/grafiche, /admin/risultati, /admin/rassegna, /admin/log, /admin/integrazioni."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "TranscriptSEO.jsx PreviewPanel: errore 'err' viene mostrato come testo rosso semplice ma quando si verifica un fallimento durante 'pub' (publish) il pulsante torna abilitato ma l'utente non vede toast/notifica chiara; consigliato un toast persistente o evidenziato in alto al modale.",
+    "TranscriptSEO.jsx: caricamento iniziale (load) non gestisce errori (try/finally senza catch) - se /api/admin/transcripts/seo/status fallisce, l'utente vede solo tabella vuota con 'Nessun contenuto con trascrizione disponibile.' senza distinzione tra 'nessun dato' e 'errore di rete'.",
+    "TranscriptSEO.jsx generate(slug): la chiamata e' sincrona/attesa nello stesso click - per AI lente puo' bloccare la UI per 1-3 minuti senza feedback di progresso (solo Loader2 spinner sul pulsante). Considerare polling o backend background job + websocket/polling status.",
+    "AI content accuracy (non frontend bug): per la riga 'allan-baclet-playoff-cosenza' (titolo originale 'Baclet senza filtri') la generazione SEO ha trasformato il nome ospite in 'Alan Buckley' (anglicizzazione errata del cognome 'Baclet'). H1, SEO title, meta description, sommario e introduzione contengono 'Alan Buckley' invece di 'Allan Baclet'. Probabile hallucination del modello LLM o normalizzazione errata. Verificare il prompt/normalizzazione del nome ospite in /app/backend/ai_transcript.py.",
+    "TranscriptSEO.jsx: nessuna paginazione/filtro nella tabella - con molti episodi (>30) la pagina puo' diventare lunga; considerare filtro per stato (Pubblicato/Anteprima/Da generare).",
+    "TranscriptSEO.jsx batch(): hardcoded {only_missing:true, limit:15} - considerare di esporre questi parametri all'utente (modal di conferma con limit selezionabile)."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skip per richiesta)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net / UxdTest!2026 (da /app/memory/test_credentials.md). NON stampata nelle console.",
+  "seed_data_creation": "Riga 'allan-baclet-playoff-cosenza' ri-pubblicata via UI durante il test (era gia' 'Pubblicato' prima; lo stato resta 'Pubblicato'). Nessun altro dato creato.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature 'Trascrizioni SEO' completamente funzionante a livello UI. Tutti i data-testid documentati nel review_request presenti e funzionanti: transcript-seo-page, seo-batch-btn, seo-row-<slug>, seo-view-<slug>, seo-gen-<slug>, seo-preview-modal, seo-preview-content, seo-publish-btn, seo-regen-btn, seo-close-btn, seo-generate-first-btn. Non testato il flusso 'Genera' su riga 'Da generare' (skip per attese LLM lunghe come da istruzione main agent). Le 3 righe Pubblicato erano: allan-baclet-playoff-cosenza, decimo-appuntamento-..., quinto-appuntamento-...; Note: contenuto AI per Baclet contiene errore nome (Alan Buckley invece di Allan Baclet) - vedere critical_code_review_comments, e' un problema lato backend/prompt LLM, non frontend.",
+  "rca of the issue": "Nessun bug bloccante rilevato. Unico problema funzionale segnalato (non frontend): hallucination del nome ospite nella riga Baclet -> 'Alan Buckley'. RCA probabile: il modello LLM ha normalizzato/anglicizzato il cognome francese 'Baclet' in 'Buckley' (cognome inglese piu' comune) durante la generazione di H1/title/sommario. Mitigazione: in ai_transcript.py passare esplicitamente al prompt il nome ospite estratto dai metadati del contenuto (campo guest_name) come constraint immutabile, e/o aggiungere un post-validation che sostituisca eventuali varianti con il guest_name canonico."
+}

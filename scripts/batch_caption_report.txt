@@ -1,0 +1,108 @@
+{
+  "finished_at": "2026-06-25T16:50:04",
+  "total": 11,
+  "counts": {
+    "done": 11
+  },
+  "items": [
+    {
+      "slug": "fabio-ceravolo-130-gol-carriera",
+      "title": "Fabio Ceravolo si racconta: 130 gol, Reggina, Atalanta e la magia del Benevento ⚽🔥",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 71549,
+      "error": null
+    },
+    {
+      "slug": "terzo-appuntamento-di-unoxdue-live-studio-serie-a-31-giornata-calcio-e-news",
+      "title": "Terzo appuntamento di Unoxdue Live | Studio Serie A 31° giornata | Calcio e News!",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 166699,
+      "error": null
+    },
+    {
+      "slug": "secondo-appuntamento-unoxdue-live-studio-serie-a-30-di-campionato-calcio-analisi",
+      "title": "Secondo appuntamento Unoxdue Live, Studio Serie A 30° di Campionato | Calcio, Analisi e News",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 147226,
+      "error": null
+    },
+    {
+      "slug": "quarto-appuntamento-di-unoxdue-live-studio-serie-a-32-giornata-calcio-e-news",
+      "title": "Quarto appuntamento di Unoxdue Live | Studio Serie A 32° giornata | Calcio e News!",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 176088,
+      "error": null
+    },
+    {
+      "slug": "speciale-mondiali-unoxdue-podcast",
+      "title": "Speciale Mondiali Unoxdue Podcast",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 48193,
+      "error": null
+    },
+    {
+      "slug": "allan-baclet-playoff-cosenza",
+      "title": "Baclet senza filtri: Cosenza, playoff, Lecce e il rimpianto Serie A EP. 1",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 60615,
+      "error": null
+    },
+    {
+      "slug": "ottavo-appuntamento-di-unoxdue-live-studio-serie-a-36-giornata-calcio-pronostici",
+      "title": "Ottavo appuntamento di Unoxdue Live | Studio Serie A 36° giornata | Calcio, pronostici e News!",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 178911,
+      "error": null
+    },
+    {
+      "slug": "nono-appuntamento-di-unoxdue-live-studio-serie-a-37-giornata-calcio-pronostici-e",
+      "title": "Nono appuntamento di Unoxdue Live | Studio Serie A 37° giornata | Calcio, pronostici e News!",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 169249,
+      "error": null
+    },
+    {
+      "slug": "studio-serie-a-38-giornata",
+      "title": "Primo Appuntamento Unoxdue Live,  Studio Serie A 29ª Giornata | Calcio, Analisi e News",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 162970,
+      "error": null
+    },
+    {
+      "slug": "sesto-appuntamento-di-unoxdue-live-studio-serie-a-34-giornata-calcio-pronostici-",
+      "title": "Sesto appuntamento di Unoxdue Live | Studio Serie A 34° giornata | Calcio, pronostici e News!",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 149331,
+      "error": null
+    },
+    {
+      "slug": "settimo-appuntamento-di-unoxdue-live-studio-serie-a-35-giornata-calcio-pronostic",
+      "title": "Settimo appuntamento di Unoxdue Live | Studio Serie A 35° giornata | Calcio, pronostici e News!",
+      "status": "done",
+      "found": true,
+      "lang": "it",
+      "chars": 164218,
+      "error": null
+    }
+  ]
+}

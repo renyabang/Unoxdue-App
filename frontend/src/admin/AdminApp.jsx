@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper, FileText,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -14,6 +14,7 @@ import Graphics from "./Graphics";
 import YouTube from "./YouTube";
 import Results from "./Results";
 import Press from "./Press";
+import TranscriptSEO from "./TranscriptSEO";
 
 function Login({ onLogged }) {
   const [email, setEmail] = useState("admin@unoxdue.net");
@@ -101,6 +102,7 @@ const nav = [
   { to: "/admin/contenuti", label: "Contenuti", icon: FileVideo },
   { to: "/admin/youtube", label: "YouTube", icon: Youtube },
   { to: "/admin/ai", label: "AI / SEO", icon: Sparkles },
+  { to: "/admin/trascrizioni", label: "Trascrizioni SEO", icon: FileText },
   { to: "/admin/schedine", label: "Schedine / Pronostici", icon: Ticket },
   { to: "/admin/grafiche", label: "Grafiche", icon: ImageIcon },
   { to: "/admin/risultati", label: "Risultati", icon: Trophy },
@@ -155,6 +157,7 @@ export default function AdminApp() {
           <Route path="contenuti" element={<Contents />} />
           <Route path="youtube" element={<YouTube />} />
           <Route path="ai" element={<AIGen />} />
+          <Route path="trascrizioni" element={<TranscriptSEO />} />
           <Route path="schedine" element={<SlipUploader />} />
           <Route path="grafiche" element={<Graphics />} />
           <Route path="risultati" element={<Results />} />

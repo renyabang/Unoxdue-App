@@ -1,0 +1,88 @@
+{% extends "base.html" %}
+{% block title %}Trascrizione — {{ ep.title }} | UnoXdue{% endblock %}
+{% block head %}
+    <meta name="description" content="Trascrizione completa della puntata: {{ ep.title }}." />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="article" />
+    <meta property="og:title" content="Trascrizione — {{ ep.title }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e]">
+      <div class="pointer-events-none absolute -top-24 -right-16 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/15 blur-[120px]"></div>
+      <div class="relative max-w-4xl mx-auto px-5 lg:px-8 pt-10 pb-12">
+        <nav class="flex items-center gap-2 text-xs text-white/50 flex-wrap" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <a href="{{ site_url }}/{{ ep.section }}/" class="hover:text-white">{{ ep.section_label }}</a> {{ m.chevron("w-3 h-3") }}
+          <a href="{{ episode_url }}" class="hover:text-white">{{ ep.title }}</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">Trascrizione</span>
+        </nav>
+        <span class="inline-flex items-center mt-5 bg-white/10 text-white/80 text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">Trascrizione</span>
+        <h1 class="font-anton text-white text-3xl sm:text-4xl lg:text-5xl mt-4 leading-[1.05]">Trascrizione della puntata</h1>
+        <p class="text-white/55 text-sm mt-3">{{ ep.title }}</p>
+        <a href="{{ episode_url }}" class="inline-flex items-center gap-2 mt-5 text-[#EA4E1B] hover:text-[#ff6a3c] text-sm font-bold uppercase tracking-wide">{{ m.chevron("w-4 h-4 rotate-180") }} Torna alla puntata</a>
+      </div>
+    </section>
+
+    <section class="bg-[#fbf7f2] py-12 lg:py-16">
+      <div class="max-w-4xl mx-auto px-5 lg:px-8">
+        {% if chapters %}
+        <div class="bg-white border border-[#ecdfce] rounded-2xl p-5 mb-8" data-testid="transcript-toc">
+          <h2 class="font-archivo font-extrabold uppercase tracking-wide text-sm text-[#9c8b7d] mb-3">Capitoli</h2>
+          <ul class="grid sm:grid-cols-2 gap-x-6 gap-y-2">
+            {% for c in chapters %}
+            <li><a href="{% if c.yt_url %}{{ c.yt_url }}{% else %}{{ episode_url }}{% endif %}" {% if c.yt_url %}target="_blank" rel="noopener noreferrer"{% endif %} class="flex items-baseline gap-3 text-[#4a3d34] hover:text-[#EA4E1B] transition-colors">
+              <span class="text-[#EA4E1B] font-bold tabular-nums min-w-[52px]">{{ c.time }}</span>
+              <span>{{ c.label }}</span>
+            </a></li>
+            {% endfor %}
+          </ul>
+        </div>
+        {% endif %}
+
+        <div class="mb-6">
+          <label class="block text-xs font-semibold uppercase tracking-wide text-[#9c8b7d] mb-1.5">Cerca nella trascrizione</label>
+          <input id="trsc-search" type="search" placeholder="Digita una parola o frase…" data-testid="transcript-search"
+                 class="w-full bg-white border border-[#ecdfce] rounded-lg px-4 py-2.5 text-sm text-[#1a1411] focus:border-[#EA4E1B] outline-none" />
+          <p id="trsc-empty" class="hidden text-sm text-[#9c8b7d] mt-3">Nessun risultato per la ricerca.</p>
+        </div>
+
+        <article id="trsc-body" class="prose-trsc space-y-4" data-testid="transcript-body">
+          {% for p in paragraphs %}
+          <p class="trsc-p text-[#3a2f28] text-base sm:text-lg leading-relaxed">{{ p }}</p>
+          {% endfor %}
+        </article>
+
+        <div class="mt-12">
+          <a href="{{ episode_url }}" class="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">{{ m.chevron("w-4 h-4 rotate-180") }} Torna alla puntata</a>
+        </div>
+      </div>
+    </section>
+
+    <script>
+      (function () {
+        var box = document.getElementById('trsc-search');
+        var paras = Array.prototype.slice.call(document.querySelectorAll('.trsc-p'));
+        var empty = document.getElementById('trsc-empty');
+        if (!box) return;
+        box.addEventListener('input', function () {
+          var q = box.value.trim().toLowerCase();
+          var visible = 0;
+          paras.forEach(function (p) {
+            var match = !q || p.textContent.toLowerCase().indexOf(q) !== -1;
+            p.style.display = match ? '' : 'none';
+            if (match) visible++;
+          });
+          empty.classList.toggle('hidden', visible !== 0);
+        });
+      })();
+    </script>
+{% endblock %}

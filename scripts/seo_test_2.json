@@ -1,0 +1,64 @@
+{
+  "quinto-appuntamento-di-unoxdue-live-studio-serie-a-33-giornata-calcio-pronostici": {
+    "ok": true,
+    "model": "gpt-5.4-mini",
+    "fallback": false,
+    "needs_review": false,
+    "cost": 0.02075,
+    "n_chapters": 15,
+    "n_quotes": 6,
+    "n_topics": 14,
+    "type": "episodio",
+    "h1": "Quinto appuntamento di UnoXdue Live: Serie A, pronostici e news",
+    "seo_title": "UnoXdue Live: Serie A 33ª giornata e pronostici",
+    "meta_len": 133,
+    "summary_paras": 6,
+    "people": [
+      "Antonello",
+      "Marziano",
+      "Micuccio",
+      "Ninja",
+      "Ciolo Simeone",
+      "Vinicius"
+    ],
+    "teams": [
+      "Inter",
+      "Como",
+      "Juventus",
+      "Fiorentina",
+      "Siena",
+      "Arsenal"
+    ]
+  },
+  "decimo-appuntamento-di-unoxdue-live-studio-serie-a-38-giornata-calcio-pronostici": {
+    "ok": true,
+    "model": "gpt-5.4-mini",
+    "fallback": false,
+    "needs_review": false,
+    "cost": 0.01228,
+    "n_chapters": 15,
+    "n_quotes": 6,
+    "n_topics": 14,
+    "type": "episodio",
+    "h1": "Unoxdue Live: pronostici e analisi dell’ultima giornata di Serie A",
+    "seo_title": "Ultima giornata Serie A con UnoXdue Live",
+    "meta_len": 108,
+    "summary_paras": 6,
+    "people": [
+      "Marziano",
+      "Ninja",
+      "Micuccio",
+      "Antone",
+      "Luciano",
+      "Mandragora"
+    ],
+    "teams": [
+      "Juventus",
+      "Fiorentina",
+      "Atalanta",
+      "Como",
+      "Roma",
+      "Milan"
+    ]
+  }
+}

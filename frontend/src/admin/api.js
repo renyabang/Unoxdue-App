@@ -78,4 +78,9 @@ export const api = {
   pressSetStatus: (id, status) => req("/admin/press/set-status", { method: "POST", body: { id, status } }),
   pressLink: (body) => req("/admin/press/link", { method: "POST", body }),
   pressLinkOptions: () => req("/admin/press/link-options"),
+  transcriptSeoStatus: () => req("/admin/transcripts/seo/status"),
+  transcriptSeoGenerate: (slug) => req(`/admin/transcripts/seo/generate/${slug}`, { method: "POST" }),
+  transcriptSeoPreview: (slug) => req(`/admin/transcripts/seo/preview/${slug}`),
+  transcriptSeoPublish: (slug) => req(`/admin/transcripts/seo/publish/${slug}`, { method: "POST" }),
+  transcriptSeoBatch: (body) => req("/admin/transcripts/seo/generate-batch", { method: "POST", body }),
 };

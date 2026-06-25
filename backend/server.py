@@ -20,6 +20,7 @@ import youtube as yt
 import results_provider as rp
 import settlement as settle
 import press
+import ai_transcript as ait
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -315,6 +316,53 @@ class AIBatchIn(BaseModel):
 @api_router.post("/admin/ai/process-batch")
 async def admin_ai_batch(payload: AIBatchIn, admin: str = Depends(get_current_admin)):
     return await ai.process_batch(payload.only_missing, payload.types, payload.limit, payload.slugs)
+
+
+# ============================ Admin: SEO da trascrizioni (P1) ============================
+@api_router.get("/admin/transcripts/seo/status")
+async def admin_transcripts_seo_status(admin: str = Depends(get_current_admin)):
+    return await ait.list_status()
+
+
+@api_router.post("/admin/transcripts/seo/generate/{slug}")
+async def admin_transcripts_seo_generate(slug: str, admin: str = Depends(get_current_admin)):
+    return await ait.generate_preview(slug)
+
+
+@api_router.get("/admin/transcripts/seo/preview/{slug}")
+async def admin_transcripts_seo_preview(slug: str, admin: str = Depends(get_current_admin)):
+    return await ait.get_preview(slug)
+
+
+@api_router.post("/admin/transcripts/seo/publish/{slug}")
+async def admin_transcripts_seo_publish(slug: str, admin: str = Depends(get_current_admin)):
+    return await ait.publish_preview(slug)
+
+
+class TranscriptBatchIn(BaseModel):
+    slugs: Optional[List[str]] = None
+    only_missing: bool = True
+    limit: int = 10
+
+
+@api_router.post("/admin/transcripts/seo/generate-batch")
+async def admin_transcripts_seo_batch(payload: TranscriptBatchIn, admin: str = Depends(get_current_admin)):
+    if payload.slugs:
+        targets = payload.slugs[:payload.limit]
+    else:
+        q = {"transcription_status": "done"}
+        if payload.only_missing:
+            q["ai_preview_at"] = {"$exists": False}
+        items = await db.episodes.find(q, {"slug": 1, "_id": 0}).limit(payload.limit).to_list(payload.limit)
+        targets = [i["slug"] for i in items]
+    ok = failed = 0
+    results = []
+    for s in targets:
+        r = await ait.generate_preview(s)
+        results.append({"slug": s, "ok": r.get("ok", False), "error": r.get("error")})
+        ok += 1 if r.get("ok") else 0
+        failed += 0 if r.get("ok") else 1
+    return {"ok": True, "processed": len(targets), "succeeded": ok, "failed": failed, "results": results}
 
 
 # ============================ Admin: grafiche pronostici (Step 5) ============================
@@ -794,6 +842,25 @@ async def ssr_interview(slug: str):
         raise HTTPException(status_code=404, detail="Contenuto non trovato")
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
+
+
+@api_router.get("/seo/episodi/{slug}/trascrizione", response_class=HTMLResponse)
+async def ssr_episode_transcript(slug: str):
+    return await _render_transcript_page(slug, "episodi")
+
+
+@api_router.get("/seo/interviste/{slug}/trascrizione", response_class=HTMLResponse)
+async def ssr_interview_transcript(slug: str):
+    return await _render_transcript_page(slug, "interviste")
+
+
+async def _render_transcript_page(slug: str, section: str) -> HTMLResponse:
+    ep = await db.episodes.find_one({"slug": slug})
+    if not ep or not ep.get("has_transcript_page"):
+        raise HTTPException(status_code=404, detail="Trascrizione non disponibile")
+    b = await ait.get_transcript_clean(slug)
+    clean = b.get("clean", "")
+    return HTMLResponse(seo.render_transcript(ep, clean, ep.get("chapters", [])))
 
 
 # ============================ Sitemap / robots / RSS ============================
