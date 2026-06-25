@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% block title %}{{ m.name }} | Team UnoXdue{% endblock %}
+{% block head %}
+    <meta name="description" content="{{ m.meta_description }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:type" content="profile" />
+    <meta property="og:title" content="{{ m.name }} | UnoXdue" />
+    <meta property="og:description" content="{{ m.meta_description }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ m.photo_abs }}" />
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <a href="{{ site_url }}/team/">Il team</a> &rsaquo; <span>{{ m.name }}</span></nav>
+      <span class="badge">{{ m.badge }}</span>
+      <h1>{{ m.name }}</h1>
+      <p class="meta">{{ m.role }}</p>
+      <img class="thumb" src="{{ m.photo_abs }}" alt="{{ m.name }}" style="max-width:360px" />
+      <p class="lead">{{ m.bio }}</p>
+      {% if m.instagram %}<p><a class="cta" href="{{ m.instagram }}">Instagram</a></p>{% endif %}
+      {% if related %}<h2>Contenuti in cui compare</h2><div class="related">{% for r in related %}<a href="{{ site_url }}/{{ r.section }}/{{ r.slug }}/">{{ r.title }}</a>{% endfor %}</div>{% endif %}
+{% endblock %}

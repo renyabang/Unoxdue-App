@@ -1,0 +1,36 @@
+{% extends "base.html" %}
+{% block title %}UnoXdue | Podcast di Calcio e Serie A{% endblock %}
+{% block head %}
+    <meta name="description" content="UnoXdue è il podcast sulla Serie A con tre tipster e un host: analisi, pronostici, dibattito e interviste esclusive ai calciatori." />
+    <link rel="canonical" href="{{ site_url }}/" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="UnoXdue | Podcast di Calcio e Serie A" />
+    <meta property="og:description" content="Analisi, pronostici e dibattito sulla Serie A. Interviste esclusive ai protagonisti." />
+    <meta property="og:url" content="{{ site_url }}/" />
+    <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+      <span class="badge">Podcast di calcio &amp; Serie A</span>
+      <h1>UnoXdue &mdash; il podcast del calcio italiano</h1>
+      <p class="lead">Analisi, pronostici e dibattito sulla Serie A con i tipster Sono Micuccio, il Ninja e il Marziano, condotti dall'host Antonello Santopaolo. In più, interviste esclusive ai protagonisti del calcio.</p>
+      <a class="cta" href="https://www.twitch.tv/unoxdue_">Segui su Twitch</a>
+      <a class="cta" href="https://www.youtube.com/@unoXdue">YouTube</a>
+
+      {% if episodes %}<h2>Ultimi episodi</h2><div class="grid">{% for it in episodes %}<a class="card" href="{{ it.url }}"><img src="{{ it.thumbnail }}" alt="{{ it.title }}" loading="lazy" /><div class="c"><span class="k">Episodio</span><h3>{{ it.title }}</h3></div></a>{% endfor %}</div>{% endif %}
+
+      {% if interviews %}<h2>Ultime interviste</h2><div class="grid">{% for it in interviews %}<a class="card" href="{{ it.url }}"><img src="{{ it.thumbnail }}" alt="{{ it.title }}" loading="lazy" /><div class="c"><span class="k">Intervista</span><h3>{{ it.title }}</h3></div></a>{% endfor %}</div>{% endif %}
+
+      <h2>Il team</h2>
+      <p>Un host e tre tipster: <a href="{{ site_url }}/team/">scopri il team di UnoXdue</a>.</p>
+      <h2>Esplora</h2>
+      <div class="related">
+        <a href="{{ site_url }}/il-podcast/">Il podcast</a>
+        <a href="{{ site_url }}/episodi/">Tutti gli episodi</a>
+        <a href="{{ site_url }}/interviste/">Tutte le interviste</a>
+        <a href="{{ site_url }}/pronostici/">Pronostici</a>
+        <a href="{{ site_url }}/parlano-di-noi/">Parlano di noi</a>
+      </div>
+{% endblock %}

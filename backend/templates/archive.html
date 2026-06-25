@@ -1,0 +1,29 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} | UnoXdue{% endblock %}
+{% block head %}
+    <meta name="description" content="{{ page_desc }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="{{ page_title }} | UnoXdue" />
+    <meta property="og:description" content="{{ page_desc }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <span>{{ page_title }}</span></nav>
+      <h1>{{ page_title }}</h1>
+      <p class="lead">{{ page_desc }}</p>
+      {% if items %}
+      <div class="grid">
+        {% for it in items %}
+        <a class="card" href="{{ it.url }}">
+          {% if it.thumbnail %}<img src="{{ it.thumbnail }}" alt="{{ it.title }}" loading="lazy" />{% endif %}
+          <div class="c"><span class="k">{{ it.kicker }}</span><h3>{{ it.title }}</h3></div>
+        </a>
+        {% endfor %}
+      </div>
+      {% else %}<p>Nessun contenuto disponibile al momento.</p>{% endif %}
+{% endblock %}

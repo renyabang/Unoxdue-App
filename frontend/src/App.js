@@ -1,36 +1,17 @@
-import React, { useState } from "react";
+import React from "react";
 import "./App.css";
-import Navbar from "./components/Navbar";
-import Hero from "./components/Hero";
-import About from "./components/About";
-import Interviews from "./components/Interviews";
-import Episodes from "./components/Episodes";
-import Predictions from "./components/Predictions";
-import Hosts from "./components/Hosts";
-import Press from "./components/Press";
-import SocialSection from "./components/SocialSection";
-import Footer from "./components/Footer";
-import VideoModal from "./components/VideoModal";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import PublicSite from "./pages/PublicSite";
+import AdminApp from "./admin/AdminApp";
 
 function App() {
-  const [video, setVideo] = useState(null);
-
   return (
-    <div className="App">
-      <Navbar />
-      <main>
-        <Hero />
-        <About />
-        <Interviews onPlay={setVideo} />
-        <Episodes onPlay={setVideo} />
-        <Predictions />
-        <Hosts />
-        <Press />
-        <SocialSection />
-      </main>
-      <Footer />
-      <VideoModal video={video} onClose={() => setVideo(null)} />
-    </div>
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<PublicSite />} />
+        <Route path="/admin/*" element={<AdminApp />} />
+      </Routes>
+    </BrowserRouter>
   );
 }
 

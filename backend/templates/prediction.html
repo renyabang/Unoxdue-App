@@ -1,0 +1,39 @@
+{% extends "base.html" %}
+{% block title %}{{ p.seo_title }}{% endblock %}
+{% block head %}
+    <meta name="description" content="{{ p.meta_description }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="{{ p.seo_title }}" />
+    <meta property="og:description" content="{{ p.meta_description }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <a href="{{ site_url }}/pronostici/">Pronostici</a> &rsaquo; <span>{{ p.competition }} {{ p.season }} &mdash; {{ p.round }}a giornata</span></nav>
+      <span class="badge">Pronostici</span>
+      <h1>{{ p.h1 }}</h1>
+      <p class="meta">{{ p.competition }} &middot; Stagione {{ p.season }} &middot; {{ p.round }}a giornata{% if p.updated_at %} &middot; aggiornato il {{ p.updated_at }}{% endif %}</p>
+      <p class="lead">{{ p.intro }}</p>
+      {% if p.episode_url %}<p><a href="{{ p.episode_url }}">Guarda la puntata collegata &rarr;</a></p>{% endif %}
+      {% for pick in p.picks %}
+      <div class="slip">
+        <div class="head"><strong>{{ pick.tipster }}</strong><span>{{ pick.type }} ({{ pick.selections|length }})</span></div>
+        {% for s in pick.selections %}
+        <div class="row">
+          <div style="font-size:12px;color:#9c8b7d;text-transform:uppercase">{{ s.competition }} &middot; {{ s.date }}</div>
+          <strong>{{ s.match }}</strong>
+          <div class="mk"><span>{{ s.market }} &middot; {{ s.pick }}</span><span class="odds">{{ s.odds }}</span></div>
+        </div>
+        {% endfor %}
+        <div class="foot"><span>Quota totale</span><strong style="color:var(--orange);font-size:20px">{{ pick.total_odds }}</strong></div>
+      </div>
+      {% endfor %}
+      <div class="disclaimer"><strong>18+ &middot; Gioca responsabilmente.</strong> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Le quote sono indicative al momento della pubblicazione e possono variare.</div>
+{% endblock %}

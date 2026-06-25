@@ -90,3 +90,62 @@ SEED_EPISODES = [
         ],
     },
 ]
+
+
+SEED_TEAM = [
+    {
+        "slug": "sono-micuccio", "name": "Sono Micuccio", "badge": "Il pioniere",
+        "role": "Fondatore & analista", "photo": "/hosts/host2.jpg", "is_host": False,
+        "order": 1,
+        "bio": "Fondatore del progetto Aperiquattro. Pioniere nell'analisi dei campionati minori, si distingue per le sue analisi avanzate sui palinsesti sportivi, sempre fuori dagli schemi e ad alto potenziale.",
+        "instagram": "https://www.instagram.com/sonomicuccioreal/",
+    },
+    {
+        "slug": "il-ninja", "name": "Il Ninja", "badge": "Lo specialista",
+        "role": "Specialista basket", "photo": "/hosts/host3.jpg", "is_host": False,
+        "order": 2,
+        "bio": "Specialista del basket: quando c'e' un tiro libero decisivo, e' sempre pronto a colpire. Segue le gare fino all'alba senza mai perdere un colpo. Precisione, dedizione e un fiuto infallibile.",
+        "instagram": "https://www.instagram.com/ilniinja/",
+    },
+    {
+        "slug": "il-marziano", "name": "Il Marziano", "badge": "Il veterano",
+        "role": "Tipster veterano", "photo": "/hosts/host1.jpg", "is_host": False,
+        "order": 3,
+        "bio": "Figura storica nel panorama dei tipster italiani. Le sue giocate si distinguono per precisione e competenza, sempre accompagnate dal suo marchio di fabbrica: gli iconici Shooters.",
+        "instagram": "https://www.instagram.com/il.marziano_/",
+    },
+    {
+        "slug": "antonello-santopaolo", "name": "Antonello Santopaolo", "badge": "La voce di UnoXdue",
+        "role": "Host", "photo": "/team/antonello.jpg", "is_host": True, "order": 4,
+        "bio": "Web content writer e moderatore di eventi, Antonello Santopaolo conduce e coordina le conversazioni di UnoXdue. Da anni opera nella comunicazione digitale, realizzando interviste e approfondimenti con professionisti e personalita' del panorama italiano. E' la voce che tiene insieme il podcast, anche quando preferisce restare fuori dall'inquadratura.",
+        "instagram": None,
+    },
+]
+
+SEED_PREDICTIONS = [
+    {
+        "competition": "Serie A", "season": "2025-2026", "round": 38,
+        "intro": "Le giocate del nostro team per l'ultima giornata di Serie A. Quote indicative al momento della pubblicazione: possono variare.",
+        "updated_at": "21/05/2026 12:20", "status": "pubblicato", "episode_url": None,
+        "picks": [
+            {"tipster": "Il Marziano", "type": "Multipla", "total_odds": "17.63", "selections": [
+                {"competition": "Serie A", "date": "22/05 20:45", "match": "Fiorentina - Atalanta", "market": "Multigol 2-4", "pick": "Si", "odds": "1.49"},
+                {"competition": "Serie A", "date": "23/05 20:45", "match": "Lazio - Pisa", "market": "Multigol 1-2 1T", "pick": "Si", "odds": "1.55"},
+                {"competition": "Serie A", "date": "24/05 18:00", "match": "Napoli - Udinese", "market": "1X2 + U/O 3,5", "pick": "1 + Under", "odds": "2.09"},
+                {"competition": "Serie A", "date": "24/05 20:45", "match": "Lecce - Genoa", "market": "Multigol Casa 1-3", "pick": "Si", "odds": "1.35"},
+                {"competition": "Serie A", "date": "24/05 20:45", "match": "Cremonese - Como", "market": "Goal/No Goal", "pick": "Goal", "odds": "1.78"},
+                {"competition": "Serie A", "date": "24/05 20:45", "match": "Verona - Roma", "market": "1X2 + U/O 1,5", "pick": "2 + Over", "odds": "1.52"},
+            ]},
+            {"tipster": "Sono Micuccio", "type": "Multipla", "total_odds": "6.42", "selections": [
+                {"competition": "Serie A", "date": "24/05 20:45", "match": "Inter - Torino", "market": "1X2", "pick": "1", "odds": "1.40"},
+                {"competition": "Serie A", "date": "23/05 18:00", "match": "Bologna - Sassuolo", "market": "Over 2,5", "pick": "Over", "odds": "1.72"},
+                {"competition": "Serie A", "date": "24/05 20:45", "match": "Juventus - Milan", "market": "Goal/No Goal", "pick": "Goal", "odds": "1.70"},
+            ]},
+            {"tipster": "Il Ninja", "type": "Multipla", "total_odds": "4.18", "selections": [
+                {"competition": "Serie A", "date": "24/05 20:45", "match": "Atalanta - Parma", "market": "1X2", "pick": "1", "odds": "1.45"},
+                {"competition": "Serie A", "date": "23/05 20:45", "match": "Roma - Empoli", "market": "Multigol Casa 1-3", "pick": "Si", "odds": "1.36"},
+                {"competition": "Serie A", "date": "24/05 18:00", "match": "Como - Cagliari", "market": "Under 3,5", "pick": "Under", "odds": "2.12"},
+            ]},
+        ],
+    },
+]

@@ -1,0 +1,75 @@
+<!doctype html>
+<html lang="it">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>{% block title %}UnoXdue{% endblock %}</title>
+    {% block head %}{% endblock %}
+    <link rel="icon" href="{{ site_url }}/logo.jpg" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Anton&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+      :root{--orange:#ea4e1b;--dark:#14100e;--cream:#fbf7f2;}
+      *{box-sizing:border-box;}
+      body{margin:0;font-family:"Inter",-apple-system,BlinkMacSystemFont,sans-serif;background:var(--cream);color:#1a1411;line-height:1.65;}
+      a{color:var(--orange);text-decoration:none;}a:hover{text-decoration:underline;}
+      .topbar{background:var(--dark);padding:16px 0;position:sticky;top:0;z-index:10;}
+      .wrap{max-width:980px;margin:0 auto;padding:0 20px;}
+      .navrow{display:flex;align-items:center;justify-content:space-between;gap:16px;flex-wrap:wrap;}
+      .brand{display:inline-flex;align-items:center;gap:10px;font-family:"Anton",sans-serif;color:#fff;font-size:26px;letter-spacing:1px;}
+      .brand img{width:40px;height:40px;border-radius:50%;}
+      .brand .x{color:var(--orange);}
+      .menu a{color:#cdbfb2;font-size:13px;font-weight:600;text-transform:uppercase;letter-spacing:.5px;margin-left:16px;}
+      .menu a:hover{color:#fff;text-decoration:none;}
+      nav.crumbs{font-size:13px;color:#6b5d52;margin:24px 0 8px;}nav.crumbs a{color:#6b5d52;}
+      h1{font-family:"Anton",sans-serif;font-weight:400;font-size:clamp(30px,6vw,52px);line-height:1.05;margin:6px 0 14px;}
+      .lead{font-size:18px;color:#4a3d34;}
+      .meta{font-size:14px;color:#6b5d52;margin-bottom:20px;}
+      .badge{display:inline-block;background:var(--orange);color:#fff;font-size:12px;font-weight:700;text-transform:uppercase;padding:4px 12px;border-radius:999px;letter-spacing:.5px;}
+      .thumb{width:100%;border-radius:16px;display:block;margin:8px 0 24px;}
+      h2{font-family:"Anton",sans-serif;font-weight:400;font-size:26px;margin:34px 0 12px;}
+      ul{padding-left:20px;}
+      .chips span{display:inline-block;background:#fff;border:1px solid #ecdfce;border-radius:999px;padding:6px 14px;margin:0 8px 8px 0;font-size:14px;}
+      .chapter{display:flex;gap:12px;padding:8px 0;border-bottom:1px solid #ecdfce;}
+      .chapter .t{color:var(--orange);font-weight:700;min-width:56px;}
+      blockquote{margin:14px 0;padding:14px 18px;background:#fff;border-left:4px solid var(--orange);border-radius:8px;font-style:italic;}
+      .cta{display:inline-block;background:var(--orange);color:#fff;font-weight:700;text-transform:uppercase;padding:12px 22px;border-radius:999px;margin:6px 8px 6px 0;letter-spacing:.4px;}
+      .cta:hover{text-decoration:none;}
+      .related a{display:block;padding:10px 0;border-bottom:1px solid #ecdfce;font-weight:600;color:#1a1411;}
+      .grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(260px,1fr));gap:18px;margin:24px 0;}
+      .card{background:#fff;border:1px solid #ecdfce;border-radius:16px;overflow:hidden;display:block;color:inherit;}
+      .card:hover{text-decoration:none;border-color:var(--orange);}
+      .card img{width:100%;aspect-ratio:16/9;object-fit:cover;display:block;}
+      .card .c{padding:14px 16px;}
+      .card .k{font-size:12px;color:var(--orange);font-weight:700;text-transform:uppercase;}
+      .card h3{font-size:17px;margin:6px 0 0;}
+      .slip{background:#fff;border:1px solid #ecdfce;border-radius:16px;overflow:hidden;margin:16px 0;}
+      .slip .head{background:var(--dark);color:#fff;padding:14px 18px;display:flex;justify-content:space-between;align-items:center;}
+      .slip .row{padding:12px 18px;border-bottom:1px solid #efe4d6;}
+      .slip .row .mk{display:flex;justify-content:space-between;margin-top:4px;}
+      .odds{background:var(--orange);color:#fff;font-weight:700;padding:2px 8px;border-radius:6px;}
+      .slip .foot{padding:14px 18px;display:flex;justify-content:space-between;align-items:center;background:var(--cream);}
+      .disclaimer{background:#fff;border:1px solid #ecdfce;border-radius:12px;padding:14px 18px;font-size:13px;color:#6b5d52;margin:24px 0;}
+      footer{background:var(--dark);color:#b8a99c;margin-top:50px;padding:28px 0;font-size:13px;}
+      footer a{color:#cdbfb2;}
+    </style>
+  </head>
+  <body>
+    <header class="topbar">
+      <div class="wrap navrow">
+        <a class="brand" href="{{ site_url }}/"><img src="{{ site_url }}/logo.jpg" alt="UnoXdue" />Uno<span class="x">X</span>due</a>
+        <nav class="menu">
+          <a href="{{ site_url }}/il-podcast/">Il podcast</a>
+          <a href="{{ site_url }}/episodi/">Episodi</a>
+          <a href="{{ site_url }}/interviste/">Interviste</a>
+          <a href="{{ site_url }}/pronostici/">Pronostici</a>
+          <a href="{{ site_url }}/team/">Il team</a>
+          <a href="{{ site_url }}/parlano-di-noi/">Parlano di noi</a>
+        </nav>
+      </div>
+    </header>
+    <main class="wrap">{% block main %}{% endblock %}</main>
+    <footer><div class="wrap">&copy; {{ year }} UnoXdue &middot; Il podcast del calcio italiano &middot; Serie A &middot; Pronostici &middot; Interviste</div></footer>
+  </body>
+</html>

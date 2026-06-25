@@ -1,0 +1,19 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} | UnoXdue{% endblock %}
+{% block head %}
+    <meta name="description" content="{{ page_desc }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="{{ page_title }} | UnoXdue" />
+    <meta property="og:description" content="{{ page_desc }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+      <nav class="crumbs"><a href="{{ site_url }}/">Home</a> &rsaquo; <span>{{ page_title }}</span></nav>
+      <h1>{{ page_title }}</h1>
+      {{ body_html | safe }}
+{% endblock %}
