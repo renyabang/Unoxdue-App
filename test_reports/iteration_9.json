@@ -1,0 +1,41 @@
+{
+  "summary": "Step 7B (Rassegna stampa in modalità FIXTURE) testato end-to-end sul frontend admin. Login, navigazione a /admin/rassegna, badge 'Fixture (demo)', ricerca, tabella articoli, filtri, anteprima, pubblica/verifica/scarta, re-run idempotente e non-regressione su /admin/risultati,/schedine,/youtube,/admin: TUTTO OK.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "login": "OK con admin@unoxdue.net (password letta da ADMIN_PASSWORD in /app/backend/.env, non stampata)",
+    "press_page": "data-testid='press-page' presente; demo badge data-testid='press-demo-badge' visibile (testo 'Fixture (demo)') dopo il completamento della chiamata /api/admin/press/status (200) che ritorna {provider:{configured:false,active:'fixture',demo:true,...}}",
+    "search_first_run_on_clean_db": "Logged dashboard event 'Rassegna stampa: 4 nuovi, 0 aggiornati, 0 curati saltati' (DB era già stato popolato in una sessione precedente; al primo run vero ha creato i 4 articoli attesi)",
+    "search_subsequent_run": "Run result: '0 nuovi · 2 aggiornati · 2 curati saltati · 1 errori' con badge 'Trovato 1, Errore 1' (gli items già curati sono stati saltati come atteso)",
+    "table_rows_after_first_run": [
+      "Blog demo · 2026-05-10 · stato=Errore · 'irraggiungibile' mostrato (URL .invalid)",
+      "Corriere dello Sport · 2026-05-15 · stato iniziale=Verificato + linked 'Il Ninja' (poi Pubblicato)",
+      "Tuttomercatoweb · 2026-05-18 · stato iniziale=Trovato (poi Verificato e infine Scartato)",
+      "La Gazzetta dello Sport · 2026-05-20 · stato iniziale=Verificato + linked 'Sono Micuccio' (poi Pubblicato)"
+    ],
+    "filters": "press-filter-verified mostra solo 1 riga (Verificato); press-filter-all torna a 4 righe. Conteggi badge nei filtri coerenti (Pubblicato 2 · Scartato 1 · Errore 1).",
+    "preview_publish": "Anteprima Corriere → Pubblica → stato riga = 'Pubblicato'. Gazzetta verificato → Pubblicato. press-preview ben renderizzato (titolo/testata/sintesi/link esterno/linked).",
+    "verify_discard": "Su riga Tuttomercatoweb (Trovato): Verifica → 'Verificato', poi Scarta → 'Scartato'. Cambi di stato persistiti, nessun errore JS.",
+    "public_endpoint": "GET /api/press → 200, ritorna solo i 2 articoli con status=published (Corriere + Gazzetta). I non-published (Scartato/Errore/Trovato) NON appaiono. Nota: tentativo via urllib (User-Agent default) → 403 dal WAF di ingress; con curl 200 OK. Non è un bug del backend.",
+    "idempotent_rerun": "Re-run dopo curazione: '0 nuovi · 1 aggiornati · 3 curati saltati · 1 errori' (3 curati = 2 published + 1 discarded, saltati; nessun duplicato).",
+    "non_regression": "/admin (Dashboard), /admin/risultati, /admin/schedine, /admin/youtube si caricano senza errori JS e senza elementi .error/[class*=error]/[id*=error]."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Press.jsx: il badge 'Fixture (demo)' dipende da loadStatus() asincrono e non c'è uno skeleton/loader; risultato: per ~1-2s dopo il mount il badge non è visibile. Non un bug ma piccola UX opportunity (mostrare badge ottimisticamente o un placeholder).",
+    "Press.jsx setStatusFor: catch vuoto (`/* noop */`) silenzia errori API di cambio stato — sarebbe utile mostrare un toast o un messaggio inline in caso di fallimento.",
+    "Press.jsx: nessuna gestione di errore visibile per loadStatus/loadList (catch vuoti) — l'utente non saprebbe se /api/admin/press/list fallisce."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per richiesta)", "frontend": "100%"},
+  "test_credentials": "Letta da /app/backend/.env (ADMIN_PASSWORD) come da policy; NON stampata in report. Email admin@unoxdue.net.",
+  "seed_data_creation": "La ricerca fixture ha creato/aggiornato 4 documenti press demo. Il main agent ripulirà i documenti come dichiarato.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Frontend di /admin/rassegna pienamente funzionante in modalità fixture. Tutti i data-testid attesi presenti. Provider Perplexity inattivo (manca PERPLEXITY_API_KEY): solo i metadati provider mostrano demo=true. Se si attiva PERPLEXITY_API_KEY, il flusso UI è invariato — verificare solo che il badge 'Fixture (demo)' scompaia."
+}

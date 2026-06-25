@@ -18,6 +18,7 @@ import graphics as gfx
 import youtube as yt
 import results_provider as rp
 import settlement as settle
+import press
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -72,7 +73,8 @@ async def list_predictions():
 
 @api_router.get("/press")
 async def list_press():
-    items = await db.press.find({}, {"_id": 0}).to_list(500)
+    items = await db.press.find(
+        {"$or": [{"status": "published"}, {"status": {"$exists": False}}]}, {"_id": 0}).to_list(500)
     return items
 
 
@@ -406,6 +408,50 @@ async def admin_press_search(q: str = "UnoXdue podcast", admin: str = Depends(ge
     return await auto.search_press(q)
 
 
+# ============================ Admin: Rassegna stampa (Step 7B) ============================
+@api_router.get("/admin/press/status")
+async def admin_press_status(admin: str = Depends(get_current_admin)):
+    data = await press.list_all()
+    return {"provider": press.provider_status(), "counts": data["counts"]}
+
+
+class PressRunIn(BaseModel):
+    query: str = "UnoXdue"
+
+
+@api_router.post("/admin/press/run")
+async def admin_press_run(payload: PressRunIn, admin: str = Depends(get_current_admin)):
+    return await press.run_search(payload.query, actor="admin")
+
+
+@api_router.get("/admin/press/list")
+async def admin_press_list(status: Optional[str] = None, limit: int = 100,
+                           admin: str = Depends(get_current_admin)):
+    return await press.list_all(status, limit)
+
+
+class PressStatusIn(BaseModel):
+    id: str
+    status: str
+
+
+@api_router.post("/admin/press/set-status")
+async def admin_press_set_status(payload: PressStatusIn, admin: str = Depends(get_current_admin)):
+    return await press.set_status(payload.id, payload.status, actor="admin")
+
+
+class PressLinkIn(BaseModel):
+    id: str
+    type: Optional[str] = None
+    slug: Optional[str] = None
+    title: Optional[str] = None
+
+
+@api_router.post("/admin/press/link")
+async def admin_press_link(payload: PressLinkIn, admin: str = Depends(get_current_admin)):
+    return await press.set_link(payload.id, payload.type, payload.slug, payload.title)
+
+
 @api_router.get("/admin/odds")
 async def admin_odds(match: str, market: str, pick: str, admin: str = Depends(get_current_admin)):
     return await auto.get_odds(match, market, pick)
@@ -589,7 +635,8 @@ async def ssr_il_podcast():
 
 @api_router.get("/seo/parlano-di-noi", response_class=HTMLResponse)
 async def ssr_press():
-    items = await db.press.find({}, {"_id": 0}).to_list(200)
+    items = await db.press.find(
+        {"$or": [{"status": "published"}, {"status": {"$exists": False}}]}, {"_id": 0}).to_list(200)
     cards = [{"url": p.get("url"), "title": p.get("title"), "kicker": p.get("source", ""),
               "thumbnail": None} for p in items]
     return HTMLResponse(seo.render_archive("Parlano di noi",

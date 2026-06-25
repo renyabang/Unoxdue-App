@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -13,6 +13,7 @@ import AIGen from "./AIGen";
 import Graphics from "./Graphics";
 import YouTube from "./YouTube";
 import Results from "./Results";
+import Press from "./Press";
 
 function Login({ onLogged }) {
   const [email, setEmail] = useState("admin@unoxdue.net");
@@ -103,6 +104,7 @@ const nav = [
   { to: "/admin/schedine", label: "Schedine / Pronostici", icon: Ticket },
   { to: "/admin/grafiche", label: "Grafiche", icon: ImageIcon },
   { to: "/admin/risultati", label: "Risultati", icon: Trophy },
+  { to: "/admin/rassegna", label: "Rassegna stampa", icon: Newspaper },
   { to: "/admin/log", label: "Log automazioni", icon: ScrollText },
   { to: "/admin/integrazioni", label: "Integrazioni", icon: Plug },
 ];
@@ -156,6 +158,7 @@ export default function AdminApp() {
           <Route path="schedine" element={<SlipUploader />} />
           <Route path="grafiche" element={<Graphics />} />
           <Route path="risultati" element={<Results />} />
+          <Route path="rassegna" element={<Press />} />
           <Route path="log" element={<Logs />} />
           <Route path="integrazioni" element={<Integrations />} />
           <Route path="*" element={<Navigate to="/admin" replace />} />

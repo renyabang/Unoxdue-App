@@ -65,4 +65,9 @@ export const api = {
   oauthStatus: () => req("/admin/youtube/oauth/status"),
   transcripts: () => req("/admin/youtube/transcripts"),
   fetchTranscript: (slug) => req(`/admin/youtube/transcript/${slug}`, { method: "POST" }),
+  pressStatus: () => req("/admin/press/status"),
+  pressRun: (query) => req("/admin/press/run", { method: "POST", body: { query } }),
+  pressList: (status) => req(`/admin/press/list${status ? `?status=${status}` : ""}`),
+  pressSetStatus: (id, status) => req("/admin/press/set-status", { method: "POST", body: { id, status } }),
+  pressLink: (body) => req("/admin/press/link", { method: "POST", body }),
 };
