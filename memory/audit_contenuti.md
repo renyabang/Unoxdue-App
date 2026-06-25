@@ -55,3 +55,15 @@ Es. ep.1: `UnoXdue | Serie A 2025/26, 29ª giornata | Primo appuntamento`
 ## Note duplicati / integrità
 - 13 record, tutti youtube_id e slug distinti. Nessun duplicato. Nessuna seconda pagina.
 - Interviste fuori dalla regola Serie A: slug già puliti (persona-based), nessun redirect.
+
+## ESITO MIGRAZIONE (25/06/2026) — COMPLETATA + verificata
+- Formato slug finale approvato: `serie-a-2025-2026-giornata-[g]-puntata-[k]` (10 episodi) + `speciale-mondiali-2026-puntata-12`.
+- Cross-check calendario reale football-data.org: per ogni giornata 29-38, 10/10 partite citate in trascrizione; date allineate alla pubblicazione. Stagione 2025/26 confermata.
+- Pilota (puntata 1) validato, poi batch (2-10 + 12). Interviste Baclet/Ceravolo INVARIATE.
+- Per ogni episodio migrato: vecchio URL 301 diretto (1 hop) → nuovo URL 200; canonical=nuovo; presente in sitemap+video-sitemap; vecchio assente; JSON-LD nuovo; trascrizione ri-keyata (db.transcriptions.slug aggiornato); link interni `related` aggiornati (slug+titolo puliti); 0 catene di redirect; 0 duplicati.
+- Casing brand corretto ovunque (`Unoxdue`→`UnoXdue`): 0 occorrenze errate sulle pagine.
+- Breadcrumb breve via campo `breadcrumb_label`; H1 descrittivo "{Ordinale} appuntamento UnoXdue: Serie A 2025/26, {g}ª giornata"; campi distinti: youtube_title_original/current (literal), website_title, seo_title, breadcrumb_label, slug.
+- Bug corretto: `ssr_episode` reindirizzava per errore a `/trascrizione/` (logica `"trascrizione" not in slug` invertita).
+- Script: `scripts/slug_migration.py` (plan/backup/titles/migrate/refresh-related/rollback). Backup+rollback includono episodes+transcriptions.
+- Rollback disponibile e validato: `/app/backups/slug_migration_20260625_192942` (13 ep + 13 trascr, caricabili) → `python slug_migration.py rollback <dir>`.
+- Speciale + puntate 3/4/7/9 senza pagina trascrizione (anteprima, transcription_seo_status non generato): atteso, nessuna regressione.

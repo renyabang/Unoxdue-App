@@ -50,6 +50,8 @@ def enrich(ep: dict) -> dict:
     ep["section"] = ep.get("section") or ("interviste" if ep["type"] == "intervista" else "episodi")
     ep["section_label"] = ep.get("section_label") or ("Interviste" if ep["type"] == "intervista" else "Episodi")
     ep["h1"] = ep.get("h1") or ep.get("title", "")
+    ep["website_title"] = ep.get("website_title") or ep["h1"]
+    ep.setdefault("breadcrumb_label", "")
     ep["seo_title"] = ep.get("seo_title") or f'{ep.get("title", "")} | UnoXdue'
     ep["meta_description"] = ep.get("meta_description") or (ep.get("excerpt") or ep.get("title", ""))[:160]
     if not ep.get("thumbnail") and ep.get("youtube_id"):
@@ -140,7 +142,7 @@ def render_episode(ep: dict, press=None) -> str:
     bc = breadcrumb_jsonld([
         ("Home", f"{SITE_URL}/"),
         (ep["section_label"], f'{SITE_URL}/{ep["section"]}/'),
-        (ep["title"], canonical),
+        (ep.get("breadcrumb_label") or ep["title"], canonical),
     ])
     return env.get_template("episode.html").render(
         ep=ep, canonical=canonical, site_url=SITE_URL,
@@ -268,16 +270,17 @@ def render_transcript(ep: dict, clean: str, chapters: list) -> str:
     canonical = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/trascrizione/'
     episode_url = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/'
     paras = _paragraphs(clean)
+    _wt = ep.get("website_title") or ep["title"]
     bc = breadcrumb_jsonld([
         ("Home", f"{SITE_URL}/"),
         (ep["section_label"], f'{SITE_URL}/{ep["section"]}/'),
-        (ep["title"], episode_url),
+        (ep.get("breadcrumb_label") or ep["title"], episode_url),
         ("Trascrizione", canonical),
     ])
     jsonld = json.dumps({
         "@context": "https://schema.org", "@type": "Article",
-        "headline": f'Trascrizione — {ep["title"]}',
-        "description": f'Trascrizione completa della puntata: {ep["title"]}.',
+        "headline": f'Trascrizione — {_wt}',
+        "description": f'Trascrizione completa della puntata: {_wt}.',
         "url": canonical, "inLanguage": "it", "isPartOf": episode_url,
         "datePublished": ep.get("published_at"),
         "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},

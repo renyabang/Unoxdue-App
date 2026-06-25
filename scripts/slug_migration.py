@@ -13,7 +13,7 @@ Uso:
 - Aggiorna i link interni (related[].slug) in TUTTI gli episodi che referenziano il vecchio slug.
 - Popola i metadati distinti richiesti senza rigenerare lo slug dal titolo.
 """
-import os, sys, json, datetime
+import os, sys, json, datetime, re
 from pathlib import Path
 from dotenv import load_dotenv
 from pymongo import MongoClient
@@ -38,6 +38,15 @@ SERIE_A = {
     10: ("6TygRGNyIi4", 38, []),
 }
 SPECIALE = {12: ("KXkkQhzzvkQ",)}  # gestito a parte (slug tematico)
+
+ORD = {1: "Primo", 2: "Secondo", 3: "Terzo", 4: "Quarto", 5: "Quinto",
+       6: "Sesto", 7: "Settimo", 8: "Ottavo", 9: "Nono", 10: "Decimo"}
+INTERVIEWS = {"MxHqU7AK97I": "Allan Baclet", "7035L7empWg": "Fabio Ceravolo"}
+SPECIALE_YT = "KXkkQhzzvkQ"
+
+
+def _fix_brand(s):
+    return re.sub(r"\bunoxdue\b", "UnoXdue", s, flags=re.IGNORECASE) if isinstance(s, str) else s
 
 
 def new_slug(puntata: int) -> str:
@@ -131,6 +140,99 @@ def cmd_migrate(puntate):
         print(f"[{k}] OK  {old}\n        -> {ns}  | transcr={tr.modified_count} | link interni in {touched} doc")
 
 
+def cmd_titles():
+    """Correzione casing brand (UnoXdue) + H1 descrittivo + campi distinti.
+    Indipendente dalla migrazione slug. Idempotente. Preserva youtube_title_original literal."""
+    yt2punt = {v[0]: k for k, v in SERIE_A.items()}
+    for d in db.episodes.find({}):
+        yt = d.get("youtube_id")
+        upd = {}
+        # preserva il titolo YouTube originale (literal) PRIMA del fix casing
+        if not d.get("youtube_title_original"):
+            upd["youtube_title_original"] = d.get("title")
+        if not d.get("youtube_title_current"):
+            upd["youtube_title_current"] = d.get("youtube_title_original") or d.get("title")
+        # casing fix sui campi testuali (MAI sugli slug)
+        upd["title"] = _fix_brand(d.get("title"))
+        for f in ("excerpt", "meta_description", "seo_title"):
+            if d.get(f):
+                upd[f] = _fix_brand(d[f])
+        if isinstance(d.get("summary"), list):
+            upd["summary"] = [_fix_brand(p) for p in d["summary"]]
+        if isinstance(d.get("topics"), list):
+            upd["topics"] = [_fix_brand(t) for t in d["topics"]]
+        if isinstance(d.get("summary_sections"), list):
+            ss = []
+            for s in d["summary_sections"]:
+                s = dict(s); s["heading"] = _fix_brand(s.get("heading"))
+                if isinstance(s.get("paragraphs"), list):
+                    s["paragraphs"] = [_fix_brand(p) for p in s["paragraphs"]]
+                ss.append(s)
+            upd["summary_sections"] = ss
+        if isinstance(d.get("quotes"), list):
+            qs = []
+            for q in d["quotes"]:
+                if isinstance(q, dict):
+                    q = dict(q); q["text"] = _fix_brand(q.get("text")); q["speaker"] = _fix_brand(q.get("speaker"))
+                else:
+                    q = _fix_brand(q)
+                qs.append(q)
+            upd["quotes"] = qs
+        if isinstance(d.get("chapters"), list):
+            cs = []
+            for c in d["chapters"]:
+                c = dict(c); c["label"] = _fix_brand(c.get("label")); c["description"] = _fix_brand(c.get("description"))
+                cs.append(c)
+            upd["chapters"] = cs
+        if isinstance(d.get("related"), list):
+            rs = []
+            for r in d["related"]:
+                r = dict(r); r["title"] = _fix_brand(r.get("title"))
+                rs.append(r)
+            upd["related"] = rs
+        # H1 descrittivo / website_title / breadcrumb_label
+        if yt in yt2punt:
+            k = yt2punt[yt]; g = SERIE_A[k][1]
+            h1 = f"{ORD[k]} appuntamento UnoXdue: Serie A 2025/26, {g}ª giornata"
+            upd.update(h1=h1, website_title=h1, breadcrumb_label=f"{ORD[k]} appuntamento")
+        elif yt == SPECIALE_YT:
+            h1 = "Speciale Mondiali UnoXdue: Coppa del Mondo FIFA 2026"
+            upd.update(h1=h1, website_title=h1, breadcrumb_label="Speciale Mondiali 2026")
+        elif yt in INTERVIEWS:
+            h1 = _fix_brand(d.get("h1") or d.get("title"))
+            upd.update(h1=h1, website_title=h1, breadcrumb_label=INTERVIEWS[yt])
+        else:
+            h1 = _fix_brand(d.get("h1") or d.get("title"))
+            upd.update(h1=h1, website_title=h1, breadcrumb_label=h1)
+        db.episodes.update_one({"_id": d["_id"]}, {"$set": upd})
+        print(f"titles OK {yt}: h1='{upd['h1']}' | bc='{upd['breadcrumb_label']}'")
+
+
+def cmd_refresh_related():
+    """Ricostruisce related[].{section,slug,title} dai documenti target (slug o previous_slugs),
+    usando il website_title pulito. Elimina titoli/slug stantii dopo la migrazione."""
+    for d in db.episodes.find({}):
+        rel = d.get("related") or []
+        if not rel:
+            continue
+        new, changed = [], False
+        for r in rel:
+            slug = r.get("slug")
+            tgt = db.episodes.find_one({"slug": slug}) or db.episodes.find_one({"previous_slugs": slug})
+            if tgt:
+                nr = {"section": ("interviste" if tgt.get("type") == "intervista" else "episodi"),
+                      "slug": tgt.get("slug"),
+                      "title": tgt.get("website_title") or tgt.get("title")}
+                if nr != r:
+                    changed = True
+                new.append(nr)
+            else:
+                new.append(r)
+        if changed:
+            db.episodes.update_one({"_id": d["_id"]}, {"$set": {"related": new}})
+            print(f"related refreshed in {d.get('slug')}")
+
+
 def cmd_rollback(backup_dir):
     p = Path(backup_dir) / "episodes_full.json"
     eps = json_util.loads(p.read_text())
@@ -151,6 +253,10 @@ if __name__ == "__main__":
         cmd_plan()
     elif cmd == "backup":
         cmd_backup()
+    elif cmd == "titles":
+        cmd_titles()
+    elif cmd == "refresh-related":
+        cmd_refresh_related()
     elif cmd == "migrate":
         cmd_migrate([int(x) for x in sys.argv[2:]])
     elif cmd == "rollback":

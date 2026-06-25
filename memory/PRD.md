@@ -231,7 +231,7 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - DA FARE: pubblicare i 4 `approved_short` (su ok utente); espandere Speciale Mondiali; test E2E completo; backup/checkpoint; poi refactoring. Slug `studio-serie-a-38-giornata` (Primo 29a) da correggere con redirect.
 
 ## File chiave
-- `backend/auth.py` (sicurezza), `backend/seo.py` (+`render_transcript`, JSON-LD capitoli, `_results_attribution`),
+- `backend/auth.py` (sicurezza), `backend/seo.py` (+`render_transcript`, JSON-LD capitoli, `_results_attribution`, breadcrumb_label/website_title),
   `backend/server.py` (route, mount `/api/static`), `backend/templates/*.html` (+ `_macros.html`, `transcript.html`), `backend/automations.py`.
 - **P1 SEO trascrizioni:** `backend/srt_utils.py` (parsing SRT/dedup/chunking), `backend/ai_transcript.py`
   (map->reduce + anti-invenzione + summary_sections), `frontend/src/admin/TranscriptSEO.jsx`.

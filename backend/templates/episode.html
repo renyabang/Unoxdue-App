@@ -29,7 +29,7 @@
         <nav class="flex items-center gap-2 text-xs text-white/50 flex-wrap" aria-label="breadcrumb">
           <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
           <a href="{{ site_url }}/{{ ep.section }}/" class="hover:text-white">{{ ep.section_label }}</a> {{ m.chevron("w-3 h-3") }}
-          <span class="text-white/70">{{ ep.title }}</span>
+          <span class="text-white/70">{{ ep.breadcrumb_label or ep.title }}</span>
         </nav>
         <span class="inline-flex items-center mt-5 bg-[#EA4E1B] text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{{ ep.type_label }}</span>
         <h1 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-4 leading-[1.03]">{{ ep.h1 }}</h1>
