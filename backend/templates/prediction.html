@@ -95,6 +95,7 @@
             {{ m.shield("w-5 h-5 text-[#EA4E1B] flex-shrink-0 mt-0.5") }}
             <p class="text-white/55 text-sm leading-relaxed"><span class="font-bold text-white/80">18+ &middot; Gioca responsabilmente.</span> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Quote rilevate dalla grafica comparativa fornita dal team al momento della pubblicazione. Le quote possono variare.</p>
           </div>
+          {% if results_attribution %}<p class="text-center text-white/35 text-xs mt-4" data-testid="results-attribution">{{ results_attribution }}</p>{% endif %}
         </div>
       </div>
     </section>

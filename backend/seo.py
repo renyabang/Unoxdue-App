@@ -182,7 +182,13 @@ def render_prediction(p: dict) -> str:
     return env.get_template("prediction.html").render(
         p=p, canonical=canonical, site_url=SITE_URL, jsonld=jsonld,
         breadcrumb_jsonld=bc, year=_year(),
+        results_attribution=_results_attribution(),
     )
+
+
+def _results_attribution():
+    from config_db import SPORT_RESULTS_API_PROVIDER
+    return "Data provided by football-data.org" if (SPORT_RESULTS_API_PROVIDER or "").lower() == "football-data" else None
 
 
 def render_team_member(m: dict, related, press=None) -> str:

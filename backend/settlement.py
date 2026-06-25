@@ -41,9 +41,19 @@ def _ft(event):
 def _market_kind(market: str, pick: str) -> str:
     m = (market or "").lower()
     p = (pick or "").lower().strip()
-    # mercati combinati (es. "1X2 + U/O 3,5", "Multigol") -> non auto-risolvibili
-    if "+" in m or "multigol" in m or "multi gol" in m or "esatto" in m or "marcatore" in m:
+    # combinati (es. "1X2 + U/O 3,5") e marcatori: NON auto-risolvibili dal solo punteggio
+    if "+" in m or "marcatore" in m or "scorer" in m:
         return "combo"
+    # mercati statistici NON deducibili dal punteggio (corner, cartellini, tiri, falli, possesso...)
+    if any(k in m for k in ["corner", "angolo", "cartellin", "ammonizion", "espulsion", "card", "booking",
+                            "tiri", "shots", "falli", "fouls", "offside", "fuorigioco", "possesso", "possession"]):
+        return "stats"
+    # risultato esatto (correct score)
+    if "esatto" in m or "correct score" in m or "exact" in m:
+        return "cs"
+    # multigol (range di gol totali)
+    if "multigol" in m or "multi gol" in m or "multi-gol" in m:
+        return "multigol"
     if "doppia chance" in m or "double chance" in m or p in ("1x", "x2", "12"):
         return "dc"
     if "draw no bet" in m or "dnb" in m:
@@ -111,8 +121,23 @@ def settle_selection(sel: dict, event: dict) -> dict:
             return V()
         over = "over" in p
         return (W() if total > line else L()) if over else (W() if total < line else L())
+    if kind == "cs":
+        nums = re.findall(r"\d+", sel.get("pick") or "")
+        if len(nums) >= 2:
+            ph, pa = int(nums[0]), int(nums[1])
+            return W() if (ph == h and pa == a) else L()
+        return {"status": "manual_review", "reason": "Risultato esatto non interpretabile"}
+    if kind == "multigol":
+        nums = re.findall(r"\d+", sel.get("pick") or "") or re.findall(r"\d+", sel.get("market") or "")
+        if len(nums) >= 2:
+            lo, hi = sorted((int(nums[0]), int(nums[1])))
+            total = h + a
+            return W() if lo <= total <= hi else L()
+        return {"status": "manual_review", "reason": "Range multigol non interpretabile"}
     if kind == "combo":
         return {"status": "manual_review", "reason": f"Mercato combinato non auto-risolvibile: {sel.get('market')}"}
+    if kind == "stats":
+        return {"status": "manual_review", "reason": f"Mercato statistico non deducibile dal punteggio: {sel.get('market')}"}
     return {"status": "manual_review", "reason": f"Mercato non riconosciuto: {sel.get('market')}"}
 
 
@@ -146,19 +171,21 @@ async def apply_publish_rule(competition: str, season: str, round_: int) -> dict
     return {"valid_picks": valid, "min_valid": min_valid, "status": new_status}
 
 
-async def compute_round(competition: str, season: str, round_: int, source: str = "auto", actor: str = None) -> dict:
+async def compute_round(competition: str, season: str, round_: int, source: str = "auto",
+                        actor: str = None, dry_run: bool = False) -> dict:
     pred = await db.predictions.find_one({"competition": competition, "season": season, "round": round_})
     if not pred:
         return {"ok": False, "error": "Pronostico non trovato"}
 
     provider = rp.get_provider()
-    events, last_err = None, None
-    for _ in range(2):  # retry
+    events, last_err, retries = None, None, 0
+    for attempt in range(2):  # retry
         try:
             events = await provider.get_events(competition, season, round_)
             break
         except Exception as e:
             last_err = str(e)
+            retries = attempt + 1
     if events is None:
         await auto.log_automation("settlement", "error", f"Provider risultati fallito: {last_err}")
         return {"ok": False, "error": last_err or "Provider non disponibile"}
@@ -171,18 +198,38 @@ async def compute_round(competition: str, season: str, round_: int, source: str 
         return None
 
     picks = pred.get("picks", [])
+    detail = []
     for pick in picks:
+        sel_detail = []
         for sel in pick.get("selections", []):
             prev = sel.get("settlement") or {}
             if prev.get("manual"):
+                sel_detail.append({"match": sel.get("match"), "market": sel.get("market"),
+                                   "pick": sel.get("pick"), "settlement": prev, "skipped": "manuale"})
                 continue  # non sovrascrivere correzioni manuali
             ev = find(sel.get("match"))
             stt = settle_selection(sel, ev)
             stt.update({"computed_at": _now(), "provider": provider.name,
                         "event_id": ev.get("provider_event_id") if ev else None,
                         "event_status": ev.get("status") if ev else None})
-            sel["settlement"] = stt
-        pick["settlement"] = aggregate_pick(pick)
+            if not dry_run:
+                sel["settlement"] = stt
+            sel_detail.append({"match": sel.get("match"), "market": sel.get("market"),
+                               "pick": sel.get("pick"), "settlement": stt,
+                               "mapped": bool(ev), "score": ev.get("score", {}).get("ft") if ev else None})
+        agg = aggregate_pick({"selections": [{"settlement": s["settlement"]} for s in sel_detail]})
+        if not dry_run:
+            pick["settlement"] = agg
+        detail.append({"tipster": pick.get("tipster"), "status": agg.get("status"), "selections": sel_detail})
+
+    summary = {}
+    for d in detail:
+        summary[d["status"]] = summary.get(d["status"], 0) + 1
+
+    if dry_run:
+        return {"ok": True, "dry_run": True, "summary": summary, "provider": provider.name,
+                "demo": provider.name == "fixture", "events_fetched": len(events),
+                "api_calls": 1, "retries": retries, "detail": detail}
 
     version_entry = {
         "version": SETTLE_VERSION, "computed_at": _now(), "provider": provider.name,
@@ -191,11 +238,6 @@ async def compute_round(competition: str, season: str, round_: int, source: str 
     }
     hist = pred.get("settlement_history", [])
     hist.append(version_entry)
-
-    summary = {}
-    for p in picks:
-        st = p.get("settlement", {}).get("status", "pending")
-        summary[st] = summary.get(st, 0) + 1
 
     await db.predictions.update_one(
         {"competition": competition, "season": season, "round": round_},
@@ -207,6 +249,7 @@ async def compute_round(competition: str, season: str, round_: int, source: str 
                               f"Settlement giornata {round_}: {summary}",
                               {"summary": summary, "provider": provider.name, "source": source})
     return {"ok": True, "summary": summary, "provider": provider.name, "demo": provider.name == "fixture",
+            "events_fetched": len(events), "api_calls": 1, "retries": retries,
             "published": pub, "version": SETTLE_VERSION}
 
 

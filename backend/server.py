@@ -693,12 +693,13 @@ class SettleIn(BaseModel):
     competition: str = "Serie A"
     season: str
     round: int
+    dry_run: bool = False
 
 
 @api_router.post("/admin/results/settle")
 async def admin_results_settle(payload: SettleIn, admin: str = Depends(get_current_admin)):
     return await settle.compute_round(payload.competition, payload.season, payload.round,
-                                      source="manual", actor="admin")
+                                      source="manual", actor="admin", dry_run=payload.dry_run)
 
 
 @api_router.get("/admin/results/{season}/{round_}")
@@ -875,6 +876,7 @@ async def _render_transcript_page(slug: str, section: str) -> HTMLResponse:
 # ============================ Sitemap / robots / RSS ============================
 @api_router.get("/sitemap.xml")
 async def sitemap():
+    from xml.sax.saxutils import escape
     eps = await db.episodes.find({}, {"_id": 0}).to_list(2000)
     preds = await db.predictions.find({}, {"_id": 0}).to_list(2000)
     team = await db.team.find({}, {"_id": 0}).to_list(200)
@@ -884,6 +886,8 @@ async def sitemap():
     for i in eps:
         sec = "interviste" if i.get("type") == "intervista" else "episodi"
         urls.append(f'{SITE_URL}/{sec}/{i["slug"]}/')
+        if i.get("has_transcript_page"):
+            urls.append(f'{SITE_URL}/{sec}/{i["slug"]}/trascrizione/')
     for p in preds:
         urls.append(f'{SITE_URL}/pronostici/serie-a/{p.get("season")}/giornata-{p.get("round")}/')
     for m in team:
@@ -891,13 +895,14 @@ async def sitemap():
     body = ['<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">']
     for u in urls:
-        body.append(f"  <url><loc>{u}</loc></url>")
+        body.append(f"  <url><loc>{escape(u)}</loc></url>")
     body.append("</urlset>")
     return Response("\n".join(body), media_type="application/xml")
 
 
 @api_router.get("/video-sitemap.xml")
 async def video_sitemap():
+    from xml.sax.saxutils import escape
     items = await db.episodes.find({}, {"_id": 0}).to_list(2000)
     body = ['<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
@@ -909,10 +914,10 @@ async def video_sitemap():
         loc = f'{SITE_URL}/{sec}/{i["slug"]}/'
         thumb = i.get("thumbnail") or f'https://img.youtube.com/vi/{i["youtube_id"]}/maxresdefault.jpg'
         desc = (i.get("meta_description") or i.get("excerpt") or i.get("title", ""))[:200]
-        body += ["  <url>", f"    <loc>{loc}</loc>", "    <video:video>",
-                 f"      <video:thumbnail_loc>{thumb}</video:thumbnail_loc>",
-                 f"      <video:title>{i.get('title','')}</video:title>",
-                 f"      <video:description>{desc}</video:description>",
+        body += ["  <url>", f"    <loc>{escape(loc)}</loc>", "    <video:video>",
+                 f"      <video:thumbnail_loc>{escape(thumb)}</video:thumbnail_loc>",
+                 f"      <video:title>{escape(i.get('title',''))}</video:title>",
+                 f"      <video:description>{escape(desc)}</video:description>",
                  f"      <video:player_loc>https://www.youtube.com/embed/{i['youtube_id']}</video:player_loc>",
                  "    </video:video>", "  </url>"]
     body.append("</urlset>")

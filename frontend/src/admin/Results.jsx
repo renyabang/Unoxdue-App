@@ -1,6 +1,6 @@
 import React, { useEffect, useState } from "react";
 import {
-  Trophy, RefreshCw, Loader2, Save, CheckCircle2, AlertTriangle, History,
+  Trophy, RefreshCw, Loader2, Save, CheckCircle2, AlertTriangle, History, Eye,
 } from "lucide-react";
 import { api } from "./api";
 
@@ -29,6 +29,7 @@ export default function Results() {
   const [view, setView] = useState(null);
   const [busy, setBusy] = useState("");
   const [summary, setSummary] = useState(null);
+  const [dryRun, setDryRun] = useState(null);
 
   useEffect(() => {
     api.resultsStatus().then((s) => { setStatus(s); setMinValid(s.settings?.publish_min_valid || 1); }).catch(() => {});
@@ -56,9 +57,20 @@ export default function Results() {
     setBusy("settle"); setSummary(null);
     try {
       const r = await api.resultsSettle({ season, round: parseInt(round, 10) });
-      setSummary(r);
+      setSummary(r); setDryRun(null);
       loadView(sel);
     } catch (e) { setSummary({ ok: false, error: e.message }); }
+    setBusy("");
+  };
+
+  const runDryRun = async () => {
+    if (!sel) return;
+    const [season, round] = sel.split("|");
+    setBusy("dry"); setSummary(null);
+    try {
+      const r = await api.resultsSettle({ season, round: parseInt(round, 10), dry_run: true });
+      setDryRun(r);
+    } catch (e) { setDryRun({ ok: false, error: e.message }); }
     setBusy("");
   };
 
@@ -111,10 +123,45 @@ export default function Results() {
               {preds.map((p) => <option key={`${p.season}|${p.round}`} value={`${p.season}|${p.round}`}>{`${p.competition || "Serie A"} ${p.season} · ${p.round}ª giornata (${(p.picks || []).length} giocate)`}</option>)}
             </select>
           </div>
+          <button data-testid="results-dryrun-btn" onClick={runDryRun} disabled={busy === "dry" || !sel} className="inline-flex items-center gap-2 bg-white border border-[#e2d4c2] hover:border-[#EA4E1B] text-[#1a1411] text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
+            {busy === "dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />} Anteprima (dry-run)
+          </button>
           <button data-testid="results-settle-btn" onClick={runSettle} disabled={busy === "settle" || !sel} className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
-            {busy === "settle" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Esegui settlement
+            {busy === "settle" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Calcola e scrivi
           </button>
         </div>
+        {dryRun && (
+          <div data-testid="results-dryrun" className="mt-4 text-sm bg-[#fff8f1] border border-[#f0d9c4] rounded-lg p-3 text-[#4a3d34]">
+            {dryRun.ok ? (
+              <div>
+                <p className="flex flex-wrap items-center gap-2 font-semibold"><Eye className="w-4 h-4 text-[#EA4E1B]" /> Anteprima settlement ({dryRun.provider}{dryRun.demo ? " · demo" : ""}) — <span className="text-[#9c8b7d] font-normal">nessuna scrittura nel DB</span> · eventi {dryRun.events_fetched} · API {dryRun.api_calls}{dryRun.retries ? ` · retry ${dryRun.retries}` : ""}:
+                  {Object.entries(dryRun.summary || {}).map(([k, v]) => <span key={k} className="ml-1"><Badge s={k} /> {v}</span>)}
+                </p>
+                <div className="mt-2 space-y-2">
+                  {(dryRun.detail || []).map((d, i) => (
+                    <div key={i} className="border border-[#f0d9c4] rounded-lg p-2 bg-white">
+                      <p className="font-bold text-[#1a1411] flex items-center gap-2">{d.tipster} <Badge s={d.status} /></p>
+                      <ul className="mt-1 space-y-0.5">
+                        {d.selections.map((s, j) => (
+                          <li key={j} className="text-xs flex flex-wrap items-center gap-2">
+                            <span className="text-[#6b5d52]">{s.match} · {s.market} · <b>{s.pick}</b></span>
+                            <Badge s={s.settlement.status} />
+                            {s.score && <span className="text-[#9c8b7d]">{s.score.home}-{s.score.away}</span>}
+                            {!s.mapped && <span className="text-red-600">non mappata</span>}
+                            {s.settlement.reason && <span className="text-[#9c8b7d] italic">{s.settlement.reason}</span>}
+                          </li>
+                        ))}
+                      </ul>
+                    </div>
+                  ))}
+                </div>
+                <button onClick={runSettle} disabled={busy === "settle"} data-testid="results-apply-btn" className="mt-3 inline-flex items-center gap-2 bg-green-600 hover:bg-green-700 text-white text-sm font-bold uppercase tracking-wide px-4 py-2 rounded-lg disabled:opacity-60">
+                  {busy === "settle" ? <Loader2 className="w-4 h-4 animate-spin" /> : <CheckCircle2 className="w-4 h-4" />} Applica e scrivi
+                </button>
+              </div>
+            ) : <span className="text-red-600">Errore: {dryRun.error}</span>}
+          </div>
+        )}
         {summary && (
           <div data-testid="results-summary" className="mt-4 text-sm bg-[#fbf7f2] rounded-lg p-3 text-[#4a3d34]">
             {summary.ok ? (

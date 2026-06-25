@@ -522,14 +522,34 @@ async def list_status() -> dict:
         {"transcription_status": "done"},
         {"_id": 0, "slug": 1, "title": 1, "type": 1, "transcription_status": 1,
          "transcription_seo_status": 1, "ai_preview_at": 1, "transcription_chars": 1,
-         "ai_preview.meta.needs_review": 1}).to_list(500)
+         "ai_preview.meta": 1}).to_list(500)
     for e in eps:
-        ap = e.get("ai_preview") or {}
-        e["needs_review"] = bool((ap.get("meta") or {}).get("needs_review")) if ap else False
+        meta = (e.get("ai_preview") or {}).get("meta") or {}
+        e["needs_review"] = bool(meta.get("needs_review")) if meta else False
+        e["quality_status"] = _quality_status(meta) if meta else None
         e["has_preview"] = bool(e.get("ai_preview_at"))
         e["seo_status"] = e.get("transcription_seo_status") or ("preview" if e["has_preview"] else "none")
         e.pop("ai_preview", None)
     return {"episodes": eps, "total": len(eps)}
+
+
+def _quality_status(meta: dict) -> str:
+    """approved | approved_short | needs_review (qualita' > soglie, no padding)."""
+    reasons = meta.get("review_reasons") or []
+    hard = [r for r in reasons if not r.startswith("sommario") and not r.startswith("intro")]
+    if hard:
+        return "needs_review"
+    sw = meta.get("summary_words", 0)
+    dur = meta.get("duration_min", 0)
+    nh2 = meta.get("n_h2", 0)
+    min_ok = 450 if dur > 90 else (330 if dur <= 45 else 420)
+    summary_short = any(r.startswith("sommario") for r in reasons)
+    intro_short = any(r.startswith("intro") for r in reasons)
+    if summary_short and sw >= min_ok and nh2 >= 3 and not intro_short:
+        return "approved_short"
+    if not reasons:
+        return "approved"
+    return "needs_review"
 
 
 async def get_preview(slug: str) -> dict:

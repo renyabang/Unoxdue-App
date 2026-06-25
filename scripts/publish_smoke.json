@@ -1,0 +1,126 @@
+{
+  "published": [
+    [
+      "fabio-ceravolo-130-gol-carriera",
+      "intervista",
+      true
+    ],
+    [
+      "allan-baclet-playoff-cosenza",
+      "intervista",
+      true
+    ],
+    [
+      "studio-serie-a-38-giornata",
+      "episodio",
+      true
+    ],
+    [
+      "sesto-appuntamento-di-unoxdue-live-studio-serie-a-34-giornata-calcio-pronostici-",
+      "episodio",
+      true
+    ],
+    [
+      "secondo-appuntamento-unoxdue-live-studio-serie-a-30-di-campionato-calcio-analisi",
+      "episodio",
+      true
+    ],
+    [
+      "ottavo-appuntamento-di-unoxdue-live-studio-serie-a-36-giornata-calcio-pronostici",
+      "episodio",
+      true
+    ],
+    [
+      "quinto-appuntamento-di-unoxdue-live-studio-serie-a-33-giornata-calcio-pronostici",
+      "episodio",
+      true
+    ],
+    [
+      "decimo-appuntamento-di-unoxdue-live-studio-serie-a-38-giornata-calcio-pronostici",
+      "episodio",
+      true
+    ]
+  ],
+  "smoke": [
+    {
+      "slug": "fabio-ceravolo-130-gol-carriera",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "allan-baclet-playoff-cosenza",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "studio-serie-a-38-giornata",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "sesto-appuntamento-di-unoxdue-live-studio-serie-a-34-giornata-calcio-pronostici-",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "secondo-appuntamento-unoxdue-live-studio-serie-a-30-di-campionato-calcio-analisi",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "ottavo-appuntamento-di-unoxdue-live-studio-serie-a-36-giornata-calcio-pronostici",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "quinto-appuntamento-di-unoxdue-live-studio-serie-a-33-giornata-calcio-pronostici",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    },
+    {
+      "slug": "decimo-appuntamento-di-unoxdue-live-studio-serie-a-38-giornata-calcio-pronostici",
+      "ep_http": 200,
+      "tr_http": 200,
+      "in_sitemap": true,
+      "tr_in_sitemap": true,
+      "canonical": true,
+      "summary_sections": true,
+      "h2": true
+    }
+  ]
+}

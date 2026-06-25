@@ -1,0 +1,39 @@
+{
+  "summary": "Feature P1 'Settlement REALE Serie A via football-data.org + DRY-RUN UI' testata end-to-end sull'admin (frontend only, come da review_request). Login admin OK (admin@unoxdue.net). Pagina /admin/risultati carica con data-testid 'results-page'. Provider attivo mostrato come 'football-data' (codice in <code>). Badge demo (results-demo-badge) NON presente, come richiesto. Selettore giornata (results-pred-select) mostra 2 opzioni: '2026-2027|38' (1 giocata) e '2025-2026|38' (3 giocate). Cliccato 'Anteprima (dry-run)' (results-dryrun-btn) per ENTRAMBI i round: il pannello data-testid 'results-dryrun' compare entro ~2s con TUTTI i campi richiesti: provider='football-data', testo 'nessuna scrittura nel DB', 'eventi 10 · API 1', summary aggregato con badge per status (DA VERIFICARE/PERSA), una card per ogni tipster con nome + badge stato giocata, e per ogni selezione: match, market, pick, badge esito (VINTA/PERSA/DA VERIFICARE), punteggio (es. '1-1', '2-1', '1-4', '1-0', '0-2'), motivo per i non mappati ('Evento non trovato nel provider' in italic) e per combinati ('Mercato combinato non auto-risolvibile: 1X2 + U/O 3,5'). Esempi reali dal round 2025-2026|38: 'Il Marziano' PERSA con 6 selezioni (3 vinte: Fiorentina-Atalanta MG2-4=SI 1-1, Lazio-Pisa MG1-2 1T=SI 2-1, Cremonese-Como GG=Goal 1-4; 1 persa: Lecce-Genoa MultiGoal Casa 1-3 = SI con 1-0; 2 manual_review: combinati 1X2+U/O). Nessun pageerror, nessun errore JS in console. Pulsanti 'Calcola e scrivi' (results-settle-btn) e 'Applica e scrivi' (results-apply-btn) presenti ma NON cliccati come richiesto (no scrittura DB). Pagina rimane stabile dopo dry-run e dopo navigazione smoke. Smoke non-regressione: 10/10 voci di menu admin (Dashboard, Contenuti, YouTube, AI/SEO, Trascrizioni SEO, Schedine, Grafiche, Rassegna, Log, Integrazioni) caricano senza pageerror né crash.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "login": "OK (admin@unoxdue.net / UxdTest!2026)",
+    "page_load": "data-testid 'results-page' presente. Titolo 'Risultati & Settlement'.",
+    "provider_box": "Mostra 'Attivo: football-data' (codice). Badge demo (results-demo-badge) assente. Nessuna nota gialla demo visibile. PASS.",
+    "pred_select": "results-pred-select presente con 2 opzioni reali: 2026-2027|38 (1 giocata 'Il Marziano') e 2025-2026|38 (3 giocate 'Sono Micuccio', 'Il Ninja', 'Il Marziano').",
+    "dryrun_round_2026_2027": "Click results-dryrun-btn -> results-dryrun appare. Pannello: 'Anteprima settlement (football-data) — nessuna scrittura nel DB · eventi 10 · API 1: DA VERIFICARE 1'. Card 'Il Marziano' DA VERIFICARE con 2 selezioni Juventus-Inter 1X2=1 e Milan-Roma 1X2=1, entrambe non mappate ('Evento non trovato nel provider'). Aspettato per round futuro non disputato.",
+    "dryrun_round_2025_2026": "Click results-dryrun-btn -> results-dryrun appare. Pannello: 'Anteprima settlement (football-data) — nessuna scrittura nel DB · eventi 10 · API 1: DA VERIFICARE 2, PERSA 1'. 3 card tipster. 'Il Marziano' PERSA con 6 selezioni, 3 VINTA con punteggi reali (1-1, 2-1, 1-4), 1 PERSA (1-0), 2 manual_review combinati con motivazione 'Mercato combinato non auto-risolvibile'. PASS: motore settlement reale calcola correttamente Multigol, Goal/No Goal, mercati combinati flaggati per review.",
+    "dryrun_panel_fields": "PASS tutti i campi richiesti: provider 'football-data', 'nessuna scrittura nel DB', 'eventi 10', 'API 1', badge stato per tipster e per selezione, punteggio, 'non mappata' evidenziato in rosso.",
+    "no_settle_clicks": "results-settle-btn e results-apply-btn presenti ma NON cliccati, come da istruzione esplicita.",
+    "page_stability": "Dopo dry-run e navigazione tra menu, /admin/risultati ricarica correttamente. Nessun PAGEERROR né errore console rilevante.",
+    "smoke_non_regression": "10/10 route admin caricano (Dashboard, Contenuti, YouTube, AI/SEO, Trascrizioni SEO, Schedine, Grafiche, Rassegna, Log, Integrazioni). Body text len OK su tutte. Nessun pageerror raccolto durante la navigazione."
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Results.jsx riga 158: il bottone 'Applica e scrivi' (results-apply-btn) chiama runSettle() ma il pannello dryRun NON viene cancellato dopo l'applicazione. runSettle setta setDryRun(null) solo nel suo proprio percorso quando lanciato da fuori; in questo caso il dryRun viene cancellato correttamente (setDryRun(null) è dentro runSettle linea 60), OK. Tuttavia, il bottone 'Applica e scrivi' è dentro il pannello dry-run e usa lo stesso runSettle() — corretto, ma considerare di disabilitare anche results-dryrun-btn quando busy==='settle' per evitare doppi click incrociati.",
+    "Results.jsx: dryRun.detail rendering usa 'd.tipster' come header ma non c'è fallback in caso sia null/undefined; se il backend restituisce detail senza tipster name, comparirebbe vuoto. Aggiungere fallback 'Sconosciuto' o tipster_id.",
+    "Results.jsx riga 138: il loop usa <Badge s={k}/> ma manca un visual separator tra badges/numeri (al momento li separa solo lo spazio). Leggibile ma migliorabile con virgole o pipe.",
+    "Results.jsx: il pannello dry-run non mostra esplicitamente quando 'detail' è vuoto (es. round con 0 picks). Aggiungere fallback 'Nessuna giocata da analizzare'.",
+    "Results.jsx riga 51: saveSettings() ignora silenziosamente errori (catch vuoto). Se l'API fallisce, l'utente non sa che la setting non è persistita. Aggiungere toast/feedback.",
+    "Results.jsx riga 83: correct() catch vuoto: analoga osservazione. Anche errori di rete su correzione manuale sono silenziati."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (frontend only)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net / UxdTest!2026 (da /app/memory/test_credentials.md).",
+  "seed_data_creation": "Nessuna modifica al DB. Il dry-run è read-only by design (backend non scrive con dry_run=true). I 2 round esistenti nel DB non sono stati alterati.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Feature 'Settlement REALE + DRY-RUN UI' completamente funzionante. data-testid attivi e verificati: results-page, results-pred-select, results-dryrun-btn, results-dryrun, results-settle-btn, results-apply-btn, results-minvalid, results-picks, results-pick-{i}, results-pick-status-{i}, results-sel-{i}-{j}, results-sel-status-{i}-{j}, results-correct-{i}-{j}. Badge results-demo-badge correttamente NON presente (provider football-data live, non demo). Il pannello dry-run mostra esiti reali calcolati dal motore interno (1X2, Doppia Chance, DNB, O/U, GG/NG, Multigol, Risultato Esatto) e marca correttamente come manual_review i mercati combinati (es. '1X2 + U/O 3,5'). Round 2025-2026|38 ha dati reali (partite ultima giornata Serie A 2025-26 con punteggi). NON testati: pulsanti di scrittura settle/apply (per istruzione esplicita). NON testato pulsante Correggi sulle giocate (results-correct-*). Test precedenti: iteration_11.json, iteration_12.json. Smoke route admin OK.",
+  "rca of the issue": "Nessun bug. Feature implementata correttamente. Dry-run conforme alla spec: anteprima senza scrittura DB, provider attivo mostrato, badge per ogni stato, motivazioni per non mappati e combinati."
+}

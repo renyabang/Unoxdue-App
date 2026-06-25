@@ -284,7 +284,9 @@ export default function TranscriptSEO() {
                     <td className="px-5 py-3 text-[#6b5d52] capitalize">{e.type}</td>
                     <td className="px-5 py-3">
                       <span className={`text-[11px] font-bold uppercase px-2.5 py-1 rounded-full ${badge.cls}`}>{badge.label}</span>
-                      {e.needs_review && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[11px] font-bold text-red-700"><AlertTriangle className="w-3 h-3" /> rev</span>}
+                      {e.seo_status !== "published" && e.quality_status === "approved_short" && <span className="ml-1.5 inline-flex items-center text-[11px] font-bold text-emerald-700" title="Sotto target ma copertura completa (no padding)">✓ corto</span>}
+                      {e.seo_status !== "published" && e.quality_status === "approved" && <span className="ml-1.5 inline-flex items-center text-[11px] font-bold text-emerald-700">✓ ok</span>}
+                      {e.seo_status !== "published" && (e.quality_status === "needs_review" || (e.needs_review && !e.quality_status)) && <span className="ml-1.5 inline-flex items-center gap-0.5 text-[11px] font-bold text-red-700"><AlertTriangle className="w-3 h-3" /> rev</span>}
                     </td>
                     <td className="px-5 py-3">
                       <div className="flex items-center justify-end gap-2">

@@ -17,14 +17,22 @@ import requests
 
 from config_db import SPORT_RESULTS_API_PROVIDER, SPORT_RESULTS_API_URL, SPORT_RESULTS_API_KEY
 
-MAPPING_VERSION = "1.0"
+MAPPING_VERSION = "1.1"
+
+# Alias per nomi che la normalizzazione standard non riconduce alla forma breve delle grafiche
+TEAM_ALIASES = {
+    "internazionale milano": "inter", "internazionale": "inter",
+    "hellas verona": "verona",
+}
 
 
 def norm_team(s: str) -> str:
     s = (s or "").lower().strip()
-    s = re.sub(r"\b(ac|as|us|ss|fc|calcio|1909|1913)\b", " ", s)
-    s = re.sub(r"[^a-z0-9]+", " ", s)
-    return re.sub(r"\s+", " ", s).strip()
+    s = re.sub(r"[^a-z0-9\s]+", " ", s)
+    s = re.sub(r"\b(ac|as|us|ss|fc|ssc|acf|bc|cfc|sc|calcio)\b", " ", s)
+    s = re.sub(r"\b\d{3,4}\b", " ", s)  # anni societari (1907, 1909, 1913, ...)
+    s = re.sub(r"\s+", " ", s).strip()
+    return TEAM_ALIASES.get(s, s)
 
 
 def norm_match(match: str):
@@ -141,8 +149,57 @@ class ApiFootballResultsProvider(ResultsProvider):
         return out
 
 
+class FootballDataResultsProvider(ResultsProvider):
+    """football-data.org v4 (free tier). Serie A = competizione 'SA'.
+    Solo risultati/stato/punteggio: MAI quote (le quote vengono dalle grafiche)."""
+    name = "football-data"
+    COMP_CODE = "SA"
+    STATUS_MAP = {
+        "FINISHED": "finished", "AWARDED": "finished",
+        "IN_PLAY": "in_play", "PAUSED": "in_play",
+        "SCHEDULED": "scheduled", "TIMED": "scheduled",
+        "POSTPONED": "postponed", "SUSPENDED": "suspended", "CANCELLED": "cancelled",
+    }
+
+    def _season_year(self, season: str) -> int:
+        return int(str(season).split("-")[0])
+
+    @staticmethod
+    def _score(node):
+        if node and node.get("home") is not None and node.get("away") is not None:
+            return {"home": node.get("home"), "away": node.get("away")}
+        return None
+
+    async def get_events(self, competition, season, round_):
+        def _call():
+            base = (SPORT_RESULTS_API_URL or "https://api.football-data.org/v4").rstrip("/")
+            headers = {"X-Auth-Token": SPORT_RESULTS_API_KEY, "User-Agent": "unoxdue/1.0"}
+            params = {"season": self._season_year(season), "matchday": round_}
+            r = requests.get(f"{base}/competitions/{self.COMP_CODE}/matches",
+                             headers=headers, params=params, timeout=15)
+            r.raise_for_status()
+            return r.json()
+
+        data = await asyncio.get_event_loop().run_in_executor(None, _call)
+        out = []
+        for m in data.get("matches", []):
+            sc = m.get("score", {}) or {}
+            # rimuovi le quote dal payload grezzo conservato (non devono mai essere usate)
+            raw = {k: v for k, v in m.items() if k != "odds"}
+            out.append(make_event(
+                "football-data", m.get("id"), competition, season, m.get("matchday", round_),
+                (m.get("homeTeam") or {}).get("name"), (m.get("awayTeam") or {}).get("name"),
+                m.get("utcDate"), self.STATUS_MAP.get(m.get("status"), "scheduled"),
+                ft=self._score(sc.get("fullTime")), ht=self._score(sc.get("halfTime")),
+                et=self._score(sc.get("extraTime")), pen=self._score(sc.get("penalties")),
+                raw=raw))
+        return out
+
+
 def get_provider() -> ResultsProvider:
     prov = (SPORT_RESULTS_API_PROVIDER or "fixture").lower()
+    if prov == "football-data" and SPORT_RESULTS_API_KEY:
+        return FootballDataResultsProvider()
     if prov == "apifootball" and SPORT_RESULTS_API_KEY:
         return ApiFootballResultsProvider()
     return FixtureResultsProvider()
@@ -151,9 +208,15 @@ def get_provider() -> ResultsProvider:
 def provider_status() -> dict:
     prov = (SPORT_RESULTS_API_PROVIDER or "fixture").lower()
     active = get_provider().name
+    notes = {
+        "football-data": "Provider risultati REALE football-data.org (Serie A). Solo risultati/stato, mai quote.",
+        "apifootball": "Provider API-Football (predisposto, alternativa).",
+        "fixture": ("Provider risultati in modalità fixture (demo). Imposta SPORT_RESULTS_API_PROVIDER=football-data "
+                    "e SPORT_RESULTS_API_KEY per i dati reali, senza modificare il motore di settlement."),
+    }
     return {
         "configured": bool(SPORT_RESULTS_API_KEY),
         "provider": prov, "active": active, "demo": active == "fixture",
-        "note": ("Provider risultati in modalità fixture (demo). Imposta SPORT_RESULTS_API_PROVIDER=apifootball "
-                 "e SPORT_RESULTS_API_KEY per i dati reali, senza modificare il motore di settlement."),
+        "attribution": "Data provided by football-data.org" if active == "football-data" else None,
+        "note": notes.get(active, notes["fixture"]),
     }
