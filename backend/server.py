@@ -954,6 +954,19 @@ async def ssr_interview_transcript(slug: str):
     return await _render_transcript_page(slug, "interviste")
 
 
+@api_router.get("/seo/{full_path:path}", response_class=HTMLResponse)
+async def ssr_not_found(full_path: str):
+    body = (
+        "<p class='lead'>La pagina che cerchi non esiste o è stata spostata.</p>"
+        "<p>Torna alla <a href=\"" + SITE_URL + "/\">home</a>, esplora gli "
+        "<a href=\"" + SITE_URL + "/episodi/\">episodi</a> o le "
+        "<a href=\"" + SITE_URL + "/interviste/\">interviste</a>.</p>"
+    )
+    html = seo.render_page("Pagina non trovata", "La pagina richiesta non esiste (errore 404).",
+                           "/404/", body, noindex=True)
+    return HTMLResponse(html, status_code=404)
+
+
 async def _render_transcript_page(slug: str, section: str):
     ep = await db.episodes.find_one({"slug": slug})
     if not ep:

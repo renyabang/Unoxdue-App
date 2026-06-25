@@ -294,12 +294,13 @@ def render_home(episodes, interviews) -> str:
     )
 
 
-def render_page(page_title, page_desc, canonical_path, body_html) -> str:
+def render_page(page_title, page_desc, canonical_path, body_html, noindex=False) -> str:
     canonical = f"{SITE_URL}{canonical_path}"
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
     return env.get_template("page.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical,
         body_html=body_html, site_url=SITE_URL, breadcrumb_jsonld=bc, year=_year(),
+        noindex=noindex,
     )
 
 

@@ -14,23 +14,16 @@ const { createProxyMiddleware } = require("http-proxy-middleware");
 
 const TARGET = process.env.SSR_PROXY_TARGET || "http://127.0.0.1:8001";
 
-const EXACT = new Set([
-  "/",
-  "/il-podcast",
-  "/parlano-di-noi",
-  "/collaborazioni",
-  "/contatti",
-  "/privacy",
-  "/cookie",
-  "/sitemap.xml",
-  "/video-sitemap.xml",
-  "/robots.txt",
-]);
-const PREFIX = ["/episodi", "/interviste", "/pronostici", "/team"];
-
 function clean(p) {
   const c = (p || "/").split("?")[0].replace(/\/+$/, "");
   return c === "" ? "/" : c;
+}
+
+// File statici serviti dal dev server React (logo, favicon, manifest, css/js, immagini team...).
+// I file SSR (sitemap/robots) NON sono considerati asset: vanno proxati al backend.
+function isAsset(path) {
+  if (["/sitemap.xml", "/video-sitemap.xml", "/robots.txt"].includes(path)) return false;
+  return /\.[a-z0-9]+$/i.test(path);
 }
 
 function isPublic(pathname) {
@@ -42,16 +35,13 @@ function isPublic(pathname) {
     path.startsWith("/ws") ||
     path.startsWith("/sockjs-node") ||
     path.startsWith("/__") ||
-    path.includes("hot-update") ||
-    path === "/manifest.json" ||
-    path === "/asset-manifest.json" ||
-    path === "/favicon.ico"
+    path.includes("hot-update")
   ) {
     return false;
   }
-  if (path === "/") return true;
-  if (EXACT.has(path)) return true;
-  return PREFIX.some((pre) => path === pre || path.startsWith(pre + "/"));
+  if (isAsset(path)) return false;
+  // Tutto il resto è pubblico -> SSR backend (che restituisce 404 per route inesistenti).
+  return true;
 }
 
 function rewrite(reqUrl) {

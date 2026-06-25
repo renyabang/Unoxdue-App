@@ -98,3 +98,5 @@ Es. ep.1: `UnoXdue | Serie A 2025/26, 29ª giornata | Primo appuntamento`
 - Pagine nuove SSR: /collaborazioni/ /contatti/ /privacy/ /cookie/ (render_page) + link nel footer. Menu (desktop+mobile <details> nativo) con `<a href>` reali alle pagine, niente #anchor.
 - Card archivio/home usano website_title (titoli puliti).
 - ⚠️ PRODUZIONE: setupProxy.js funziona SOLO nel dev server (preview). In deploy esterno il routing URL pulita→SSR va gestito dall'ingress/reverse proxy. DA RISOLVERE prima/durante il deploy (verificare con support/deployment).
+- 404: proxy INVERTITO (instrada tutto tranne admin/api/static/asset-con-estensione) + route backend catch-all `GET /seo/{full_path:path}` → pagina SSR 404 stilizzata (noindex), status 404. Route inesistenti (es. /pagina-finta/) ora danno 404 reale (non più falso 200 SPA).
+- Test (iteration_14.json): 39/40 PASS al primo giro; unico FAIL (falso 200 su route sconosciute) RISOLTO e verificato via curl (404 su /pagina-finta/, /foo/bar/, /team/non-esiste/; route valide ancora 200; logo/asset 200; /admin React; sitemap/robots 200).
