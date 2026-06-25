@@ -216,6 +216,13 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - Testato: pipeline su 3 contenuti (Quinto/Decimo/Baclet) — capitoli 12-15, citazioni 6, costo ~$0.008-0.02/contenuto; SSR verificato (15 Clip JSON-LD, 136 paragrafi pagina trascrizione); testing_agent frontend 100% (iteration_11.json); fix nome ospite verificato (0 'Buckley').
 - DA FARE: generare/pubblicare gli altri 10 episodi (dopo verifica utente sui primi 2).
 
+### [25/06/2026] P1 v2 — Sommario strutturato `summary_sections` (H2/H3) + editor admin + report QC. COMPLETATO.
+- Modello dati: `summary_sections` [{id, level(2/3), heading, paragraphs[], source_segment_ids[], confidence, order}] + `toc` (H2). Campo `summary` (flat) mantenuto come fallback. Migrazione non distruttiva (SSR fa fallback al vecchio summary se mancano le sezioni). Snapshot `ai_preview_prev` per confronto/rollback.
+- Parametri editoriali: intro 80-120p; sommario adattivo alla durata (<=45min 400-600, 45-90 500-750, >90 650-900); capitoli 6-10 (max 12, dedup <90s); citazioni 2-5 (max 6 interviste), >=6 parole, verbatim, speaker solo se certo; cap 6 H2 (merge eccedenze, niente perdita testo). Qualita' > soglie (no padding).
+- SSR semantico: `<section class="episode-summary">` con `<h2 id>`/`<h3 id>` (slug univoci), indice "In questa puntata" se >=3 H2; presenti nell'HTML SSR (verificato via render). Endpoint admin PUT `/preview/{slug}/sections` (riordino/edit). Validazione UI blocca save se titolo vuoto/duplicato/H3-first/no-paragrafi.
+- Generazione 13/13 anteprime (NON pubblicate, live intatto): 0 falliti, 0 duplicazioni SEO (h1/title/meta/slug), costo totale ~$0.21 (~347k token); 5 approvati auto, 8 da revisionare (quasi tutti per sommario sotto target su live lunghi/ripetitivi + 2 intro a 74/78p; i 2 con 8 H2 corretti a 6). Citazioni 0 non supportate, timestamp 0 dubbi, gerarchia corretta. Testing_agent frontend 100% (iteration_12.json), editor sezioni validato.
+- DA FARE: approvazione utente (singola/batch) per pubblicare; eventuale tuning lunghezza sommario per >90min.
+
 ## File chiave
 - `backend/auth.py` (sicurezza), `backend/seo.py` (+helper `asset()` versioning, `render_transcript`, JSON-LD capitoli),
   `backend/server.py` (route, mount `/api/static`), `backend/templates/*.html` (+ `_macros.html`, `transcript.html`), `backend/automations.py`.

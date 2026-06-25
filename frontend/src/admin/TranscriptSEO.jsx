@@ -88,6 +88,18 @@ function PreviewPanel({ slug, onClose, onPublished }) {
 
   const p = data?.preview;
   const meta = p?.meta || {};
+  const sectionErrors = (() => {
+    const errs = [];
+    const heads = sections.map((s) => (s.heading || "").trim().toLowerCase());
+    sections.forEach((s, i) => {
+      if (!(s.heading || "").trim()) errs.push(`Sezione ${i + 1}: titolo vuoto`);
+      if (heads.indexOf(heads[i]) !== i && heads[i]) errs.push(`Sezione ${i + 1}: titolo duplicato`);
+      if (i === 0 && s.level === 3) errs.push("La prima sezione non può essere H3");
+      if (!(s.paragraphs || []).some((x) => (x || "").trim())) errs.push(`Sezione ${i + 1}: nessun paragrafo`);
+    });
+    return [...new Set(errs)];
+  })();
+  const hasErrors = editing && sectionErrors.length > 0;
   return (
     <div className="fixed inset-0 z-50 bg-black/50 flex items-start justify-center overflow-y-auto py-8 px-4" data-testid="seo-preview-modal">
       <div className="bg-white rounded-2xl w-full max-w-3xl shadow-2xl">
@@ -140,9 +152,13 @@ function PreviewPanel({ slug, onClose, onPublished }) {
                 {!editing ? (
                   <button onClick={() => setEditing(true)} data-testid="seo-edit-sections-btn" className="text-xs font-semibold text-[#EA4E1B] inline-flex items-center gap-1"><Pencil className="w-3.5 h-3.5" /> Modifica</button>
                 ) : (
-                  <button onClick={saveSections} disabled={!!busy} data-testid="seo-save-sections-btn" className="text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50">{busy === "save" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salva sezioni</button>
+                  <button onClick={saveSections} disabled={!!busy || hasErrors} data-testid="seo-save-sections-btn" className="text-xs font-bold text-white bg-green-600 hover:bg-green-700 rounded-lg px-3 py-1.5 inline-flex items-center gap-1 disabled:opacity-50" title={hasErrors ? "Correggi gli errori di struttura prima di salvare" : ""}>{busy === "save" ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <Save className="w-3.5 h-3.5" />} Salva sezioni</button>
                 )}
               </div>
+
+              {hasErrors && (
+                <ul className="text-xs text-red-600 mb-2 list-disc pl-5" data-testid="section-errors">{sectionErrors.map((e, i) => <li key={i}>{e}</li>)}</ul>
+              )}
 
               {editing ? (
                 <SectionEditor sections={sections} setSections={setSections} />
