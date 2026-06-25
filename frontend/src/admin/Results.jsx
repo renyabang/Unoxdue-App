@@ -123,7 +123,7 @@ export default function Results() {
               {preds.map((p) => <option key={`${p.season}|${p.round}`} value={`${p.season}|${p.round}`}>{`${p.competition || "Serie A"} ${p.season} · ${p.round}ª giornata (${(p.picks || []).length} giocate)`}</option>)}
             </select>
           </div>
-          <button data-testid="results-dryrun-btn" onClick={runDryRun} disabled={busy === "dry" || !sel} className="inline-flex items-center gap-2 bg-white border border-[#e2d4c2] hover:border-[#EA4E1B] text-[#1a1411] text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
+          <button data-testid="results-dryrun-btn" onClick={runDryRun} disabled={busy === "dry" || busy === "settle" || !sel} className="inline-flex items-center gap-2 bg-white border border-[#e2d4c2] hover:border-[#EA4E1B] text-[#1a1411] text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
             {busy === "dry" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Eye className="w-4 h-4" />} Anteprima (dry-run)
           </button>
           <button data-testid="results-settle-btn" onClick={runSettle} disabled={busy === "settle" || !sel} className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
@@ -138,9 +138,10 @@ export default function Results() {
                   {Object.entries(dryRun.summary || {}).map(([k, v]) => <span key={k} className="ml-1"><Badge s={k} /> {v}</span>)}
                 </p>
                 <div className="mt-2 space-y-2">
+                  {(dryRun.detail || []).length === 0 && <p className="text-[#9c8b7d] italic">Nessuna giocata da analizzare.</p>}
                   {(dryRun.detail || []).map((d, i) => (
                     <div key={i} className="border border-[#f0d9c4] rounded-lg p-2 bg-white">
-                      <p className="font-bold text-[#1a1411] flex items-center gap-2">{d.tipster} <Badge s={d.status} /></p>
+                      <p className="font-bold text-[#1a1411] flex items-center gap-2">{d.tipster || "Giocata"} <Badge s={d.status} /></p>
                       <ul className="mt-1 space-y-0.5">
                         {d.selections.map((s, j) => (
                           <li key={j} className="text-xs flex flex-wrap items-center gap-2">

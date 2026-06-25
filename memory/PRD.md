@@ -223,11 +223,20 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - Generazione 13/13 anteprime (NON pubblicate, live intatto): 0 falliti, 0 duplicazioni SEO (h1/title/meta/slug), costo totale ~$0.21 (~347k token); 5 approvati auto, 8 da revisionare (quasi tutti per sommario sotto target su live lunghi/ripetitivi + 2 intro a 74/78p; i 2 con 8 H2 corretti a 6). Citazioni 0 non supportate, timestamp 0 dubbi, gerarchia corretta. Testing_agent frontend 100% (iteration_12.json), editor sezioni validato.
 - DA FARE: approvazione utente (singola/batch) per pubblicare; eventuale tuning lunghezza sommario per >90min.
 
+### [25/06/2026] Pubblicazione 8 contenuti SEO + Step 6 risultati REALI football-data.org. COMPLETATO + testato.
+- **Pubblicati 8/13** (Ceravolo, Baclet, Primo, Sesto, Secondo, Ottavo, Quinto, Decimo) dopo controllo finale 0 errori bloccanti (slug unici, canonical, H1/title/meta non duplicati, gerarchia H2/H3, timestamp reali, citazioni verbatim, JSON-LD valido). Smoke test: tutte 200, sitemap (+pagine `/trascrizione/`, escaping XML) e video-sitemap aggiornate; le 5 in revisione hanno `/trascrizione/` 404. `ai_preview_prev` per rollback.
+- Stato `approved_short`: sommari sotto target ma completi (>=450p su >90min, >=3 H2) NON sono errori (regola "qualita' > soglie"). 4 dei 5 in revisione sono `approved_short` (Nono/Settimo/Quarto/Terzo); 1 `needs_review` (Speciale Mondiali, sommario/intro corti).
+- **Step 6 REALE:** `FootballDataResultsProvider` (football-data.org v4, comp SA, header X-Auth-Token; mapping squadre con alias internazionale->inter, hellas verona->verona; status/score; MAI quote). Provider attivo (`SPORT_RESULTS_API_PROVIDER=football-data`), ApiFootball e Fixture mantenuti. Motore settlement esteso: 1X2/DC/DNB/OU/GG-NG/**Multigol**/**Risultato Esatto** auto; combinati/marcatori/**statistici (corner/cartellini/tiri)** -> `manual_review`. **Dry-run** (no scrittura DB) backend + UI admin (anteprima -> "Applica e scrivi"). Attribuzione "Data provided by football-data.org" sulle pagine pronostici.
+- Testato: provider reale 38a 2024-25 (10 match, mapping ok); settlement dry-run su tutti i mercati (won/lost/void/manual_review corretti, no scrittura); casi void/postponed/suspended/cancelled ok; testing_agent frontend 100% su TranscriptSEO editor (iteration_12) e Results dry-run (iteration_13).
+- DA FARE: pubblicare i 4 `approved_short` (su ok utente); espandere Speciale Mondiali; test E2E completo; backup/checkpoint; poi refactoring. Slug `studio-serie-a-38-giornata` (Primo 29a) da correggere con redirect.
+
 ## File chiave
-- `backend/auth.py` (sicurezza), `backend/seo.py` (+helper `asset()` versioning, `render_transcript`, JSON-LD capitoli),
+- `backend/auth.py` (sicurezza), `backend/seo.py` (+`render_transcript`, JSON-LD capitoli, `_results_attribution`),
   `backend/server.py` (route, mount `/api/static`), `backend/templates/*.html` (+ `_macros.html`, `transcript.html`), `backend/automations.py`.
-- **NUOVO (P1 SEO trascrizioni):** `backend/srt_utils.py` (parsing SRT/dedup/chunking), `backend/ai_transcript.py`
-  (map->reduce + anti-invenzione), `frontend/src/admin/TranscriptSEO.jsx`.
+- **P1 SEO trascrizioni:** `backend/srt_utils.py` (parsing SRT/dedup/chunking), `backend/ai_transcript.py`
+  (map->reduce + anti-invenzione + summary_sections), `frontend/src/admin/TranscriptSEO.jsx`.
+- **Step 6 risultati:** `backend/results_provider.py` (FootballDataResultsProvider + alias squadre), `backend/settlement.py`
+  (1X2/DC/DNB/OU/GG-NG/Multigol/Risultato Esatto + dry-run), `frontend/src/admin/Results.jsx`.
 - `frontend/tailwind.ssr.config.js`, `frontend/src/ssr.css` (build CSS SSR), `frontend/src/admin/*`.
 - `scripts/build_ssr_css.sh`, `scripts/fetch_fonts.py`, `deploy/nginx.conf`, `DEPLOY.md`.
 
