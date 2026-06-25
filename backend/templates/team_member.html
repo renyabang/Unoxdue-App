@@ -1,10 +1,10 @@
 {% extends "base.html" %}
 {% block title %}{{ m_.name }} | Team UnoXdue{% endblock %}
+{% block og_type %}profile{% endblock %}
 {% block head %}
     <meta name="description" content="{{ m_.meta_description }}" />
     <link rel="canonical" href="{{ canonical }}" />
     <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="profile" />
     <meta property="og:title" content="{{ m_.name }} | UnoXdue" />
     <meta property="og:description" content="{{ m_.meta_description }}" />
     <meta property="og:url" content="{{ canonical }}" />

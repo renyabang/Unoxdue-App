@@ -1,16 +1,14 @@
 {% extends "base.html" %}
 {% block title %}{{ ep.seo_title }}{% endblock %}
+{% block og_type %}video.other{% endblock %}
 {% block head %}
     <meta name="description" content="{{ ep.meta_description }}" />
     <link rel="canonical" href="{{ canonical }}" />
     <meta name="robots" content="index, follow" />
-    <meta property="og:type" content="video.episode" />
     <meta property="og:title" content="{{ ep.seo_title }}" />
     <meta property="og:description" content="{{ ep.meta_description }}" />
     <meta property="og:url" content="{{ canonical }}" />
     <meta property="og:image" content="{{ ep.thumbnail }}" />
-    <meta property="og:site_name" content="UnoXdue" />
-    <meta name="twitter:card" content="summary_large_image" />
     <meta name="twitter:title" content="{{ ep.seo_title }}" />
     <meta name="twitter:description" content="{{ ep.meta_description }}" />
     <meta name="twitter:image" content="{{ ep.thumbnail }}" />

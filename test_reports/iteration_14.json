@@ -1,0 +1,52 @@
+{
+  "summary": "Public SSR site E2E review (frontend only, no admin login). Verified all clean URLs are server-rendered HTML with H1, canonical, JSON-LD, real <a href> menu links (no '#anchor'), 404 for non-existing episode/team slugs, transcript page rendered, mobile <details> menu present, admin SPA still loads, and brand spelling always 'UnoXdue'. Created pytest suite /app/backend/tests/test_public_ssr.py with 40 tests: 39 PASS, 1 FAIL. The single FAIL is a real spec violation: unknown public routes that don't match the proxy whitelist (e.g. /pagina-finta/) return HTTP 200 with the React SPA shell instead of 404.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [
+      {
+        "flow": "404 for non-existing public routes",
+        "issue": "/pagina-finta/ (and any other unknown clean URL not in proxy EXACT/PREFIX list) returns HTTP 200 with the React SPA shell (index.html). Spec requires 404. Note: /episodi/non-esiste-xyz/ and /team/non-esiste/ correctly return 404 because the proxy routes them to the SSR backend which 404s. Only completely unknown top-level slugs fall through to the React dev server and get a 200.",
+        "affected_selectors": ["proxy frontend/src/setupProxy.js isPublic() whitelist"]
+      }
+    ],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "home_ssr": "PASS - / returns 200 with <h1>UnoXdue</h1>, <link rel=canonical href=https://sportivo.preview.emergentagent.com/>, and JSON-LD @graph (Organization, WebSite, PodcastSeries). Body length > 500. Not a SPA shell.",
+    "ssr_pages": "PASS 11/11 - /, /il-podcast/, /episodi/, /interviste/, /pronostici/, /team/, /parlano-di-noi/, /collaborazioni/, /contatti/, /privacy/, /cookie/ all return 200 with H1 and canonical in source.",
+    "menu_real_links": "PASS 6/6 - header has real <a href=\"https://sportivo.preview.emergentagent.com/il-podcast/\">, /episodi/, /interviste/, /pronostici/, /team/, /parlano-di-noi/. No '#' anchor links in header.",
+    "footer_legal": "PASS - footer contains <a> to /privacy/, /cookie/, /contatti/, /collaborazioni/.",
+    "mobile_menu": "PASS - native <details>/<summary> present (works without JS). Confirmed in mobile viewport (390x844) screenshot.",
+    "episodi_archive": "PASS - /episodi/ lists 11 episode cards (giornate 29-38 puntate 1-10 + speciale-mondiali-2026-puntata-12), all with real <a href>.",
+    "episode_detail": "PASS - /episodi/serie-a-2025-2026-giornata-29-puntata-1/ returns H1 'Primo appuntamento UnoXdue: Serie A 2025/26, 29ª giornata' and breadcrumb contains 'Primo appuntamento'. Browser navigation to puntata-10 returned H1 'Decimo appuntamento UnoXdue: Serie A 2025/26, 38ª giornata'.",
+    "transcript_page": "PASS - /episodi/serie-a-2025-2026-giornata-29-puntata-1/trascrizione/ returns 200 with multiple <p> paragraphs in source (browser test on puntata-10 showed 83 <p>).",
+    "404_routes": "PARTIAL - /episodi/non-esiste-xyz/ -> 404 OK, /team/non-esiste/ -> 404 OK, but /pagina-finta/ -> 200 SPA shell (BUG).",
+    "admin_spa": "PASS - /admin loads React SPA showing login form ('UnoXdue admin Email Password Entra'). No login attempted as instructed.",
+    "brand_spelling": "PASS 11/11 - no 'Unoxdue' (wrong casing) found in any public page source. Always 'UnoXdue'.",
+    "jsonld": "PASS - home contains <script type=\"application/ld+json\"> with Organization, WebSite, PodcastSeries entities."
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_public_ssr.py",
+    "/app/test_reports/pytest/public_ssr.xml"
+  ],
+  "action_items": [
+    "Fix /pagina-finta/ (and any unknown clean URL not matching the proxy whitelist) to return HTTP 404. Options: (a) extend the proxy isPublic() to forward ALL non-asset, non-/admin, non-/api paths to the SSR backend so the FastAPI 404 handler is hit; or (b) ensure index.html served by the React dev server responds with a status 404 + 404 page for unmatched routes. Option (a) is preferred because in production the same reverse proxy mapping must also 404 unknown clean URLs."
+  ],
+  "critical_code_review_comments": [
+    "frontend/src/setupProxy.js: the isPublic() whitelist (EXACT + PREFIX) silently makes any unknown clean URL (e.g. /pagina-finta/, /qualsiasi-cosa/) bypass SSR and fall through to the React dev server which always returns 200. This breaks the SEO 404 contract. Recommend: invert the policy — proxy EVERYTHING except /admin, /static, /api, /ws, /sockjs-node, /__, /manifest.json, /asset-manifest.json, /favicon.ico, hot-update; the backend will then 404 unknown SSR routes correctly. The current /episodi/<slug>/ behaviour (404 from SSR) is the desired model.",
+    "backend/templates/base.html: links in header/footer are emitted as absolute URLs (https://sportivo.preview.emergentagent.com/...). Functionally fine, but consider switching to root-relative paths to avoid hard dependency on the canonical host in HTML, simplifying future domain changes (e.g. unoxdue.net).",
+    "backend/server.py /seo/* routes: HEAD requests on / return 405 ('allow: GET'). FastAPI by default doesn't auto-implement HEAD for GET routes. Some crawlers (and some uptime monitors) probe with HEAD; consider allowing HEAD or letting the framework respond with an empty body for HEAD on these routes.",
+    "robots.txt route is whitelisted in setupProxy.js but EXACT does not include trailing slash; both /sitemap.xml and /robots.txt are correctly mapped to /api/<file>. Verify these endpoints exist in backend (not tested in this iteration)."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_public_ssr.py (NEW pytest suite)"
+  ],
+  "success_rate": {"backend": "n/a (frontend-only review)", "frontend": "39/40 = 97.5%"},
+  "test_credentials": "Not used. Public-only testing as requested.",
+  "seed_data_creation": "None.",
+  "retest_needed": true,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Public SSR suite is in /app/backend/tests/test_public_ssr.py and runs against REACT_APP_BACKEND_URL. All clean URLs are server-rendered HTML (verified in source via requests, not just rendered DOM). The only failure is /pagina-finta/ returning 200 instead of 404; this is due to frontend/src/setupProxy.js isPublic() whitelist not covering arbitrary unknown paths, so they fall through to the React dev server. Episode detail H1 format is '{Primo|Secondo|...|Decimo} appuntamento UnoXdue: Serie A 2025/26, {N}ª giornata'. Mobile menu uses native <details>/<summary> (no JS required). /admin still loads the React SPA login. Brand always 'UnoXdue' (no 'Unoxdue' anywhere).",
+  "rca of the issue": "Root cause for /pagina-finta/ returning 200: frontend/src/setupProxy.js defines isPublic(pathname) returning true only when path is in EXACT set or starts with one of PREFIX ['/episodi','/interviste','/pronostici','/team']. Any other clean path returns false from isPublic, so http-proxy-middleware skips proxying and the request is served by the React dev server's catch-all (index.html, status 200). Reproduction: curl -sI https://sportivo.preview.emergentagent.com/pagina-finta/ -> HTTP/2 200 with React shell. Mitigation: change setupProxy.js to invert the rule (proxy everything except /admin, /static, /api, /ws, /sockjs-node, /__, /manifest.json, /asset-manifest.json, /favicon.ico, *hot-update*) so the FastAPI SSR backend gets the request and returns 404 for unknown slugs; or alternatively rewrite to /api/seo<path> with a backend wildcard catch-all that 404s."
+}

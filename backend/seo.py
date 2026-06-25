@@ -102,27 +102,55 @@ def enrich(ep: dict) -> dict:
     return ep
 
 
+def _iso_duration(seconds) -> str:
+    seconds = int(seconds or 0)
+    if seconds <= 0:
+        return None
+    h, rem = divmod(seconds, 3600)
+    m, s = divmod(rem, 60)
+    out = "PT"
+    if h:
+        out += f"{h}H"
+    if m:
+        out += f"{m}M"
+    if s:
+        out += f"{s}S"
+    return out
+
+
 def episode_jsonld(ep: dict) -> str:
     canonical = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/'
-    schema_type = "PodcastEpisode" if ep["type"] != "intervista" else "VideoObject"
-    data = {
-        "@context": "https://schema.org", "@type": schema_type,
+    yt = ep.get("youtube_id", "")
+    publisher = {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"}
+    video = {
+        "@type": "VideoObject",
         "name": ep["h1"], "description": ep["meta_description"], "url": canonical,
-        "datePublished": ep.get("published_at"), "uploadDate": ep.get("published_at"),
-        "thumbnailUrl": ep.get("thumbnail"), "inLanguage": "it",
-        "embedUrl": f'https://www.youtube.com/embed/{ep.get("youtube_id", "")}',
-        "contentUrl": f'https://www.youtube.com/watch?v={ep.get("youtube_id", "")}',
-        "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
+        "thumbnailUrl": ep.get("thumbnail"), "uploadDate": ep.get("published_at"),
+        "inLanguage": "it",
+        "embedUrl": f'https://www.youtube.com/embed/{yt}',
+        "contentUrl": f'https://www.youtube.com/watch?v={yt}',
+        "publisher": publisher,
     }
+    dur = _iso_duration(ep.get("duration_seconds"))
+    if dur:
+        video["duration"] = dur
     if ep.get("chapters"):
-        data["hasPart"] = [
+        video["hasPart"] = [
             {"@type": "Clip", "name": c["label"], "startOffset": c.get("seconds", 0),
              "url": f'{canonical}#t-{c.get("seconds", 0)}'}
             for c in ep["chapters"] if c.get("label")
         ]
+    main_type = "PodcastEpisode" if ep["type"] != "intervista" else "Article"
+    main = {
+        "@type": main_type, "name": ep["h1"], "headline": ep["h1"],
+        "description": ep["meta_description"], "url": canonical,
+        "datePublished": ep.get("published_at"), "inLanguage": "it",
+        "publisher": publisher,
+        "associatedMedia": {"@type": "VideoObject", "embedUrl": f'https://www.youtube.com/embed/{yt}'},
+    }
     if ep.get("has_transcript_page"):
-        data["transcript"] = f'{canonical}trascrizione/'
-    return json.dumps(data, ensure_ascii=False, indent=2)
+        main["transcript"] = f'{canonical}trascrizione/'
+    return json.dumps({"@context": "https://schema.org", "@graph": [main, video]}, ensure_ascii=False, indent=2)
 
 
 def breadcrumb_jsonld(items) -> str:
@@ -154,9 +182,20 @@ def render_episode(ep: dict, press=None) -> str:
 def render_archive(page_title, page_desc, canonical_path, items, show_play=False) -> str:
     canonical = f"{SITE_URL}{canonical_path}"
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+    item_list = [
+        {"@type": "ListItem", "position": i + 1, "url": it.get("url"), "name": it.get("title")}
+        for i, it in enumerate(items) if it.get("url")
+    ]
+    jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "CollectionPage",
+        "name": page_title, "description": page_desc, "url": canonical, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "mainEntity": {"@type": "ItemList", "numberOfItems": len(item_list),
+                       "itemListElement": item_list},
+    }, ensure_ascii=False, indent=2)
     return env.get_template("archive.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical,
-        items=items, site_url=SITE_URL, breadcrumb_jsonld=bc, year=_year(),
+        items=items, site_url=SITE_URL, breadcrumb_jsonld=bc, jsonld=jsonld, year=_year(),
         show_play=show_play,
     )
 
@@ -200,12 +239,18 @@ def render_team_member(m: dict, related, press=None) -> str:
     m["photo_abs"] = photo if photo.startswith("http") else f"{SITE_URL}{photo}"
     canonical = f'{SITE_URL}/team/{m["slug"]}/'
     same_as = [m["instagram"]] if m.get("instagram") else []
-    jsonld = json.dumps({
-        "@context": "https://schema.org", "@type": "Person",
+    person = {
+        "@type": "Person", "@id": f"{canonical}#person",
         "name": m["name"], "description": m["meta_description"], "url": canonical,
         "image": m["photo_abs"], "jobTitle": m.get("role", ""), "sameAs": same_as,
         "worksFor": {"@type": "Organization", "name": "UnoXdue"},
-    }, ensure_ascii=False, indent=2)
+    }
+    profile = {
+        "@type": "ProfilePage", "url": canonical, "inLanguage": "it",
+        "mainEntity": {"@id": f"{canonical}#person"},
+    }
+    jsonld = json.dumps({"@context": "https://schema.org", "@graph": [profile, person]},
+                        ensure_ascii=False, indent=2)
     bc = breadcrumb_jsonld([
         ("Home", f"{SITE_URL}/"), ("Il team", f"{SITE_URL}/team/"), (m["name"], canonical),
     ])
@@ -225,13 +270,24 @@ def render_press_archive(items) -> str:
 
 
 def render_home(episodes, interviews) -> str:
-    jsonld = json.dumps({
-        "@context": "https://schema.org", "@type": "PodcastSeries",
-        "name": "UnoXdue", "url": f"{SITE_URL}/", "image": f"{SITE_URL}/logo.jpg",
-        "inLanguage": "it", "genre": "Sport",
-        "sameAs": ["https://www.twitch.tv/unoxdue_", "https://www.instagram.com/unoxdue_",
-                   "https://www.youtube.com/@unoXdue", "https://www.tiktok.com/@unoxdue_"],
-    }, ensure_ascii=False, indent=2)
+    socials = ["https://www.twitch.tv/unoxdue_", "https://www.instagram.com/unoxdue_",
+               "https://www.youtube.com/@unoXdue", "https://www.tiktok.com/@unoxdue_"]
+    org = {
+        "@type": "Organization", "@id": f"{SITE_URL}/#organization", "name": "UnoXdue",
+        "url": f"{SITE_URL}/", "logo": {"@type": "ImageObject", "url": f"{SITE_URL}/logo.jpg"},
+        "sameAs": socials,
+    }
+    website = {
+        "@type": "WebSite", "@id": f"{SITE_URL}/#website", "name": "UnoXdue",
+        "url": f"{SITE_URL}/", "inLanguage": "it", "publisher": {"@id": f"{SITE_URL}/#organization"},
+    }
+    series = {
+        "@type": "PodcastSeries", "@id": f"{SITE_URL}/#podcast", "name": "UnoXdue",
+        "url": f"{SITE_URL}/", "image": f"{SITE_URL}/logo.jpg", "inLanguage": "it",
+        "genre": "Sport", "publisher": {"@id": f"{SITE_URL}/#organization"}, "sameAs": socials,
+    }
+    jsonld = json.dumps({"@context": "https://schema.org", "@graph": [org, website, series]},
+                        ensure_ascii=False, indent=2)
     return env.get_template("home.html").render(
         episodes=episodes, interviews=interviews, site_url=SITE_URL,
         jsonld=jsonld, year=_year(),

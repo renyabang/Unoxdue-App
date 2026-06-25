@@ -749,7 +749,7 @@ async def ssr_home():
     ints = await db.episodes.find({"type": "intervista"}, {"_id": 0}).sort("published_at", -1).to_list(6)
     def card(i):
         sec = "interviste" if i.get("type") == "intervista" else "episodi"
-        return {"url": f'{SITE_URL}/{sec}/{i["slug"]}/', "title": i.get("title"),
+        return {"url": f'{SITE_URL}/{sec}/{i["slug"]}/', "title": i.get("website_title") or i.get("title"),
                 "thumbnail": i.get("thumbnail") or f'https://img.youtube.com/vi/{i.get("youtube_id","")}/maxresdefault.jpg'}
     return HTMLResponse(seo.render_home([card(i) for i in eps], [card(i) for i in ints]))
 
@@ -770,6 +770,80 @@ async def ssr_il_podcast():
         "Scopri UnoXdue: il podcast sulla Serie A con tre tipster e un host.", "/il-podcast/", body))
 
 
+@api_router.get("/seo/collaborazioni", response_class=HTMLResponse)
+async def ssr_collaborazioni():
+    body = (
+        "<p class='lead'>Vuoi collaborare con UnoXdue? Siamo aperti a partnership, sponsorizzazioni e progetti editoriali nel mondo del calcio.</p>"
+        "<p>UnoXdue è un podcast settimanale dedicato alla Serie A, con dirette su Twitch, episodi su YouTube, "
+        "interviste ai protagonisti e pronostici per ogni giornata. Collaboriamo con brand, testate e realtà sportive "
+        "che condividono la nostra passione per il calcio italiano.</p>"
+        "<h2>Tipi di collaborazione</h2><ul>"
+        "<li>Sponsorizzazioni di episodi e dirette</li>"
+        "<li>Contenuti editoriali e branded content</li>"
+        "<li>Interviste e ospitate</li>"
+        "<li>Partnership con media e creator</li></ul>"
+        "<h2>Come proporre una collaborazione</h2>"
+        "<p>Scrivici tramite la pagina <a href=\"" + SITE_URL + "/contatti/\">Contatti</a> o contattaci sui nostri canali social. "
+        "Ti risponderemo con i dettagli su formati, pubblico e modalità.</p>"
+    )
+    return HTMLResponse(seo.render_page("Collaborazioni",
+        "Collabora con UnoXdue: sponsorizzazioni, partnership e progetti editoriali sul calcio e la Serie A.",
+        "/collaborazioni/", body))
+
+
+@api_router.get("/seo/contatti", response_class=HTMLResponse)
+async def ssr_contatti():
+    body = (
+        "<p class='lead'>Mettiti in contatto con UnoXdue.</p>"
+        "<p>Per collaborazioni, interviste, segnalazioni o semplici domande, puoi raggiungerci sui nostri canali ufficiali.</p>"
+        "<h2>Dove trovarci</h2><ul>"
+        "<li><a href=\"https://www.twitch.tv/unoxdue_\" target=\"_blank\" rel=\"noopener noreferrer\">Twitch — dirette settimanali</a></li>"
+        "<li><a href=\"https://www.youtube.com/@unoXdue\" target=\"_blank\" rel=\"noopener noreferrer\">YouTube — episodi completi</a></li>"
+        "<li><a href=\"https://www.instagram.com/unoxdue_\" target=\"_blank\" rel=\"noopener noreferrer\">Instagram</a></li>"
+        "<li><a href=\"https://www.tiktok.com/@unoxdue_\" target=\"_blank\" rel=\"noopener noreferrer\">TikTok</a></li></ul>"
+        "<p>Per proposte di collaborazione visita anche la pagina <a href=\"" + SITE_URL + "/collaborazioni/\">Collaborazioni</a>.</p>"
+    )
+    return HTMLResponse(seo.render_page("Contatti",
+        "Contatta UnoXdue: Twitch, YouTube, Instagram e TikTok. Collaborazioni, interviste e segnalazioni.",
+        "/contatti/", body))
+
+
+@api_router.get("/seo/privacy", response_class=HTMLResponse)
+async def ssr_privacy():
+    body = (
+        "<p class='lead'>La presente informativa descrive come UnoXdue tratta i dati personali degli utenti del sito.</p>"
+        "<h2>Titolare del trattamento</h2><p>Il titolare del trattamento è UnoXdue. Per qualsiasi richiesta relativa ai tuoi dati puoi usare la pagina Contatti.</p>"
+        "<h2>Dati raccolti</h2><p>Il sito è prevalentemente informativo. Possono essere raccolti dati tecnici di navigazione "
+        "(indirizzo IP, tipo di browser, pagine visitate) e, se attivati, dati statistici aggregati per misurare l'audience.</p>"
+        "<h2>Contenuti di terze parti</h2><p>Le pagine possono includere contenuti incorporati da YouTube (video) e link ai social network. "
+        "Questi servizi possono raccogliere dati secondo le rispettive informative privacy.</p>"
+        "<h2>Diritti dell'utente</h2><p>Hai diritto di accedere, rettificare o cancellare i tuoi dati e di opporti al trattamento, "
+        "contattandoci tramite la pagina <a href=\"" + SITE_URL + "/contatti/\">Contatti</a>.</p>"
+        "<h2>Cookie</h2><p>Per l'uso dei cookie consulta la <a href=\"" + SITE_URL + "/cookie/\">Cookie Policy</a>.</p>"
+    )
+    return HTMLResponse(seo.render_page("Privacy Policy",
+        "Informativa privacy di UnoXdue: trattamento dei dati, contenuti di terze parti e diritti degli utenti.",
+        "/privacy/", body))
+
+
+@api_router.get("/seo/cookie", response_class=HTMLResponse)
+async def ssr_cookie():
+    body = (
+        "<p class='lead'>Questa Cookie Policy spiega come e perché UnoXdue utilizza i cookie e tecnologie simili.</p>"
+        "<h2>Cosa sono i cookie</h2><p>I cookie sono piccoli file di testo memorizzati dal browser durante la navigazione, utili al funzionamento del sito e all'analisi dell'uso.</p>"
+        "<h2>Tipologie utilizzate</h2><ul>"
+        "<li><strong>Tecnici</strong>: necessari al funzionamento del sito.</li>"
+        "<li><strong>Statistici/analitici</strong>: in forma aggregata, per misurare l'audience (attivati solo previo consenso ove richiesto).</li>"
+        "<li><strong>Di terze parti</strong>: legati a contenuti incorporati come i video di YouTube.</li></ul>"
+        "<h2>Gestione dei cookie</h2><p>Puoi gestire o disabilitare i cookie dalle impostazioni del tuo browser. "
+        "La disattivazione di alcuni cookie potrebbe limitare alcune funzionalità.</p>"
+        "<p>Per maggiori informazioni sul trattamento dei dati consulta la <a href=\"" + SITE_URL + "/privacy/\">Privacy Policy</a>.</p>"
+    )
+    return HTMLResponse(seo.render_page("Cookie Policy",
+        "Cookie Policy di UnoXdue: tipologie di cookie, finalità e gestione delle preferenze.",
+        "/cookie/", body))
+
+
 @api_router.get("/seo/parlano-di-noi", response_class=HTMLResponse)
 async def ssr_press():
     items = await press.published_archive()
@@ -779,7 +853,7 @@ async def ssr_press():
 @api_router.get("/seo/episodi", response_class=HTMLResponse)
 async def ssr_episodi():
     items = await db.episodes.find({"type": "episodio"}, {"_id": 0}).sort("published_at", -1).to_list(500)
-    cards = [{"url": f'{SITE_URL}/episodi/{i["slug"]}/', "title": i.get("title"), "kicker": "Episodio",
+    cards = [{"url": f'{SITE_URL}/episodi/{i["slug"]}/', "title": i.get("website_title") or i.get("title"), "kicker": "Episodio",
               "thumbnail": i.get("thumbnail")} for i in items]
     return HTMLResponse(seo.render_archive("Episodi",
         "Tutti gli episodi del podcast UnoXdue dedicati alla Serie A.", "/episodi/", cards, show_play=True))
@@ -788,7 +862,7 @@ async def ssr_episodi():
 @api_router.get("/seo/interviste", response_class=HTMLResponse)
 async def ssr_interviste():
     items = await db.episodes.find({"type": "intervista"}, {"_id": 0}).sort("published_at", -1).to_list(500)
-    cards = [{"url": f'{SITE_URL}/interviste/{i["slug"]}/', "title": i.get("title"), "kicker": "Intervista",
+    cards = [{"url": f'{SITE_URL}/interviste/{i["slug"]}/', "title": i.get("website_title") or i.get("title"), "kicker": "Intervista",
               "thumbnail": i.get("thumbnail")} for i in items]
     return HTMLResponse(seo.render_archive("Interviste",
         "Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano.", "/interviste/", cards, show_play=True))

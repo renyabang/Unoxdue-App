@@ -11,6 +11,9 @@
     <script type="application/ld+json">
 {{ breadcrumb_jsonld | safe }}
     </script>
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
 {% endblock %}
 {% block main %}
 {% import "_macros.html" as m %}

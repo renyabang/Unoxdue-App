@@ -74,3 +74,27 @@ Es. ep.1: `UnoXdue | Serie A 2025/26, 29ª giornata | Primo appuntamento`
 - Verifica per episodio: ep 200, trascrizione 200 (119-129 paragrafi), H1 descrittivo UnoXdue+stagione+giornata, breadcrumb breve, 5-6 H2, 12 capitoli, 5 citazioni, 14 topics, canonical=nuovo, JSON-LD (PodcastEpisode+12 Clip+transcript+BreadcrumbList), OG ok, meta ok, 0 "Unoxdue", presente in sitemap+video-sitemap.
 - Ora 12/13 con has_transcript_page + transcription_seo_status=published. Resta solo Speciale Mondiali (Step 4).
 - Rollback pre-pubblicazione: `/app/backups/slug_migration_20260625_200003`.
+
+## STEP 4 (25/06/2026) — Speciale Mondiali espanso + pubblicato. COMPLETATO + verificato
+- Rigenerata anteprima (solo da trascrizione, anti-invenzione): intro 81w, 5 H2, sommario 307w (approved_short, tutti i temi coperti — niente padding), 5 capitoli (timestamp reali), 5 citazioni verbatim. Gruppi A-L con squadre, Iran, favorita (FRA/ENG/ARG), gioco albo d'oro, saluti.
+- Pubblicazione MIRATA (solo corpo) preservando H1/seo_title/meta gia' corretti (NON usate le versioni ai_preview con casing "Unoxdue").
+- Smoke: episodio 200, trascrizione 200 (33 parag.), vecchio URL `speciale-mondiali-unoxdue-podcast` → 301, canonical self, JSON-LD (Episode+5 Clip+transcript+Breadcrumb), in sitemap+video-sitemap, 0 "Unoxdue".
+- Ora 13/13 con SEO + trascrizione pubblicati. Rollback: `/app/backups/slug_migration_20260625_201101`.
+
+## PROSSIMO BLOCCO (richiesto utente, P0) — SSR pubblico completo + menu reale
+- Problema: la homepage `/` (e route pubbliche) servono ancora la SPA React (`<div id="root"></div>`); contenuto generato solo da JS. Menu landing usa #anchor/scroll JS invece di link reali.
+- Obiettivo: tutte le route pubbliche servono HTML server-rendered (H1/contenuto/canonical/metadata/JSON-LD nel sorgente senza JS). `/admin` resta React SPA. Menu con `<a href>` reali alle pagine.
+- Architettura: FastAPI+Jinja2 per pubblico, React solo /admin, /api FastAPI. In preview: proxy/route coerente verso SSR Jinja2 (no anchor fittizie, un solo helper routing `PUBLIC_BASE_URL`).
+- Route da coprire: / · /il-podcast/ · /episodi/ · /episodi/[slug]/ · /trascrizione/ · /interviste/ · /interviste/[slug]/ · /pronostici/ · /pronostici/serie-a/[stagione]/giornata-[n]/ · /team/ · /team/[slug]/ · /parlano-di-noi/ · /collaborazioni/ · /contatti/ · privacy · cookie.
+- Pulizia produzione: rimuovere badge Emergent, Tailwind CDN, commenti CRA, codice preview; PostHog solo post-consenso. Rimuovere meta keywords. Status reali 200/301/404/401-403/500.
+- DOPO questo blocco: checkpoint + refactoring (NON prima).
+
+## SSR PUBBLICO — STATO (25/06/2026) — IMPLEMENTATO in preview, verificato via curl/screenshot
+- Audit: tutte le URL pulite servivano la SPA React (root, 200 anche per route inesistenti). SSR esisteva solo su /api/seo/*.
+- Soluzione preview: `frontend/src/setupProxy.js` (http-proxy-middleware) instrada le route pubbliche pulite → SSR backend (/api/seo/...), pathRewrite + filtro; esclude /admin, /static, /api, ws/hmr. `/`→/api/seo/home, /sitemap.xml→/api/sitemap.xml.
+- Risultato: TUTTE le URL pulite servono HTML SSR (root assente, H1/contenuto/canonical/JSON-LD nel sorgente senza JS). /admin resta React SPA. 404 reale per route inesistenti. Title unici per route. canonical autoreferenziale.
+- JSON-LD arricchito (seo.py): HOME @graph Organization+WebSite+PodcastSeries; archivi CollectionPage+ItemList; episodio @graph PodcastEpisode/Article+VideoObject(+Clip capitoli, duration ISO); team ProfilePage+Person; pronostico Article+Breadcrumb.
+- OG completo + Twitter card su tutti i tipi (un solo og:type: website/article/video.other/profile), no duplicati. robots index,follow. No meta keywords. base.html SSR NON usa Tailwind CDN/Emergent/PostHog (CSS compilato unoxdue.css).
+- Pagine nuove SSR: /collaborazioni/ /contatti/ /privacy/ /cookie/ (render_page) + link nel footer. Menu (desktop+mobile <details> nativo) con `<a href>` reali alle pagine, niente #anchor.
+- Card archivio/home usano website_title (titoli puliti).
+- ⚠️ PRODUZIONE: setupProxy.js funziona SOLO nel dev server (preview). In deploy esterno il routing URL pulita→SSR va gestito dall'ingress/reverse proxy. DA RISOLVERE prima/durante il deploy (verificare con support/deployment).
