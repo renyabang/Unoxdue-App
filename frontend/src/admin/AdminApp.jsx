@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -9,6 +9,7 @@ import Contents from "./Contents";
 import SlipUploader from "./SlipUploader";
 import Logs from "./Logs";
 import Integrations from "./Integrations";
+import AIGen from "./AIGen";
 
 function Login({ onLogged }) {
   const [email, setEmail] = useState("admin@unoxdue.net");
@@ -94,6 +95,7 @@ function ChangePassword({ onDone }) {
 const nav = [
   { to: "/admin", label: "Dashboard", icon: LayoutDashboard, end: true },
   { to: "/admin/contenuti", label: "Contenuti", icon: FileVideo },
+  { to: "/admin/ai", label: "AI / SEO", icon: Sparkles },
   { to: "/admin/schedine", label: "Schedine / Pronostici", icon: Ticket },
   { to: "/admin/log", label: "Log automazioni", icon: ScrollText },
   { to: "/admin/integrazioni", label: "Integrazioni", icon: Plug },
@@ -143,6 +145,7 @@ export default function AdminApp() {
         <Routes>
           <Route index element={<Dashboard />} />
           <Route path="contenuti" element={<Contents />} />
+          <Route path="ai" element={<AIGen />} />
           <Route path="schedine" element={<SlipUploader />} />
           <Route path="log" element={<Logs />} />
           <Route path="integrazioni" element={<Integrations />} />

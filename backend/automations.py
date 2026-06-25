@@ -88,6 +88,7 @@ async def youtube_sync(channel_id: str = None, auto_publish: bool = True) -> dic
     root = ET.fromstring(xml_text)
     entries = root.findall("atom:entry", YT_NS)
     found, created, updated, skipped = 0, 0, 0, 0
+    affected = []
     for entry in entries:
         found += 1
         vid = entry.find("yt:videoId", YT_NS)
@@ -129,11 +130,14 @@ async def youtube_sync(channel_id: str = None, auto_publish: bool = True) -> dic
         if existing:
             await db.episodes.update_one({"youtube_id": youtube_id}, {"$set": doc})
             updated += 1
+            affected.append(doc["slug"])
         else:
             doc["created_at"] = doc["updated_at"]
             await db.episodes.insert_one(dict(doc))
             created += 1
-    summary = {"ok": True, "found": found, "created": created, "updated": updated, "skipped_shorts": skipped}
+            affected.append(doc["slug"])
+    summary = {"ok": True, "found": found, "created": created, "updated": updated,
+               "skipped_shorts": skipped, "affected": affected}
     await log_automation("youtube_sync", "ok", f"Sync completato: {created} nuovi, {updated} aggiornati", summary)
     return summary
 

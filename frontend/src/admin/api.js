@@ -43,4 +43,8 @@ export const api = {
     return req("/admin/predictions/ocr", { method: "POST", form: fd });
   },
   addPick: (payload) => req("/admin/predictions/add-pick", { method: "POST", body: payload }),
+  aiSettings: () => req("/admin/ai/settings"),
+  updateAiSettings: (body) => req("/admin/ai/settings", { method: "PUT", body }),
+  aiProcess: (slug) => req(`/admin/ai/process/${slug}`, { method: "POST" }),
+  aiProcessBatch: (body) => req("/admin/ai/process-batch", { method: "POST", body }),
 };

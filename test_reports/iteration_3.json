@@ -1,0 +1,33 @@
+{
+  "summary": "Frontend-only E2E testing of UnoXdue admin AI/SEO flows (Step 4). All 6 requested flows passed: direct login (no forced change-password), AI/SEO page load with correct toggles + usage cards, toggle auto-sync + save + persistence after reload, AI page batch processing, Contents page AI column + per-row process button, Contents page batch button. Real LLM calls (gpt-5.4-mini via Emergent) work end-to-end.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": ["/app/test_reports/iteration_3.json"],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "Both AIGen.jsx and Contents.jsx use the same data-testid='ai-batch-btn'. They are on different routes so no collision occurs in practice, but consider differentiating (e.g. 'ai-batch-btn-settings' vs 'ai-batch-btn-contents') for clearer test targeting.",
+    "Contents.jsx processOne shows 'AI completata per <slug>' regardless; OK but the message uses the slug rather than the title - acceptable since slug is unique."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped per request)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net / UnoXdue#Admin-2026! (verified working, must_change_password=false, NOT modified during tests)",
+  "seed_data_creation": "None. Used existing 16 episodi/interviste already in DB.",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Step 4 AI admin flows fully verified. Observed behaviors: (1) GET /api/admin/ai/settings returns enabled=true, auto_on_sync=false, auto_shorts=false, transcription disabled, daily/monthly usage numeric. (2) Toggle auto-sync ON + Save -> message 'Impostazioni AI salvate.' and persists across reload. (3) AI page batch returned 'Batch AI: 12 ok, 0 falliti su 12.' on first run with real LLM. (4) Per-row 'Elabora con AI' button on /admin/contenuti -> 'AI completata per <slug>.' and AI column badge shows 'Generato'. (5) Contents page batch (only_missing=true) returned '0 ok, 0 falliti su 0' after the AI-page batch already processed everything - expected behavior. Note: during testing auto_on_sync was toggled ON then reverted back to OFF; current persisted state at end of test is OFF (original).",
+  "detailed_results": {
+    "login_no_forced_change": "PASS - direct to Dashboard",
+    "ai_page_loads": "PASS - data-testid='ai-page' present",
+    "initial_toggles": "enabled=true, auto_sync=false, auto_shorts=false, transcription_disabled=true",
+    "usage_cards_visible": "PASS - 'Uso oggi' and 'Uso questo mese' rendered with numbers",
+    "toggle_save_persistence": "PASS - toggle auto-sync -> save shows 'Impostazioni AI salvate.' -> reload retains ON state",
+    "ai_page_batch": "PASS - 'Batch AI: 12 ok, 0 falliti su 12.'",
+    "contents_page_loads": "PASS - 16 rows, AI column with badges visible",
+    "per_row_process": "PASS - contents-msg 'AI completata per \"fabio-ceravolo-130-gol-carriera\".' and badge 'Generato'",
+    "contents_page_batch": "PASS - 'Batch AI: 0 ok, 0 falliti su 0.' (nothing missing after prior batch)"
+  }
+}

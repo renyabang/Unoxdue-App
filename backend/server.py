@@ -13,6 +13,7 @@ from config_db import db, client, SITE_URL, UPLOAD_DIR, CRON_SECRET, YOUTUBE_CHA
 from auth import auth_router, get_current_admin, ensure_admin
 import seo
 import automations as auto
+import ai_content as ai
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -233,7 +234,39 @@ async def put_settings(data: dict, admin: str = Depends(get_current_admin)):
 # ============================ Admin: automazioni (trigger) ============================
 @api_router.post("/admin/sync/youtube")
 async def admin_sync_youtube(admin: str = Depends(get_current_admin)):
-    return await auto.youtube_sync()
+    res = await auto.youtube_sync()
+    try:
+        res["ai_autorun"] = await ai.maybe_autorun_after_sync(res)
+    except Exception as e:
+        logger.error("AI autorun error: %s", e)
+    return res
+
+
+# ============================ Admin: generazione AI (Step 4) ============================
+@api_router.get("/admin/ai/settings")
+async def admin_get_ai_settings(admin: str = Depends(get_current_admin)):
+    return {"settings": await ai.get_ai_settings(), "usage": await ai.usage_counts()}
+
+
+@api_router.put("/admin/ai/settings")
+async def admin_put_ai_settings(data: dict, admin: str = Depends(get_current_admin)):
+    return {"ok": True, "settings": await ai.set_ai_settings(data)}
+
+
+@api_router.post("/admin/ai/process/{slug}")
+async def admin_ai_process(slug: str, admin: str = Depends(get_current_admin)):
+    return await ai.generate_for_slug(slug, is_auto=False)
+
+
+class AIBatchIn(BaseModel):
+    only_missing: bool = True
+    types: Optional[List[str]] = None
+    limit: int = 15
+
+
+@api_router.post("/admin/ai/process-batch")
+async def admin_ai_batch(payload: AIBatchIn, admin: str = Depends(get_current_admin)):
+    return await ai.process_batch(payload.only_missing, payload.types, payload.limit)
 
 
 @api_router.get("/admin/press/search")
@@ -251,7 +284,12 @@ async def admin_odds(match: str, market: str, pick: str, admin: str = Depends(ge
 async def cron_youtube(secret: str = Query(...)):
     if not CRON_SECRET or secret != CRON_SECRET:
         raise HTTPException(status_code=403, detail="Cron secret non valido")
-    return await auto.youtube_sync()
+    res = await auto.youtube_sync()
+    try:
+        res["ai_autorun"] = await ai.maybe_autorun_after_sync(res)
+    except Exception as e:
+        logger.error("AI autorun error: %s", e)
+    return res
 
 
 # ============================ Public SSR pages ============================
