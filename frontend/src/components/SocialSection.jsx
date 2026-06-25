@@ -20,7 +20,7 @@ export default function SocialSection() {
             Resta Connesso
           </span>
           <h2 className="font-anton text-[#14100e] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">
-            Seguici Ovunque
+            Seguici ovunque
           </h2>
           <p className="text-[#3a1e10] text-base sm:text-lg mt-4 font-medium">
             Non perderti nessun contenuto: dirette, episodi, clip e interviste

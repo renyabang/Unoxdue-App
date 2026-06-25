@@ -13,12 +13,12 @@ export const brand = {
 
 export const navLinks = [
   { label: "Home", href: "#home" },
-  { label: "Il Podcast", href: "#about" },
+  { label: "Il podcast", href: "#about" },
+  { label: "Episodi", href: "#episodi" },
   { label: "Interviste", href: "#interviste" },
-  { label: "Contenuti", href: "#contenuti" },
-  { label: "Conduttori", href: "#conduttori" },
-  { label: "Parlano di Noi", href: "#press" },
-  { label: "Social", href: "#social" },
+  { label: "Pronostici", href: "#pronostici" },
+  { label: "Il team", href: "#team" },
+  { label: "Parlano di noi", href: "#press" },
 ];
 
 export const socials = [
@@ -57,15 +57,15 @@ export const socials = [
 ];
 
 export const aboutText = [
-  "UnoXdue è il podcast calcistico dove analisi tattica, pronostici e dibattito appassionato si incontrano per offrirti uno sguardo unico sul mondo del calcio italiano.",
-  "Ogni settimana, Sonomuiccio, Ninja e Marziano si ritrovano in diretta per discutere della Serie A, analizzare le partite più importanti e confrontarsi sui temi caldi del calcio italiano ed europeo.",
-  "Dal pre-partita alle analisi post-gara, passando per il calciomercato, UnoXdue è il punto di ritrovo per tutti gli appassionati che cercano contenuti autentici e approfonditi.",
+  "UnoXdue è il podcast sulla Serie A con tre tipster e un host: analisi tattica, pronostici e dibattito appassionato si incontrano per offrirti uno sguardo unico sul mondo del calcio italiano.",
+  "Ogni settimana Sono Micuccio, il Ninja e il Marziano si ritrovano in diretta insieme all'host Antonello Santopaolo per discutere della Serie A, analizzare le partite più importanti e confrontarsi sui temi caldi del calcio italiano ed europeo.",
+  "Dalle giornate di campionato ai palinsesti, dalle giocate alle interviste ai protagonisti, UnoXdue è il punto di ritrovo per tutti gli appassionati che cercano contenuti autentici e approfonditi.",
 ];
 
 export const features = [
   {
     icon: "radio",
-    title: "Dirette Settimanali",
+    title: "Dirette settimanali",
     text: "Live su Twitch con analisi e dibattito in tempo reale.",
   },
   {
@@ -75,12 +75,12 @@ export const features = [
   },
   {
     icon: "users",
-    title: "Tre Conduttori",
-    text: "Tre punti di vista diversi per un'analisi completa.",
+    title: "Tre tipster e un host",
+    text: "Quattro punti di vista diversi per un'analisi completa.",
   },
   {
     icon: "clapperboard",
-    title: "Contenuti Multipli",
+    title: "Contenuti multipli",
     text: "Clip, highlights e contenuti esclusivi su tutti i social.",
   },
 ];
@@ -141,42 +141,56 @@ export const episodes = [
     duration: "0:45",
     date: "11 marzo 2026",
     title: "Clip TikTok — Momenti Migliori",
-    text: "I momenti più divertenti e le perle di saggezza dei nostri conduttori.",
+    text: "I momenti più divertenti e le perle di saggezza del nostro team.",
     url: "https://www.tiktok.com/@unoxdue_",
   },
 ];
 
-// Conduttori — NB: le foto sono abbinate in ordine, da confermare/sistemare.
+// Il team — tre tipster e un host. Foto verificate.
 export const hosts = [
   {
-    id: "sonomuiccio",
-    nickname: "Sonomuiccio",
-    realName: "Domenico Ruffa",
-    badge: "Il Pioniere",
-    role: "Fondatore & Analista",
-    photo: "/hosts/host1.jpg",
-    bio: "Fondatore del progetto Aperiquattro. Pioniere nell'analisi dei campionati minori, si distingue per le sue analisi avanzate sulle scommesse sportive, sempre fuori dagli schemi e ad alto potenziale.",
+    id: "sono-micuccio",
+    slug: "sono-micuccio",
+    nickname: "Sono Micuccio",
+    badge: "Il pioniere",
+    role: "Fondatore & analista",
+    photo: "/hosts/host2.jpg",
+    isHost: false,
+    bio: "Fondatore del progetto Aperiquattro. Pioniere nell'analisi dei campionati minori, si distingue per le sue analisi avanzate sui palinsesti sportivi, sempre fuori dagli schemi e ad alto potenziale.",
     instagram: "https://www.instagram.com/sonomicuccioreal/",
   },
   {
-    id: "ninja",
+    id: "il-ninja",
+    slug: "il-ninja",
     nickname: "Il Ninja",
-    realName: "Antonio Nasta",
-    badge: "Lo Specialista",
-    role: "Specialista Basket",
-    photo: "/hosts/host2.jpg",
-    bio: "Lo specialista del Basket: quando c'è un tiro libero decisivo, è sempre pronto a colpire. Segue le gare fino all'alba senza mai perdere un colpo. Precisione, dedizione e un fiuto infallibile.",
+    badge: "Lo specialista",
+    role: "Specialista basket",
+    photo: "/hosts/host3.jpg",
+    isHost: false,
+    bio: "Specialista del basket: quando c'è un tiro libero decisivo, è sempre pronto a colpire. Segue le gare fino all'alba senza mai perdere un colpo. Precisione, dedizione e un fiuto infallibile.",
     instagram: "https://www.instagram.com/ilniinja/",
   },
   {
-    id: "marziano",
+    id: "il-marziano",
+    slug: "il-marziano",
     nickname: "Il Marziano",
-    realName: "Giuseppe Ruocco",
-    badge: "Il Veterano",
-    role: "Tipster Veterano",
-    photo: "/hosts/host3.jpg",
-    bio: "Figura storica nel panorama Tipster Italia. Le sue giocate si distinguono per precisione e competenza, sempre accompagnate dal suo marchio di fabbrica: gli iconici Shooters.",
+    badge: "Il veterano",
+    role: "Tipster veterano",
+    photo: "/hosts/host1.jpg",
+    isHost: false,
+    bio: "Figura storica nel panorama dei tipster italiani. Le sue giocate si distinguono per precisione e competenza, sempre accompagnate dal suo marchio di fabbrica: gli iconici Shooters.",
     instagram: "https://www.instagram.com/il.marziano_/",
+  },
+  {
+    id: "antonello-santopaolo",
+    slug: "antonello-santopaolo",
+    nickname: "Antonello Santopaolo",
+    badge: "La voce di UnoXdue",
+    role: "Host",
+    photo: "/team/antonello.jpg",
+    isHost: true,
+    bio: "Web content writer e moderatore di eventi, Antonello Santopaolo conduce e coordina le conversazioni di UnoXdue. Da anni opera nella comunicazione digitale, realizzando interviste e approfondimenti con professionisti e personalità del panorama italiano. È la voce che tiene insieme il podcast, anche quando preferisce restare fuori dall'inquadratura.",
+    instagram: null,
   },
 ];
 
@@ -211,5 +225,67 @@ export const press = [
     excerpt:
       "L'intervista di UnoXdue ad Allan Baclet rilanciata da LaC News24: i ricordi della promozione e il gruppo che scrisse la storia rossoblù.",
     url: "https://www.lacnews24.it/sport/baclet-ricorda-i-playoff-col-cosenza-avremmo-vinto-anche-contro-la-juventus-rr06av0s",
+  },
+];
+
+
+// Pronostici — schedina di esempio (mock) ricreata con il brand UnoXdue.
+// IMPORTANTE: nessun importo, bonus, vincita o branding di operatori.
+// I pronostici sono opinioni editoriali. 18+ — Gioca responsabilmente.
+export const predictionsMeta = {
+  competition: "Serie A",
+  season: "2025-2026",
+  round: 38,
+  title: "Pronostici Serie A — 38ª giornata",
+  intro:
+    "Le giocate del nostro team per l'ultima giornata di Serie A. Quote indicative al momento della pubblicazione: possono variare.",
+  updatedAt: "21/05/2026 12:20",
+};
+
+export const predictions = [
+  {
+    id: "marziano-g38",
+    tipsterId: "il-marziano",
+    tipster: "Il Marziano",
+    photo: "/hosts/host1.jpg",
+    type: "Multipla",
+    status: "In corso",
+    totalOdds: "17.63",
+    selections: [
+      { competition: "Serie A", date: "22/05 · 20:45", match: "Fiorentina - Atalanta", market: "Multigol 2-4", pick: "Sì", odds: "1.49" },
+      { competition: "Serie A", date: "23/05 · 20:45", match: "Lazio - Pisa", market: "Multigol 1-2 (1°T)", pick: "Sì", odds: "1.55" },
+      { competition: "Serie A", date: "24/05 · 18:00", match: "Napoli - Udinese", market: "1X2 + U/O 3,5", pick: "1 + Under", odds: "2.09" },
+      { competition: "Serie A", date: "24/05 · 20:45", match: "Lecce - Genoa", market: "Multigol Casa 1-3", pick: "Sì", odds: "1.35" },
+      { competition: "Serie A", date: "24/05 · 20:45", match: "Cremonese - Como", market: "Goal/No Goal", pick: "Goal", odds: "1.78" },
+      { competition: "Serie A", date: "24/05 · 20:45", match: "Verona - Roma", market: "1X2 + U/O 1,5", pick: "2 + Over", odds: "1.52" },
+    ],
+  },
+  {
+    id: "micuccio-g38",
+    tipsterId: "sono-micuccio",
+    tipster: "Sono Micuccio",
+    photo: "/hosts/host2.jpg",
+    type: "Multipla",
+    status: "In corso",
+    totalOdds: "6.42",
+    selections: [
+      { competition: "Serie A", date: "24/05 · 20:45", match: "Inter - Torino", market: "1X2", pick: "1", odds: "1.40" },
+      { competition: "Serie A", date: "23/05 · 18:00", match: "Bologna - Sassuolo", market: "Over 2,5", pick: "Over", odds: "1.72" },
+      { competition: "Serie A", date: "24/05 · 20:45", match: "Juventus - Milan", market: "Goal/No Goal", pick: "Goal", odds: "1.70" },
+    ],
+  },
+  {
+    id: "ninja-g38",
+    tipsterId: "il-ninja",
+    tipster: "Il Ninja",
+    photo: "/hosts/host3.jpg",
+    type: "Multipla",
+    status: "In corso",
+    totalOdds: "4.18",
+    selections: [
+      { competition: "Serie A", date: "24/05 · 20:45", match: "Atalanta - Parma", market: "1X2", pick: "1", odds: "1.45" },
+      { competition: "Serie A", date: "23/05 · 20:45", match: "Roma - Empoli", market: "Multigol Casa 1-3", pick: "Sì", odds: "1.36" },
+      { competition: "Serie A", date: "24/05 · 18:00", match: "Como - Cagliari", market: "Under 3,5", pick: "Under", odds: "2.12" },
+    ],
   },
 ];

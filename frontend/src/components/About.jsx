@@ -17,10 +17,10 @@ export default function About() {
         <div className="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
           <Reveal>
             <span className="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">
-              Chi Siamo
+              Chi siamo
             </span>
             <h2 className="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">
-              Il Podcast
+              Il podcast
             </h2>
             <div className="mt-6 space-y-4">
               {aboutText.map((p, i) => (

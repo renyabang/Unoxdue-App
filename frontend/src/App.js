@@ -5,6 +5,7 @@ import Hero from "./components/Hero";
 import About from "./components/About";
 import Interviews from "./components/Interviews";
 import Episodes from "./components/Episodes";
+import Predictions from "./components/Predictions";
 import Hosts from "./components/Hosts";
 import Press from "./components/Press";
 import SocialSection from "./components/SocialSection";
@@ -22,6 +23,7 @@ function App() {
         <About />
         <Interviews onPlay={setVideo} />
         <Episodes onPlay={setVideo} />
+        <Predictions />
         <Hosts />
         <Press />
         <SocialSection />

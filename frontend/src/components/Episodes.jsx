@@ -27,14 +27,14 @@ function YtThumb({ id, alt }) {
 
 export default function Episodes({ onPlay }) {
   return (
-    <section id="contenuti" className="section-anchor bg-[#f4ebe1] py-20 lg:py-28">
+    <section id="episodi" className="section-anchor bg-[#f4ebe1] py-20 lg:py-28">
       <div className="max-w-7xl mx-auto px-5 lg:px-8">
         <Reveal className="text-center max-w-2xl mx-auto">
           <span className="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">
-            Contenuti Recenti
+            Contenuti recenti
           </span>
           <h2 className="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">
-            Ultimi Contenuti
+            Ultimi contenuti
           </h2>
           <p className="text-[#6b5d52] text-base sm:text-lg mt-4">
             Rimani aggiornato con i nostri ultimi episodi e clip su tutte le

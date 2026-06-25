@@ -28,10 +28,10 @@ export default function Interviews({ onPlay }) {
       <div className="relative max-w-7xl mx-auto px-5 lg:px-8">
         <Reveal className="text-center max-w-2xl mx-auto">
           <span className="inline-flex items-center gap-2 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">
-            <Mic className="w-4 h-4" /> UnoXdue Intervista
+            <Mic className="w-4 h-4" /> UnoXdue intervista
           </span>
           <h2 className="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">
-            Le Voci del Calcio
+            Le voci del calcio
           </h2>
           <p className="text-white/60 text-base sm:text-lg mt-4">
             Interviste esclusive ai protagonisti del calcio italiano. Storie,
