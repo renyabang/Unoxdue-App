@@ -108,7 +108,7 @@ export default function Results() {
           <div className="flex-1 min-w-[220px]">
             <label className="text-xs font-semibold text-[#6b5d52] uppercase">Giornata</label>
             <select data-testid="results-pred-select" value={sel} onChange={(e) => setSel(e.target.value)} className="w-full mt-1 border border-[#e2d4c2] rounded-lg px-2 py-2 text-sm">
-              {preds.map((p) => <option key={`${p.season}|${p.round}`} value={`${p.season}|${p.round}`}>{p.competition || "Serie A"} {p.season} · {p.round}ª giornata ({(p.picks || []).length} giocate)</option>)}
+              {preds.map((p) => <option key={`${p.season}|${p.round}`} value={`${p.season}|${p.round}`}>{`${p.competition || "Serie A"} ${p.season} · ${p.round}ª giornata (${(p.picks || []).length} giocate)`}</option>)}
             </select>
           </div>
           <button data-testid="results-settle-btn" onClick={runSettle} disabled={busy === "settle" || !sel} className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">

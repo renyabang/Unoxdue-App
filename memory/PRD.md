@@ -79,15 +79,30 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - **P0 — Step 3: Archivio completo YouTube / WebSub / OAuth / trascrizioni** ✅ COMPLETATO + testato (giugno 2026, demo).
 - **P1 — Step 7A (REVISIONATO): OCR grafiche comparative + persistenza quote** ✅ COMPLETATO + testato (giugno 2026).
   Le quote vengono dalla grafica del team (OCR Vision), NON da API esterne. The Odds API rimosso dal piano (funzione futura disattivata).
-- **P2 — Step 6: Risultati, storico e pubblicazione condizionata** — PROSSIMO. Fonte risultati/stato eventi = API-Football
-  o equivalente (SOLO risultati/fixture/stato, mai quote, mai AI come fonte ufficiale). Stati: pending/won/lost/void/postponed/
-  suspended/cancelled/manual_review. Storico versionato (no overwrite silenzioso). Auto-pubblicazione configurabile (≥1/≥2/3 giocate valide;
-  default ≥1, aggiorna la stessa pagina quando arrivano le altre).
-- **P2 — Step 7B: Rassegna stampa (Perplexity)** — menzioni reali UnoXdue + collegamento a episodio/intervista/ospite/team;
-  salva url/titolo/testata/data/sintesi; no duplicati; verifica URL raggiungibile; no testo integrale; dubbi in revisione.
+- **P2 — Step 6: Risultati, storico e pubblicazione condizionata** ✅ COMPLETATO + testato (giugno 2026, modalità fixture).
+- **P2 — Step 7B: Rassegna stampa (Perplexity)** — PROSSIMO. Adapter Perplexity, modello dati, dedup URL, schermata admin,
+  fixture, log, revisione risultati dubbi. Ricerca reale disattivata finché manca PERPLEXITY_API_KEY.
 - **P3 — Refactoring finale**: split server.py in routes/services/models/integrations/jobs/utilities. Prima: checkpoint stabile,
   suite test, inventario endpoint, mappa dipendenze, backup DB. NON cambiare API/URL pubbliche/schema/comportamento automazioni.
   Consentita prima solo separazione minima se server.py diventa un rischio concreto.
+
+### [giugno 2026] Step 6 — Risultati, storico e pubblicazione condizionata (P2). COMPLETATO + testato (fixture).
+- `results_provider.py`: astrazione `ResultsProvider` (get_events/get_event/get_results) + `FixtureResultsProvider` (dataset
+  deterministico: finished/postponed/suspended/cancelled/AET/PEN) + `ApiFootballResultsProvider` (predisposto, attivo solo con
+  SPORT_RESULTS_API_PROVIDER=apifootball + SPORT_RESULTS_API_KEY). `get_provider()` factory: sostituibile senza toccare il motore.
+  Stati normalizzati, normalizzazione squadre/match, score ft/ht/et/pen.
+- `settlement.py`: motore interno. `settle_selection` (1X2, Doppia Chance, DNB, Over/Under, GG/NG; combinati/sconosciuti -> manual_review),
+  `aggregate_pick` (multipla: persa se una persa; pending se una pending; void/postponed/suspended/cancelled trattati come void),
+  storico versionato `settlement_history`, audit `settlement_audit`, `apply_publish_rule` (publish_min_valid 1/2/3),
+  correzioni manuali protette dal re-settle (manual=True). Mai AI come fonte, mai valori inventati. Log + retry.
+- `server.py`: `/admin/results/status|settings|settle|{season}/{round}|correct` + cron `/cron/settle`. `add_pick` applica la pubblicazione condizionata.
+- `Results.jsx` (admin "Risultati"): provider status + badge demo, selettore publish_min_valid, selezione giornata, esegui settlement,
+  badge esito per giocata/selezione, correzione manuale per selezione/giocata, riga storico/audit. Pagina pubblica `prediction.html`:
+  badge esito (Vinta/Persa/Void/Rinviata/Sospesa/Annullata/Da verificare) per giocata e per selezione.
+- Env: SPORT_RESULTS_API_PROVIDER (default 'fixture'), SPORT_RESULTS_API_URL, SPORT_RESULTS_API_KEY.
+- Testato: motore via curl (won/lost/void/postponed/suspended/cancelled/manual_review, aggregazione, correzione manuale non sovrascritta,
+  storico+audit, publish 1/2/3); frontend testing_agent 100% (iteration_8.json), non-regressione admin OK.
+- BLOCCATO solo per dati reali: serve SPORT_RESULTS_API_KEY (+ provider=apifootball) per i risultati veri.
 
 ### [giugno 2026] Step 7A REVISIONATO — OCR grafiche comparative + persistenza quote (P1). COMPLETATO + testato.
 - `automations.py`: nuovo `OCR_PROMPT` per grafiche comparative (tipster, competition, round, type, total_odds, raw_text,
