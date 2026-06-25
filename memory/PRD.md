@@ -17,10 +17,12 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
   alla SPA React; le pagine SSR si testano su `/api/seo/...`. NON modificare il routing dell'ambiente.
 
 ## Integrazioni
-- OpenAI Vision (OCR schedine) — Emergent LLM Key via `emergentintegrations` (modello gpt-5.4). ATTIVO.
-- YouTube — attualmente sync via feed RSS. (Data API completa = task futuro, richiede API key utente.)
-- Perplexity (rassegna stampa) — DEMO (manca chiave utente).
-- Odds API (comparatore quote) — DEMO (manca chiave utente).
+- OpenAI Vision (OCR grafiche comparative pronostici) — Emergent LLM Key via `emergentintegrations` (modello gpt-5.4). ATTIVO.
+- YouTube — sync RSS + Data API v3 (Step 3, demo finché manca YOUTUBE_API_KEY) + WebSub + OAuth sottotitoli (demo finché mancano GOOGLE_OAUTH_*).
+- Perplexity (rassegna stampa) — DEMO (manca chiave utente). Step 7B.
+- **Comparatore quote esterno (The Odds API/Odds API) — DEPRECATO/DISATTIVATO.** Le quote provengono SOLO dall'OCR
+  della grafica comparativa fornita dal team. `ODDS_API_*` restano come funzione futura disattivata, senza sviluppo prioritario.
+- Risultati/stato eventi (Step 6) — da integrare con API-Football o equivalente SOLO per risultati/fixture/stato (non per quote).
 
 ## Stato implementazione
 ### Completato
@@ -73,15 +75,34 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
   - Testato: testing_agent frontend 10/11 -> dopo fix 11/11 (retest 100%); backend verificato via curl + screenshot reali dei 3 formati e casi limite.
   - Docker: `Dockerfile.backend` installa Chromium (`playwright install --with-deps chromium`); asset brand in `backend/static/public/`.
 
-## Backlog (ordine stretto richiesto dall'utente, messaggio #205 + #342)
+## Backlog (ordine stretto richiesto dall'utente, messaggio #205 + #342 + correzione Step 7A)
 - **P0 — Step 3: Archivio completo YouTube / WebSub / OAuth / trascrizioni** ✅ COMPLETATO + testato (giugno 2026, demo).
-- **P1 — Step 7A: Comparatore quote reale** (verifica struttura provider: ID stabile, settlement, eventi sospesi;
-  connettore separato SPORT_RESULTS_API se manca il settlement). PROSSIMO.
-- **P2 — Step 6: Risultati, storico e pubblicazione condizionata** (storico quote, override manuali,
-  calcolo esito vinta/persa/void, auto-pubblicazione condizionata).
-- **P2 — Step 7B: Rassegna stampa (Perplexity)** — news rilevanti UnoXdue + ospiti.
-- **P3 — Refactoring finale**: split server.py in routes/services/models/integrations/jobs/utility
-  (solo tecnico, senza cambiare comportamento testato).
+- **P1 — Step 7A (REVISIONATO): OCR grafiche comparative + persistenza quote** ✅ COMPLETATO + testato (giugno 2026).
+  Le quote vengono dalla grafica del team (OCR Vision), NON da API esterne. The Odds API rimosso dal piano (funzione futura disattivata).
+- **P2 — Step 6: Risultati, storico e pubblicazione condizionata** — PROSSIMO. Fonte risultati/stato eventi = API-Football
+  o equivalente (SOLO risultati/fixture/stato, mai quote, mai AI come fonte ufficiale). Stati: pending/won/lost/void/postponed/
+  suspended/cancelled/manual_review. Storico versionato (no overwrite silenzioso). Auto-pubblicazione configurabile (≥1/≥2/3 giocate valide;
+  default ≥1, aggiorna la stessa pagina quando arrivano le altre).
+- **P2 — Step 7B: Rassegna stampa (Perplexity)** — menzioni reali UnoXdue + collegamento a episodio/intervista/ospite/team;
+  salva url/titolo/testata/data/sintesi; no duplicati; verifica URL raggiungibile; no testo integrale; dubbi in revisione.
+- **P3 — Refactoring finale**: split server.py in routes/services/models/integrations/jobs/utilities. Prima: checkpoint stabile,
+  suite test, inventario endpoint, mappa dipendenze, backup DB. NON cambiare API/URL pubbliche/schema/comportamento automazioni.
+  Consentita prima solo separazione minima se server.py diventa un rischio concreto.
+
+### [giugno 2026] Step 7A REVISIONATO — OCR grafiche comparative + persistenza quote (P1). COMPLETATO + testato.
+- `automations.py`: nuovo `OCR_PROMPT` per grafiche comparative (tipster, competition, round, type, total_odds, raw_text,
+  selections con match/date/market/pick/odds/confidence + bookmakers[{bookmaker,odds,confidence,bbox}]). `_normalize_extracted`
+  pulisce i dati VIETATI (importo/bonus/vincita/saldo/dati personali) a ogni livello, normalizza tipi e calcola `needs_review`
+  (confidence < 0.6 o quota mancante). `ODDS_DISCLAIMER` + `MAPPING_VERSION`. NIENTE valori inventati.
+- `server.py`: `POST /admin/predictions/ocr` persiste `slip_uploads` {id, image_path, ocr_raw, extracted, mapping_version, status, uploaded_at}
+  e ritorna upload_id+data+raw_text+disclaimer. `add_pick` estesa con source_image/ocr_upload_id/mapping_version/needs_review + odds_disclaimer;
+  marca l'upload come confermato. `GET /admin/slip-uploads` per audit.
+- `SlipUploader.jsx`: revisione editabile con tabella comparativa bookmaker (add/remove), badge confidence %, flag "Da verificare",
+  testo OCR audit, immagine sorgente, disclaimer, salvataggio (con stato saving).
+- Pagina pubblica `prediction.html`: chip comparativi bookmaker per selezione + badge "Da verificare" + disclaimer esatto. CSS SSR ricompilato.
+- Grafica social (`graphics.py`): disclaimer aggiornato al testo obbligatorio.
+- Testato: OCR reale (Vision) su grafica comparativa di test estrae correttamente e IGNORA importo/bonus/vincita; add_pick + SSR verificati via curl;
+  frontend testing_agent 100% (iteration_7.json), non-regressione admin OK.
 
 ### [giugno 2026] Step 3 — Archivio YouTube completo, WebSub, OAuth, trascrizioni (P0). COMPLETATO + testato (demo).
 - Nuovo modulo `backend/youtube.py`: connettore Data API v3 (channels.list -> uploads playlist,

@@ -29,6 +29,7 @@ export default function SlipUploader() {
   const [season, setSeason] = useState("");
   const [round, setRound] = useState("");
   const [saved, setSaved] = useState(null);
+  const [saving, setSaving] = useState(false);
   const [err, setErr] = useState("");
 
   const onFile = (e) => {
@@ -86,6 +87,7 @@ export default function SlipUploader() {
     setErr(""); setSaved(null);
     if (!season || !round) { setErr("Inserisci stagione e giornata"); return; }
     const needs_review = data.selections.some((s) => !s.odds || s.needs_review);
+    setSaving(true);
     try {
       const r = await api.addPick({
         competition: data.competition || "Serie A", season, round: parseInt(round, 10),
@@ -96,6 +98,7 @@ export default function SlipUploader() {
       });
       setSaved(r.public_url);
     } catch (e) { setErr(e.message); }
+    finally { setSaving(false); }
   };
 
   return (
@@ -204,8 +207,8 @@ export default function SlipUploader() {
 
               <p className="text-[11px] text-[#9c8b7d] mt-3 leading-relaxed">{DISCLAIMER}</p>
 
-              <button data-testid="slip-save-btn" onClick={save} className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-3 rounded-lg">
-                <Save className="w-4 h-4" /> Salva giocata
+              <button data-testid="slip-save-btn" onClick={save} disabled={saving} className="mt-3 w-full inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-3 rounded-lg disabled:opacity-60 transition-colors">
+                {saving ? <Loader2 className="w-4 h-4 animate-spin" /> : <Save className="w-4 h-4" />} {saving ? "Salvataggio..." : "Salva giocata"}
               </button>
               {saved && (
                 <p data-testid="slip-saved" className="mt-3 text-sm text-green-700 flex items-center gap-2">
