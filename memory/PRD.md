@@ -89,7 +89,17 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 1. inserimento credenziali YouTube API + Google OAuth → 2. test reale Step 3 → 3. inserimento provider risultati (SPORT_RESULTS_API_KEY + provider=apifootball) →
 4. test reale Step 6 → 5. inserimento Perplexity → 6. test reale Step 7B → 7. test e2e completo → 8. backup+checkpoint → 9. refactoring finale.
 
-### [giugno 2026] Step 7B — Rassegna stampa (P2). COMPLETATO + testato (fixture).
+### [giugno 2026] Step 7B BIDIREZIONALE — Collegamento rassegna stampa ⇄ contenuti (P2). COMPLETATO + testato (fixture, e2e).
+- `press.py`: `links` come LISTA (auto + manuale), `_associate_all` (multi-match team/episodi/interviste), `_merge_links`
+  (preserva i manuali al re-run), `set_link(action add/remove)` (rimozione/correzione senza eliminare l'articolo), `link_options`,
+  `published_for(slug)` (box: published + reachable + linked, dedup canonica, recenti), `published_archive` (link interni multipli puliti).
+- SSR: box "Ne hanno parlato" su `episode.html`/`team_member.html` (solo published+reachable+linked); nuova `press.html` per
+  "Parlano di noi" con link esterno (target _blank + rel noopener) e link interni puliti (/episodi//interviste//team/, non /api/seo/).
+  `seo.render_episode/render_team_member` accettano `press`; `render_press_archive`. Endpoint SSR episodi/interviste/team passano `published_for`.
+- Admin `Press.jsx`: sezione "Contenuti collegati" con chip (auto/manual), aggiunta manuale via select (link_options), rimozione per chip.
+- `server.py`: `/admin/press/link` con action add/remove, `/admin/press/link-options`.
+- Test e2e (10/10 via curl) + frontend testing_agent 100% (iteration_10.json): articolo pubblicato↔intervista, box SSR, link esterno rel noopener,
+  link interno dall'archivio, review/discarded non pubblici, URL duplicata non duplicata, irraggiungibile escluso, rimozione associazione aggiorna le pagine, HTML box senza JS.
 - `press.py`: astrazione `PressProvider` (search) + `FixturePressProvider` (demo deterministico) + `PerplexityPressProvider`
   (predisposto, attivo solo con PERPLEXITY_API_KEY). `get_provider()` factory sostituibile. Pipeline `run_search`:
   dedup per URL canonica, verifica raggiungibilità (HEAD/GET + retry), associazione a team/episodio/intervista/ospite,

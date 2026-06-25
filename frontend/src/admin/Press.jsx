@@ -170,7 +170,7 @@ export default function Press() {
                   {(preview.links || []).map((l, i) => (
                     <span key={i} className="inline-flex items-center gap-1.5 text-xs bg-indigo-50 text-indigo-700 border border-indigo-100 rounded-full pl-2.5 pr-1 py-0.5" data-testid={`press-link-${l.type}-${l.slug}`}>
                       <Link2 className="w-3 h-3" /> {l.title} <span className="text-indigo-400">({l.source || "auto"})</span>
-                      <button onClick={() => removeLink(preview, l)} disabled={busy === `link-${preview.id}`} className="ml-0.5 text-indigo-400 hover:text-red-600" data-testid={`press-link-remove-${l.slug}`}><XCircle className="w-3.5 h-3.5" /></button>
+                      <button onClick={() => removeLink(preview, l)} disabled={busy === `link-${preview.id}`} className="ml-0.5 text-indigo-400 hover:text-red-600" data-testid={`press-link-remove-${l.type}-${l.slug}`}><XCircle className="w-3.5 h-3.5" /></button>
                     </span>
                   ))}
                 </div>
