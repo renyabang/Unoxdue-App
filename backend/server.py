@@ -2,6 +2,8 @@ from fastapi import FastAPI, APIRouter, HTTPException, Depends, UploadFile, File
 from fastapi.responses import HTMLResponse, Response, JSONResponse, RedirectResponse
 from fastapi.staticfiles import StaticFiles
 from starlette.middleware.cors import CORSMiddleware
+from starlette.exceptions import HTTPException as StarletteHTTPException
+from fastapi.exception_handlers import http_exception_handler
 import os
 import uuid
 import asyncio
@@ -28,6 +30,26 @@ logger = logging.getLogger(__name__)
 
 app = FastAPI(title="UnoXdue API")
 api_router = APIRouter(prefix="/api")
+
+
+def _render_ssr_404() -> HTMLResponse:
+    body = (
+        "<p class='lead'>La pagina che cerchi non esiste o è stata spostata.</p>"
+        "<p>Torna alla <a href=\"" + SITE_URL + "/\">home</a>, esplora gli "
+        "<a href=\"" + SITE_URL + "/episodi/\">episodi</a> o le "
+        "<a href=\"" + SITE_URL + "/interviste/\">interviste</a>.</p>"
+    )
+    html = seo.render_page("Pagina non trovata", "La pagina richiesta non esiste (errore 404).",
+                           "/404/", body, noindex=True)
+    return HTMLResponse(html, status_code=404)
+
+
+@app.exception_handler(StarletteHTTPException)
+async def _ssr_http_exception_handler(request: Request, exc: StarletteHTTPException):
+    # 404 sulle pagine pubbliche SSR -> pagina 404 stilizzata; le API restano JSON.
+    if exc.status_code == 404 and request.url.path.startswith("/api/seo/"):
+        return _render_ssr_404()
+    return await http_exception_handler(request, exc)
 
 
 # ============================ Health ============================
@@ -956,15 +978,7 @@ async def ssr_interview_transcript(slug: str):
 
 @api_router.get("/seo/{full_path:path}", response_class=HTMLResponse)
 async def ssr_not_found(full_path: str):
-    body = (
-        "<p class='lead'>La pagina che cerchi non esiste o è stata spostata.</p>"
-        "<p>Torna alla <a href=\"" + SITE_URL + "/\">home</a>, esplora gli "
-        "<a href=\"" + SITE_URL + "/episodi/\">episodi</a> o le "
-        "<a href=\"" + SITE_URL + "/interviste/\">interviste</a>.</p>"
-    )
-    html = seo.render_page("Pagina non trovata", "La pagina richiesta non esiste (errore 404).",
-                           "/404/", body, noindex=True)
-    return HTMLResponse(html, status_code=404)
+    return _render_ssr_404()
 
 
 async def _render_transcript_page(slug: str, section: str):
