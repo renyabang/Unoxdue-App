@@ -80,11 +80,26 @@ brandizzate UnoXdue. Lingua di tutta l'app e delle interazioni: **ITALIANO**.
 - **P1 — Step 7A (REVISIONATO): OCR grafiche comparative + persistenza quote** ✅ COMPLETATO + testato (giugno 2026).
   Le quote vengono dalla grafica del team (OCR Vision), NON da API esterne. The Odds API rimosso dal piano (funzione futura disattivata).
 - **P2 — Step 6: Risultati, storico e pubblicazione condizionata** ✅ COMPLETATO + testato (giugno 2026, modalità fixture).
-- **P2 — Step 7B: Rassegna stampa (Perplexity)** — PROSSIMO. Adapter Perplexity, modello dati, dedup URL, schermata admin,
-  fixture, log, revisione risultati dubbi. Ricerca reale disattivata finché manca PERPLEXITY_API_KEY.
+- **P2 — Step 7B: Rassegna stampa (Perplexity)** ✅ COMPLETATO + testato (giugno 2026, modalità fixture).
 - **P3 — Refactoring finale**: split server.py in routes/services/models/integrations/jobs/utilities. Prima: checkpoint stabile,
   suite test, inventario endpoint, mappa dipendenze, backup DB. NON cambiare API/URL pubbliche/schema/comportamento automazioni.
-  Consentita prima solo separazione minima se server.py diventa un rischio concreto.
+  ⚠️ NON iniziare prima che i 3 flussi reali (Step 3, 6, 7B con chiavi) siano verificati: gli adapter potrebbero richiedere modifiche a modelli/servizi.
+
+### Ordine concordato dopo Step 7B (messaggio utente)
+1. inserimento credenziali YouTube API + Google OAuth → 2. test reale Step 3 → 3. inserimento provider risultati (SPORT_RESULTS_API_KEY + provider=apifootball) →
+4. test reale Step 6 → 5. inserimento Perplexity → 6. test reale Step 7B → 7. test e2e completo → 8. backup+checkpoint → 9. refactoring finale.
+
+### [giugno 2026] Step 7B — Rassegna stampa (P2). COMPLETATO + testato (fixture).
+- `press.py`: astrazione `PressProvider` (search) + `FixturePressProvider` (demo deterministico) + `PerplexityPressProvider`
+  (predisposto, attivo solo con PERPLEXITY_API_KEY). `get_provider()` factory sostituibile. Pipeline `run_search`:
+  dedup per URL canonica, verifica raggiungibilità (HEAD/GET + retry), associazione a team/episodio/intervista/ospite,
+  stati found/verified/review/published/discarded/error, log. `set_status` (anteprima→pubblica/verifica/scarta), `set_link`, `list_all`.
+  Salva SOLO metadati + sintesi originale (testata, titolo, url, canonical_url, data, summary, linked, query, detected_at, status, confidence). MAI testo integrale.
+- `server.py`: `/admin/press/status|run|list|set-status|link`. `GET /api/press` + SSR `/parlano-di-noi` mostrano SOLO status=published (+ legacy senza status).
+- `Press.jsx` (admin "Rassegna stampa"): ricerca, badge demo, tabella con stato/linked/irraggiungibile, filtri per stato, anteprima + pubblica/verifica/scarta.
+- Ricerca reale disattivata finché manca PERPLEXITY_API_KEY (provider fixture).
+- Testato: pipeline via curl (4 trovati, 2 verified via associazione, 1 error per URL irraggiungibile, dedup/re-run idempotente, pubblicazione→visibilità pubblica);
+  frontend testing_agent 100% (iteration_9.json), non-regressione admin OK.
 
 ### [giugno 2026] Step 6 — Risultati, storico e pubblicazione condizionata (P2). COMPLETATO + testato (fixture).
 - `results_provider.py`: astrazione `ResultsProvider` (get_events/get_event/get_results) + `FixtureResultsProvider` (dataset
