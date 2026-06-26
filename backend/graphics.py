@@ -388,3 +388,127 @@ async def generate_pick(season: str, round_: int, pick_index: int) -> dict:
                               + (f", errori: {list(errors)}" if errors else ""),
                               {"season": season, "round": round_, "pick": pick_index})
     return {"ok": bool(formats_out), "graphics": gen, "errors": errors}
+
+
+
+# ============================================================
+# COPERTINE PRONOSTICI (artefatto distinto dalle schedine)
+# Solo: logo UnoXdue, "Pronostici Serie A", stagione, giornata, sfondo nero/arancione,
+# elementi tattici discreti. Nessun dato di giocata, nessun bookmaker. WebP 1200x675 + 1200x1200.
+# ============================================================
+COVER_FORMATS = {"horizontal": (1200, 675), "square": (1200, 1200)}
+COVERS_DIR = UPLOAD_DIR / "covers"
+COVERS_DIR.mkdir(parents=True, exist_ok=True)
+
+
+def _season_short(season: str) -> str:
+    parts = (season or "").split("-")
+    if len(parts) == 2 and len(parts[1]) == 4:
+        return f"{parts[0]}/{parts[1][2:]}"
+    return season or ""
+
+
+def _pitch_svg() -> str:
+    # Campo + lavagna tattica discreti (slice a coprire la card di qualsiasi formato).
+    return (
+        '<svg class="pitch" viewBox="0 0 1200 760" preserveAspectRatio="xMidYMid slice" '
+        'xmlns="http://www.w3.org/2000/svg">'
+        '<g fill="none" stroke="rgba(246,217,191,0.08)" stroke-width="3">'
+        '<rect x="70" y="80" width="1060" height="600" rx="8"/>'
+        '<line x1="600" y1="80" x2="600" y2="680"/>'
+        '<circle cx="600" cy="380" r="120"/>'
+        '<rect x="70" y="230" width="150" height="300"/>'
+        '<rect x="980" y="230" width="150" height="300"/>'
+        '<rect x="70" y="305" width="55" height="150"/>'
+        '<rect x="1075" y="305" width="55" height="150"/>'
+        '</g>'
+        '<circle cx="600" cy="380" r="7" fill="rgba(246,217,191,0.12)"/>'
+        '<g fill="none" stroke="rgba(234,78,27,0.22)" stroke-width="3" stroke-dasharray="9 12" stroke-linecap="round">'
+        '<path d="M250 600 C 450 460, 520 400, 720 280"/>'
+        '<path d="M320 180 C 540 290, 660 380, 880 500"/>'
+        '</g></svg>'
+    )
+
+
+async def build_cover_html(pred: dict, w: int, h: int, logo_uri) -> str:
+    season_s = _season_short(pred.get("season", ""))
+    rnd = pred.get("round", "")
+    comp = pred.get("competition", "Serie A")
+    date = (pred.get("date") or "").strip()
+    big = h >= 1000  # quadrato
+    logo_sz = 160 if big else 120
+    wm_sz = 58 if big else 50
+    label_sz = 36 if big else 30
+    title_sz = 104 if big else 92
+    sub_sz = 34 if big else 28
+    gap = 26 if big else 18
+    return f"""<!doctype html><html lang="it"><head><meta charset="utf-8"><style>
+*{{margin:0;padding:0;box-sizing:border-box}}
+{_fonts_css()}
+#card{{position:relative;width:{w}px;height:{h}px;overflow:hidden;background:#14100e;color:#fff;
+  font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;text-align:center}}
+.pitch{{position:absolute;inset:0;width:100%;height:100%;z-index:1}}
+#card::before{{content:"";position:absolute;top:-180px;right:-120px;width:640px;height:640px;border-radius:50%;
+  background:radial-gradient(closest-side,rgba(234,78,27,.42),transparent);z-index:1}}
+#card::after{{content:"UNOXDUE";position:absolute;bottom:-26px;left:-12px;font-family:'Anton';
+  font-size:{int(w/4.2)}px;color:rgba(255,255,255,.04);letter-spacing:.04em;white-space:nowrap;z-index:1}}
+#inner{{position:relative;z-index:3;display:flex;flex-direction:column;align-items:center;gap:{gap}px;padding:{int(h*0.08)}px}}
+.logo{{width:{logo_sz}px;height:{logo_sz}px;border-radius:50%;object-fit:cover;
+  box-shadow:0 0 0 4px rgba(234,78,27,.6),0 18px 60px rgba(0,0,0,.5)}}
+.wm{{font-family:'Anton';font-size:{wm_sz}px;letter-spacing:.02em;line-height:1}}
+.wm b{{color:#EA4E1B;font-weight:400}}
+.label{{font-family:'Archivo';font-weight:800;text-transform:uppercase;letter-spacing:.28em;
+  color:#EA4E1B;font-size:{label_sz}px;margin-top:{int(gap*0.4)}px}}
+.title{{font-family:'Anton';font-size:{title_sz}px;line-height:.94;letter-spacing:.01em}}
+.title .gw{{color:#EA4E1B}}
+.sub{{display:inline-flex;align-items:center;gap:14px;color:#F6D9BF;font-weight:700;
+  text-transform:uppercase;letter-spacing:.12em;font-size:{sub_sz}px}}
+.sub .dot{{width:7px;height:7px;border-radius:50%;background:#EA4E1B;display:inline-block}}
+</style></head><body>
+<div id="card">
+  {_pitch_svg()}
+  <div id="inner">
+    {f'<img class="logo" src="{logo_uri}" alt="">' if logo_uri else ''}
+    <div class="wm">Uno<b>X</b>due</div>
+    <div class="label">Pronostici {_esc(comp)}</div>
+    <div class="title">{_esc(season_s)}<br><span class="gw">{_esc(rnd)}ª GIORNATA</span></div>
+    <div class="sub"><span>{_esc(season_s)}</span>{f'<span class="dot"></span><span>{_esc(date)}</span>' if date else ''}</div>
+  </div>
+</div></body></html>"""
+
+
+async def generate_cover(season: str, round_: int) -> dict:
+    pred = await db.predictions.find_one({"season": season, "round": round_})
+    if not pred:
+        return {"ok": False, "error": "Pronostico non trovato."}
+    logo_uri = await _embed_image("/logo.jpg")
+    out_dir = COVERS_DIR / season / str(round_)
+    out_dir.mkdir(parents=True, exist_ok=True)
+    cover, errors = {}, {}
+    for fmt, (w, h) in COVER_FORMATS.items():
+        last_err = None
+        for _ in range(2):
+            try:
+                html = await build_cover_html(pred, w, h, logo_uri)
+                png = await asyncio.wait_for(_render_png(html, w, h), timeout=30)
+                webp = _png_to_webp(png)
+                (out_dir / f"{fmt}.webp").write_bytes(webp)
+                rel = f"/api/uploads/covers/{season}/{round_}/{fmt}.webp"
+                cover[fmt] = {"url": f"{SITE_URL}{rel}", "w": w, "h": h}
+                last_err = None
+                break
+            except Exception as e:
+                last_err = str(e)
+        if last_err:
+            errors[fmt] = last_err
+    from datetime import datetime, timezone
+    cover["alt"] = f"Pronostici {pred.get('competition','Serie A')} {_season_short(season)} {round_}ª giornata — UnoXdue"
+    cover["generated_at"] = datetime.now(timezone.utc).isoformat()
+    await db.predictions.update_one({"season": season, "round": round_}, {"$set": {"cover": cover}})
+    import automations as auto
+    status = "ok" if cover.get("horizontal") else "error"
+    await auto.log_automation("cover", status,
+                              f"Copertine giornata {round_} ({season}): {len([k for k in cover if k in COVER_FORMATS])}/2 formati"
+                              + (f", errori: {list(errors)}" if errors else ""),
+                              {"season": season, "round": round_})
+    return {"ok": bool(cover.get("horizontal")), "cover": cover, "errors": errors}
