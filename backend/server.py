@@ -1026,7 +1026,8 @@ async def _render_transcript_page(slug: str, section: str):
         return _render_ssr_404()
     b = await ait.get_transcript_clean(slug)
     clean = b.get("clean", "")
-    return HTMLResponse(seo.render_transcript(ep, clean, ep.get("chapters", [])))
+    segments = await ait.get_transcript_segments(slug)
+    return HTMLResponse(seo.render_transcript(ep, clean, ep.get("chapters", []), segments=segments))
 
 
 # ============================ Sitemap / robots / RSS ============================

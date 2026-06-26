@@ -1,6 +1,9 @@
 """Rendering SSR (HTML completo) per le pagine pubbliche. URL pulite nei canonical."""
 import json
+import re
+import unicodedata
 from datetime import datetime
+import srt_utils as su
 from jinja2 import Environment, FileSystemLoader, select_autoescape
 
 from config_db import SITE_URL, ROOT_DIR
@@ -396,28 +399,74 @@ def render_page(page_title, page_desc, canonical_path, body_html, noindex=False)
 
 
 def _paragraphs(text: str, target: int = 700) -> list:
-    """Spezza il testo pulito in paragrafi leggibili (~target caratteri) sui confini di frase."""
-    import re
+    """Spezza il testo pulito in paragrafi leggibili (~target caratteri).
+    Usa i confini di frase; se i sottotitoli sono privi di punteggiatura, spezza per parole."""
     text = (text or "").strip()
     if not text:
         return []
-    sentences = re.split(r"(?<=[.!?…])\s+", text)
-    paras, buf = [], ""
+    sentences = re.split(r"(?<=[.!?\u2026])\s+", text)
+    units = []
     for s in sentences:
-        if len(buf) + len(s) + 1 > target and buf:
+        s = s.strip()
+        if not s:
+            continue
+        if len(s) > target * 1.5:  # blocco senza punteggiatura: spezza per parole
+            chunk = ""
+            for w in s.split():
+                if len(chunk) + len(w) + 1 > target and chunk:
+                    units.append(chunk.strip())
+                    chunk = ""
+                chunk = f"{chunk} {w}".strip()
+            if chunk:
+                units.append(chunk.strip())
+        else:
+            units.append(s)
+    paras, buf = [], ""
+    for u in units:
+        if len(buf) + len(u) + 1 > target and buf:
             paras.append(buf.strip())
             buf = ""
-        buf = f"{buf} {s}".strip()
+        buf = f"{buf} {u}".strip()
     if buf:
         paras.append(buf.strip())
     return paras
 
 
-def render_transcript(ep: dict, clean: str, chapters: list) -> str:
+def _split_transcript_by_chapters(segments, chapters):
+    if not segments or not chapters:
+        return None
+    seg_clean = su.segment_clean_text(segments)
+    chs = sorted([c for c in chapters if c.get("label")], key=lambda c: c.get("seconds", 0))
+    if not chs:
+        return None
+    sections, used, n = [], set(), len(chs)
+    for i, c in enumerate(chs):
+        start = chs[i].get("seconds", 0)
+        end = chs[i + 1].get("seconds", 0) if i + 1 < n else float("inf")
+        lo = -1 if i == 0 else start  # il primo capitolo assorbe il testo iniziale
+        text = " ".join(s["clean"].strip() for s in seg_clean
+                         if lo <= s.get("start", 0) < end and s.get("clean", "").strip())
+        if not text.strip():
+            continue
+        base = _slug_anchor(c.get("label"))
+        sid, k = base, 2
+        while sid in used:
+            sid = f"{base}-{k}"; k += 1
+        used.add(sid)
+        sections.append({
+            "id": sid, "time": c.get("time"), "seconds": c.get("seconds", 0),
+            "label": c.get("label"), "yt_url": c.get("yt_url"),
+            "paragraphs": _paragraphs(text, target=600),
+        })
+    return sections or None
+
+
+def render_transcript(ep: dict, clean: str, chapters: list, segments=None) -> str:
     ep = enrich(ep)
     canonical = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/trascrizione/'
     episode_url = f'{SITE_URL}/{ep["section"]}/{ep["slug"]}/'
-    paras = _paragraphs(clean)
+    sections = _split_transcript_by_chapters(segments, ep.get("chapters", []))
+    paras = None if sections else _paragraphs(clean)
     _wt = ep.get("website_title") or ep["title"]
     bc = breadcrumb_jsonld([
         ("Home", f"{SITE_URL}/"),
@@ -435,7 +484,7 @@ def render_transcript(ep: dict, clean: str, chapters: list) -> str:
     }, ensure_ascii=False, indent=2)
     return env.get_template("transcript.html").render(
         ep=ep, canonical=canonical, episode_url=episode_url, site_url=SITE_URL,
-        paragraphs=paras, chapters=ep.get("chapters", []), jsonld=jsonld,
+        sections=sections, paragraphs=paras, chapters=ep.get("chapters", []), jsonld=jsonld,
         breadcrumb_jsonld=bc, year=_year(),
     )
 
@@ -658,25 +707,62 @@ def _archive_date(published_at):
         return str(published_at)
 
 
+def _slug_anchor(text: str) -> str:
+    t = unicodedata.normalize("NFKD", text or "").encode("ascii", "ignore").decode()
+    t = re.sub(r"[^\w\s-]", "", t).strip().lower()
+    return re.sub(r"[\s_-]+", "-", t)[:60] or "capitolo"
+
+
+def _clean_excerpt(text: str, limit: int = 200) -> str:
+    s = re.sub(r"\s+", " ", str(text or "")).strip()
+    if len(s) <= limit:
+        return s
+    cut = s[:limit].rsplit(" ", 1)[0].rstrip(" ,.;:\u2014-")
+    return cut + "\u2026"
+
+
+def _card_tags(ep):
+    guest = (ep.get("guest_name") or "").strip().lower()
+
+    def ok(t):
+        tl = str(t).strip().lower()
+        if not tl or len(str(t)) > 22:
+            return False
+        if "unoxdue" in tl or "intervista" in tl or "episodio" in tl or "puntata" in tl:
+            return False
+        if guest and (tl == guest or guest in tl or tl in guest):
+            return False
+        return True
+
+    for key in ("seo_keywords", "competitions_mentioned"):
+        vals = [str(x).strip() for x in (ep.get(key) or []) if ok(x)]
+        if vals:
+            return vals[:3]
+    ents = ep.get("entities") or {}
+    pool = [str(x).strip() for x in ((ents.get("competitions") or []) + (ents.get("teams") or [])) if ok(x)]
+    if pool:
+        return pool[:3]
+    return [str(t).strip() for t in (ep.get("topics") or []) if ok(t)][:3]
+
+
 def _content_card(ep, section):
     yid = ep.get("youtube_id") or ""
     thumb = ep.get("thumbnail") or (f"https://img.youtube.com/vi/{yid}/maxresdefault.jpg" if yid else f"{SITE_URL}/logo.jpg")
     fallback = f"https://img.youtube.com/vi/{yid}/hqdefault.jpg" if yid else f"{SITE_URL}/logo.jpg"
-    excerpt = ep.get("excerpt")
-    if not excerpt:
+    raw = ep.get("archive_excerpt")
+    if not raw:
         summ = ep.get("summary") or []
-        excerpt = (summ[0] if summ else "") or ep.get("meta_description") or ""
-    tags = [t for t in (ep.get("topics") or [])[:3] if t]
+        raw = ep.get("excerpt") or (summ[0] if summ else "") or ep.get("meta_description") or ""
     return {
         "url": f'{SITE_URL}/{section}/{ep.get("slug")}/',
         "thumb": thumb, "thumb_fallback": fallback,
         "title": ep.get("website_title") or ep.get("title") or "",
         "date": _archive_date(ep.get("published_at")),
         "duration": ep.get("duration") or "",
-        "excerpt": excerpt,
+        "excerpt": _clean_excerpt(raw, 200),
         "guest": ep.get("guest_name") or "",
         "role": ep.get("guest_role") or "",
-        "tags": tags,
+        "tags": _card_tags(ep),
     }
 
 

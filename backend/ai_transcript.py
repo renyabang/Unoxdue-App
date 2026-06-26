@@ -570,3 +570,11 @@ async def get_preview(slug: str) -> dict:
 async def get_transcript_clean(slug: str) -> dict:
     b = await db.transcriptions.find_one({"slug": slug}, {"_id": 0, "clean": 1, "chars_clean": 1})
     return b or {}
+
+
+async def get_transcript_segments(slug: str) -> list:
+    b = await db.transcriptions.find_one({"slug": slug}, {"_id": 0, "segments": 1})
+    if not b:
+        await ensure_bundle(slug)
+        b = await db.transcriptions.find_one({"slug": slug}, {"_id": 0, "segments": 1})
+    return (b or {}).get("segments") or []

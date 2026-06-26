@@ -32,15 +32,17 @@
       </div>
     </section>
 
-    <section class="relative bg-[#14100e] pb-20 lg:pb-28 overflow-hidden">
-      <div class="pointer-events-none absolute bottom-0 left-0 w-[28rem] h-[28rem] rounded-full bg-[#EA4E1B]/8 blur-[120px]"></div>
-      <div class="relative max-w-7xl mx-auto px-5 lg:px-8">
+    <section class="bg-[#f4ebe1] py-16 lg:py-24">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-7">
+          <p class="text-sm font-semibold text-[#9c8b7d]">{{ cards|length }} interviste</p>
+        </div>
         {% if cards %}
-        <div class="grid md:grid-cols-2 gap-7">
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
           {% for c in cards %}{{ m.interview_card(c) }}{% endfor %}
         </div>
         {% else %}
-        <p class="text-center text-white/50 py-10">Nessuna intervista pubblicata al momento. Torna presto!</p>
+        <p class="text-center text-[#9c8b7d] py-10">Nessuna intervista pubblicata al momento. Torna presto!</p>
         {% endif %}
       </div>
     </section>

@@ -312,6 +312,15 @@ TODO deploy futuro: split di `server.py` in `routes/`+`models/` quando il file d
 - **Verifiche**: /episodi/ (11 card) e /interviste/ (2 card) HTTP 200, CollectionPage JSON-LD, canonical, link card corretti, no `<div id="root">`. Screenshot desktop+mobile di tutte e 5 le pagine (2 archivi + singolo episodio + singola intervista + trascrizione) OK. Regressione home/il-podcast/pronostici/team/parlano-di-noi/sitemap tutti 200. CSS SSR ricompilato (65.7KB).
 - **DA FARE**: approvazione utente Blocco 2 → poi Blocco 3 (/team/ + profilo, /parlano-di-noi/, pagine istituzionali, footer) secondo specifiche vincolanti Team già registrate.
 
+### [26/06/2026] BLOCCO 2 — refinement di chiusura richiesti dall'utente. COMPLETATO E APPROVATO.
+- **Archivi uniformati**: Interviste convertito allo stile di Episodi → hero scuro + area crema (#f4ebe1) + card bianche + testo scuro + badge/CTA arancioni + stessi radius/ombra/spaziatura/griglia (3 col). Mantenuto carattere editoriale: badge "Intervista", nome ospite, tag argomenti, copertina scura/arancione. Niente più card nere su sfondo nero.
+- **Testi card ridotti**: nuovo campo `archive_excerpt` (fallback a estratto pulito `_clean_excerpt`, ~200 char, mai l'intero sommario). `line-clamp-6 md:line-clamp-5`, CTA in fondo (`mt-auto`), card ad altezza uniforme (`h-full`). Testo completo solo nella pagina singola.
+- **Tag puliti** (`_card_tags`): preferisce `seo_keywords`/`competitions_mentioned`/entities, filtra rumore (brand, nome ospite, "intervista/episodio/puntata", >22 char).
+- **Episodi**: struttura confermata + header risultati ("N episodi") che predispone i futuri filtri (stagione/giornata/tipologia/ricerca) senza rompere il layout.
+- **Trascrizione divisa per capitoli reali (server-side)**: `_split_transcript_by_chapters` assegna i segmenti SRT (start in secondi) ai capitoli; ogni capitolo = `<section id="slug">` con `<h2>` reale (timestamp arancione → link al punto del video YouTube + titolo) e paragrafi leggibili. Indice "CAPITOLI" → ancore in-page (#slug). `_paragraphs` migliorato: spezza per parole quando i sottotitoli non hanno punteggiatura. Verificato: 12 capitoli, 146 paragrafi (~525 char). Tutta la trascrizione in SSR, leggibile senza JS; ricerca = progressive enhancement. Testo originale non riscritto.
+- **Pagine singole**: verificate (larghezza leggibile max-w-4xl, sezioni, CTA trascrizione, link Pronostici quando disponibile, correlati) — nessuna modifica al design.
+- **Verifiche**: screenshot desktop+mobile di archivio Episodi, archivio Interviste e Trascrizione OK. Tutte le rotte SSR 200, sitemap 200, nessuna regressione. CSS SSR ricompilato.
+
 ### Backlog confermato (dopo parità visiva, NON mescolare al Blocco 2):
 - testi SEO originali su pagine e archivi; contenuti unici per ogni giornata Pronostici; pipeline Perplexity con fonti reali e stato `ai_preview`; controllo similarità tra pagine; keyword map per DataForSEO/Ahrefs; "Parlano di noi" completo; recupero automatico logo testata; approvazione manuale menzioni; audit Schema.org completo; test SSR/structured data/sitemap/canonical.
 
