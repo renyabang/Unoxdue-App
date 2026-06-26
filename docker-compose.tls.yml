@@ -1,0 +1,95 @@
+# UnoXdue — stack di produzione con HTTPS automatico (Caddy + Let's Encrypt).
+# Caddy fa da entrypoint pubblico (80/443), termina il TLS, applica gli header di
+# sicurezza e il redirect www -> dominio, e inoltra al servizio `web` (Nginx) che
+# applica il routing SSR/SPA definito in deploy/nginx.conf.
+#
+# Prerequisiti:
+#   - DNS: A/AAAA di unoxdue.net e www.unoxdue.net puntano al server
+#   - porte 80 e 443 aperte e libere sull'host
+#   - .env compilato (cp .env.example .env) con SITE_URL, DOMAIN, ACME_EMAIL,
+#     JWT_SECRET, ADMIN_PASSWORD, CORS_ORIGINS=https://unoxdue.net, ecc.
+#
+# Avvio:  docker compose -f docker-compose.tls.yml up -d --build
+# Staging (certificati di test, evita rate-limit Let's Encrypt):
+#         CADDY_ACME_CA=https://acme-staging-v02.api.letsencrypt.org/directory \
+#           docker compose -f docker-compose.tls.yml up -d --build
+
+services:
+  mongo:
+    image: mongo:7
+    restart: unless-stopped
+    volumes:
+      - mongo_data:/data/db
+      - ./backups:/backups
+    healthcheck:
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
+      interval: 20s
+      timeout: 5s
+      retries: 5
+
+  backend:
+    build:
+      context: .
+      dockerfile: Dockerfile.backend
+    restart: unless-stopped
+    env_file: .env
+    environment:
+      - MONGO_URL=mongodb://mongo:27017
+      - DB_NAME=${DB_NAME:-unoxdue}
+      # CORS ristretto al dominio (letto da server.py). In .env: CORS_ORIGINS=https://unoxdue.net
+      - CORS_ORIGINS=${CORS_ORIGINS:-https://unoxdue.net}
+    depends_on:
+      mongo:
+        condition: service_healthy
+    volumes:
+      - backend_uploads:/app/backend/uploads
+    expose:
+      - "8001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  web:
+    build:
+      context: .
+      dockerfile: Dockerfile.admin
+      args:
+        REACT_APP_BACKEND_URL: ${SITE_URL}
+    restart: unless-stopped
+    depends_on:
+      backend:
+        condition: service_healthy
+    expose:
+      - "80"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost/admin"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
+
+  caddy:
+    image: caddy:2-alpine
+    restart: unless-stopped
+    ports:
+      - "80:80"
+      - "443:443"
+      - "443:443/udp"
+    environment:
+      - DOMAIN=${DOMAIN:-unoxdue.net}
+      - ACME_EMAIL=${ACME_EMAIL}
+      - CADDY_ACME_CA=${CADDY_ACME_CA:-https://acme-v02.api.letsencrypt.org/directory}
+    volumes:
+      - ./deploy/Caddyfile:/etc/caddy/Caddyfile:ro
+      - caddy_data:/data
+      - caddy_config:/config
+    depends_on:
+      web:
+        condition: service_healthy
+
+volumes:
+  mongo_data:
+  backend_uploads:
+  caddy_data:
+  caddy_config:

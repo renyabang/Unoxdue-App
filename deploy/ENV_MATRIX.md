@@ -27,6 +27,9 @@ Nel repository resta solo `.env.example` con valori vuoti. Questo documento è u
 | `ODDS_API_PROVIDER`/`ODDS_API_URL`/`ODDS_API_KEY` | — | DEPRECATO/DISATTIVATO | Le quote vengono dall'OCR della grafica |
 | `OPENAI_AUDIO_API_KEY` | — | trascrizione audio opzionale | |
 | `CRON_SECRET` | ⚠️ | endpoint cron protetti (`/api/cron/*`) | Necessaria per scheduler esterno |
-| `CORS_ORIGINS` | — | (attualmente NON letta dal codice: server usa `["*"]`) | ⚠️ Restringere il CORS nel codice prima del lancio |
+| `CORS_ORIGINS` | — | backend `server.py` (CORS) | Letta dal codice: lista separata da virgole; `*` solo per test, in prod `https://unoxdue.net` |
+| `DOMAIN` | ⚠️ (TLS) | `docker-compose.tls.yml` + Caddy | Dominio per HTTPS automatico, es. `unoxdue.net` |
+| `ACME_EMAIL` | ⚠️ (TLS) | Caddy (Let's Encrypt) | Email per i certificati |
+| `CADDY_ACME_CA` | — | Caddy | CA ACME; impostare a staging per i test |
 
 Legenda: ✅ obbligatoria · ⚠️ richiesta per la relativa funzione · — opzionale/con default.

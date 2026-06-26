@@ -16,6 +16,9 @@
     <script type="application/ld+json">
 {{ jsonld | safe }}
     </script>
+    {% if faq_jsonld %}<script type="application/ld+json">
+{{ faq_jsonld | safe }}
+    </script>{% endif %}
 {% endblock %}
 {% block main %}
 {% import "_macros.html" as m %}
@@ -32,9 +35,10 @@
       </div>
     </section>
 
-    <section class="bg-[#f4ebe1] py-16 lg:py-24">
+    <section class="bg-[#f4ebe1] pt-16 lg:pt-20 pb-16 lg:pb-24">
       <div class="max-w-7xl mx-auto px-5 lg:px-8">
-        <div class="flex flex-wrap items-center justify-between gap-4 mb-7">
+        {{ m.editorial_intro(intro) }}
+        <div class="flex flex-wrap items-center justify-between gap-4 mb-7 mt-12">
           <p class="text-sm font-semibold text-[#9c8b7d]">{{ cards|length }} episodi</p>
         </div>
         {% if cards %}
@@ -49,4 +53,5 @@
         </div>
       </div>
     </section>
+    {{ m.faq_section(faqs) }}
 {% endblock %}

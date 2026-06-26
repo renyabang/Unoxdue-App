@@ -1,9 +1,17 @@
 {
   "summary": "Block 3 testing (press logos + /team SSR). Backend: 11/11 pytest PASS (admin login, /api/admin/press/list returns 5 records with logo{method,url,approved,initials}, none published; /api/admin/press/logo/{extract,approve,initials} work correctly; .webp static logos served as image/webp; /api/seo/team SSR shows tipster cards in order il-marziano, sono-micuccio, il-ninja AND collab-card-sono-gianmarco; /api/seo/home and /api/seo/il-podcast contain the 3 tipster cards and DO NOT contain 'Sono Gianmarco'; /api/seo/parlano-di-noi 200 with empty state). Frontend admin: login OK, Rassegna stampa page loads 5 rows; press-logo-extract-all-btn triggers extraction and shows press-logo-report with 5 rows (methods: metadata, jsonld, fallback iniziali for irraggiungibile / HTTP 403 — atteso); preview pane shows press-logo-block with all required buttons (press-logo-extract-btn, press-logo-manual-btn, press-logo-initials-btn) and press-logo-approve-btn appears conditionally; CRITICAL POSITIVE: approving the logo does NOT publish the mention (status stays 'Da revisionare'). MINOR UI SYNC: after clicking Approva logo / Usa iniziali, the 'Approvato' badge text was not visible inside press-logo-block within 2.5s of refresh — likely a state-propagation timing issue worth investigating.",
-  "backend_issues": {"critical": [], "minor": []},
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
   "frontend_issues": {
     "ui_bugs": [
-      {"component": "Press.jsx · press-logo-block", "issue": "After POST /api/admin/press/logo/approve (or /initials) the optimistic UI updates row data, but the 'Approvato' badge inside the currently-open preview's press-logo-block did not appear within 2.5s (backend persistence verified OK). Likely refresh() returns before React commits the new preview state, or the setPreview functional update doesn't find the refreshed item in time.", "selector": "[data-testid=\"press-logo-block\"] >> text=Approvato", "priority": "MEDIUM"}
+      {
+        "component": "Press.jsx · press-logo-block",
+        "issue": "After POST /api/admin/press/logo/approve (or /initials) the optimistic UI updates row data, but the 'Approvato' badge inside the currently-open preview's press-logo-block did not appear within 2.5s (backend persistence verified OK). Likely refresh() returns before React commits the new preview state, or the setPreview functional update doesn't find the refreshed item in time.",
+        "selector": "[data-testid=\"press-logo-block\"] >> text=Approvato",
+        "priority": "MEDIUM"
+      }
     ],
     "integration_issues": [],
     "design_issues": []
@@ -34,8 +42,11 @@
   "updated_files": [
     "/app/backend/tests/test_block3_press_logos.py (NEW - 11 tests covering Block 3 backend)"
   ],
-  "success_rate": {"backend": "11/11 = 100%", "frontend": "9/11 = 82% (2 UI-sync timing issues, non-blocking — backend data is correct)"},
-  "test_credentials": "admin@unoxdue.net / !Dbgl5pCTofTPm$I#pfJ0XwEluUB (from /app/memory/test_credentials.md)",
+  "success_rate": {
+    "backend": "11/11 = 100%",
+    "frontend": "9/11 = 82% (2 UI-sync timing issues, non-blocking — backend data is correct)"
+  },
+  "test_credentials": "Admin authentication configured and verified. No credentials stored (see backend/.env).",
   "seed_data_creation": "None. Used existing 5 press records (Cosenzachannel.it x2, Forzaparma.it, Parmalive.com, Calabria7.news).",
   "retest_needed": false,
   "main_agent_can_self_test": true,

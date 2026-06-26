@@ -11,6 +11,9 @@
     <script type="application/ld+json">
 {{ breadcrumb_jsonld | safe }}
     </script>
+    {% if jsonld %}<script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>{% endif %}
 {% endblock %}
 {% block main %}
 {% import "_macros.html" as m %}
@@ -28,6 +31,11 @@
 
     <section class="bg-[#f4ebe1] py-16 lg:py-24 min-h-[40vh]">
       <div class="max-w-5xl mx-auto px-5 lg:px-8">
+        {% if intro %}
+        <div class="max-w-3xl mb-12 space-y-4" data-testid="press-intro">
+          {% for p in intro %}<p class="text-[#5a4d43] text-base sm:text-lg leading-relaxed">{{ p }}</p>{% endfor %}
+        </div>
+        {% endif %}
         {% if items %}
         <div class="grid md:grid-cols-2 gap-5" data-testid="press-archive">
           {% for a in items %}

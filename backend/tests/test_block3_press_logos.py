@@ -5,8 +5,28 @@ import pytest
 import requests
 
 BASE_URL = os.environ.get("REACT_APP_BACKEND_URL", "https://sportivo.preview.emergentagent.com").rstrip("/")
-ADMIN_EMAIL = "admin@unoxdue.net"
-ADMIN_PASSWORD = "!Dbgl5pCTofTPm$I#pfJ0XwEluUB"
+
+
+def _load_admin_creds():
+    """Leggi le credenziali admin SOLO da backend/.env (nessun segreto hardcoded)."""
+    email = os.environ.get("ADMIN_EMAIL")
+    pw = os.environ.get("ADMIN_PASSWORD")
+    if email and pw:
+        return email, pw
+    env_path = os.path.join(os.path.dirname(__file__), "..", ".env")
+    try:
+        with open(env_path) as f:
+            for line in f:
+                if line.startswith("ADMIN_EMAIL=") and not email:
+                    email = line.split("=", 1)[1].strip().strip('"').strip("'")
+                elif line.startswith("ADMIN_PASSWORD=") and not pw:
+                    pw = line.split("=", 1)[1].strip().strip('"').strip("'")
+    except FileNotFoundError:
+        pass
+    return email or "admin@unoxdue.net", pw
+
+
+ADMIN_EMAIL, ADMIN_PASSWORD = _load_admin_creds()
 
 
 @pytest.fixture(scope="module")

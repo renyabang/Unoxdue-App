@@ -1,0 +1,43 @@
+# UnoXdue — Caddy: HTTPS automatico (Let's Encrypt), redirect www -> dominio,
+# header di sicurezza e reverse proxy verso il tier `web` (Nginx + SSR/SPA).
+# Le variabili {$DOMAIN} {$ACME_EMAIL} {$CADDY_ACME_CA} arrivano dall'ambiente (docker-compose.tls.yml).
+
+{
+	email {$ACME_EMAIL}
+	acme_ca {$CADDY_ACME_CA}
+}
+
+# www -> dominio principale (redirect 308 permanente)
+www.{$DOMAIN} {
+	redir https://{$DOMAIN}{uri} permanent
+}
+
+{$DOMAIN} {
+	encode gzip zstd
+
+	# ---- Header di sicurezza ----
+	header {
+		Strict-Transport-Security "max-age=31536000; includeSubDomains; preload"
+		X-Content-Type-Options "nosniff"
+		X-Frame-Options "SAMEORIGIN"
+		Referrer-Policy "strict-origin-when-cross-origin"
+		Permissions-Policy "geolocation=(), microphone=(), camera=()"
+		Cross-Origin-Opener-Policy "same-origin"
+		# rimuove header che rivelano lo stack
+		-Server
+		-X-Powered-By
+	}
+
+	# Content-Security-Policy: consente embed YouTube e risorse same-origin.
+	# Gli stili/JSON-LD/script inline del SSR richiedono 'unsafe-inline'.
+	# Attiva/affina dopo i test: in caso di problemi commenta questo blocco.
+	header Content-Security-Policy "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.twitch.tv; connect-src 'self'; base-uri 'self'; form-action 'self'"
+
+	# ---- Reverse proxy al tier web (Nginx applica il routing SSR/SPA) ----
+	reverse_proxy web:80
+
+	log {
+		output stdout
+		format console
+	}
+}

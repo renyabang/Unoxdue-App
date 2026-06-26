@@ -122,8 +122,36 @@
 </article>
 {% endmacro %}
 
-{# ===== Logo testata rassegna stampa (immagine approvata o fallback iniziali) ===== #}
-{% macro press_logo(a, size="w-12 h-12") %}{% if a.logo %}<img src="{{ a.logo }}" alt="{{ a.source }} logo" loading="lazy" class="{{ size }} rounded-xl object-contain bg-white border border-[#ecdfce] p-1.5 flex-shrink-0" />{% else %}<span class="{{ size }} rounded-xl bg-[#14100e] text-white font-anton flex items-center justify-center flex-shrink-0">{{ a.initials or '?' }}</span>{% endif %}{% endmacro %}
+{# ===== Sezione FAQ riutilizzabile (con stile a fisarmonica semplice) ===== #}
+{% macro faq_section(faqs, title="Domande frequenti") %}
+{% if faqs %}
+<section class="bg-[#fbf7f2] py-14 lg:py-20 border-t border-[#ecdfce]" data-testid="faq-section">
+  <div class="max-w-3xl mx-auto px-5 lg:px-8">
+    <h2 class="font-anton text-[#1a1411] text-3xl sm:text-4xl leading-none mb-8">{{ title }}</h2>
+    <div class="space-y-3">
+      {% for f in faqs %}
+      <details class="group bg-white border border-[#ecdfce] rounded-2xl px-5 py-4" data-testid="faq-item">
+        <summary class="flex items-center justify-between gap-4 cursor-pointer list-none font-archivo font-extrabold text-[#1a1411] text-base sm:text-lg">
+          <span>{{ f.q }}</span>
+          <span class="text-[#EA4E1B] transition-transform group-open:rotate-45 text-2xl leading-none">+</span>
+        </summary>
+        <p class="text-[#5a4d43] text-sm sm:text-base leading-relaxed mt-3">{{ f.a }}</p>
+      </details>
+      {% endfor %}
+    </div>
+  </div>
+</section>
+{% endif %}
+{% endmacro %}
+
+{# ===== Blocco intro editoriale (lista di paragrafi) ===== #}
+{% macro editorial_intro(paragraphs) %}
+{% if paragraphs %}
+<div class="max-w-3xl space-y-4" data-testid="editorial-intro">
+  {% for p in paragraphs %}<p class="text-[#5a4d43] text-base sm:text-lg leading-relaxed">{{ p }}</p>{% endfor %}
+</div>
+{% endif %}
+{% endmacro %}
 
 {# ===== Schedina pronostico (slip) ===== #}
 {% macro slip_card(p) %}

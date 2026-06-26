@@ -272,10 +272,20 @@ def render_team_member(m: dict, related, press=None) -> str:
 
 def render_press_archive(items) -> str:
     canonical = f"{SITE_URL}/parlano-di-noi/"
+    page_desc = ("Parlano di noi: la rassegna stampa di UnoXdue. Articoli e menzioni reali del podcast "
+                 "sulla Serie A e dei suoi protagonisti, con link alle fonti originali.")
+    item_list = [{"@type": "ListItem", "position": i + 1, "url": a.get("url"), "name": a.get("title")}
+                 for i, a in enumerate(items) if a.get("url")]
+    jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "CollectionPage",
+        "name": "Parlano di noi", "description": page_desc, "url": canonical, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "mainEntity": {"@type": "ItemList", "numberOfItems": len(item_list), "itemListElement": item_list},
+    }, ensure_ascii=False, indent=2)
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), ("Parlano di noi", canonical)])
     return env.get_template("press.html").render(
-        items=items, canonical=canonical, site_url=SITE_URL,
-        breadcrumb_jsonld=bc, year=_year(),
+        items=items, canonical=canonical, site_url=SITE_URL, intro=PRESS_INTRO,
+        breadcrumb_jsonld=bc, jsonld=jsonld, year=_year(),
     )
 
 
@@ -422,13 +432,27 @@ def render_home(episodes, interviews, team=None, prediction=None, press=None) ->
     )
 
 
-def render_page(page_title, page_desc, canonical_path, body_html, noindex=False) -> str:
+def render_page(page_title, page_desc, canonical_path, body_html, noindex=False,
+                page_type="WebPage", faqs=None):
     canonical = f"{SITE_URL}{canonical_path}"
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+    page_node = {
+        "@type": page_type, "@id": f"{canonical}#webpage", "url": canonical,
+        "name": f"{page_title} | UnoXdue", "description": page_desc, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
+    }
+    page_jsonld = json.dumps({"@context": "https://schema.org", "@graph": [page_node]},
+                             ensure_ascii=False, indent=2)
+    faq_jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": [{"@type": "Question", "name": f["q"],
+                        "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in faqs],
+    }, ensure_ascii=False, indent=2) if faqs else None
     return env.get_template("page.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical,
         body_html=body_html, site_url=SITE_URL, breadcrumb_jsonld=bc, year=_year(),
-        noindex=noindex,
+        noindex=noindex, page_jsonld=page_jsonld, faq_jsonld=faq_jsonld, faqs=faqs or [],
     )
 
 
@@ -509,10 +533,13 @@ def render_transcript(ep: dict, clean: str, chapters: list, segments=None) -> st
         ("Trascrizione", canonical),
     ])
     jsonld = json.dumps({
-        "@context": "https://schema.org", "@type": "Article",
+        "@context": "https://schema.org", "@type": "WebPage",
+        "@id": f"{canonical}#webpage",
+        "name": f'Trascrizione — {_wt}',
         "headline": f'Trascrizione — {_wt}',
         "description": f'Trascrizione completa della puntata: {_wt}.',
-        "url": canonical, "inLanguage": "it", "isPartOf": episode_url,
+        "url": canonical, "inLanguage": "it",
+        "isPartOf": {"@type": "WebPage", "@id": episode_url},
         "datePublished": ep.get("published_at"),
         "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
     }, ensure_ascii=False, indent=2)
@@ -808,6 +835,57 @@ def _archive_collection_jsonld(page_title, page_desc, canonical, cards):
     }, ensure_ascii=False, indent=2)
 
 
+def _faq_jsonld(faqs):
+    if not faqs:
+        return None
+    return json.dumps({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": [{"@type": "Question", "name": f["q"],
+                        "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in faqs],
+    }, ensure_ascii=False, indent=2)
+
+
+# Testi editoriali unici per gli archivi (niente duplicazioni con la home)
+EPISODI_INTRO = [
+    "Gli episodi di UnoXdue sono il cuore del progetto: ogni settimana il team analizza la giornata di "
+    "Serie A partendo dalle partite e arrivando ai temi caldi del campionato, tra letture tattiche, "
+    "momenti di forma, scelte degli allenatori e calendario. Le puntate nascono in diretta su Twitch e "
+    "restano poi disponibili, complete, su YouTube e qui in archivio.",
+    "In questa sezione trovi tutte le puntate in ordine cronologico, con titolo, sommario e capitoli per "
+    "raggiungere subito i momenti chiave. Dove disponibile, ogni episodio ha una trascrizione testuale "
+    "navigabile, pensata per chi preferisce leggere o cercare un passaggio specifico.",
+]
+EPISODI_FAQS = [
+    {"q": "Ogni quanto esce un nuovo episodio?",
+     "a": "Pubblichiamo nuove puntate con cadenza settimanale, in concomitanza con le giornate di Serie A: prima la diretta su Twitch, poi l'episodio completo su YouTube e in archivio sul sito."},
+    {"q": "Gli episodi hanno la trascrizione?",
+     "a": "Quando è disponibile una fonte reale (sottotitoli o audio), pubblichiamo una trascrizione testuale navigabile, divisa in capitoli con collegamento al minuto esatto del video. Non inventiamo mai citazioni o minutaggi."},
+    {"q": "Dove posso vedere gli episodi completi?",
+     "a": "Tutte le puntate integrali sono sul canale YouTube @unoXdue; dal sito puoi aprire ogni episodio con sommario, capitoli ed eventuale trascrizione."},
+]
+INTERVISTE_INTRO = [
+    "Le interviste di UnoXdue danno voce ai protagonisti del calcio italiano: calciatori, allenatori e "
+    "addetti ai lavori che si raccontano senza fretta, in conversazioni lunghe e curate. Niente domande "
+    "di circostanza: spazio alle storie, alle carriere e ai ricordi che hanno fatto la differenza.",
+    "In questa sezione raccogliamo tutte le interviste pubblicate, con sommario e capitoli per orientarti "
+    "nel racconto. Dove disponibile, ogni intervista è accompagnata da una trascrizione testuale, utile "
+    "per rileggere i passaggi più significativi.",
+]
+INTERVISTE_FAQS = [
+    {"q": "Chi sono gli ospiti delle interviste?",
+     "a": "Protagonisti del calcio italiano: ex calciatori, allenatori e personalità legate alla Serie A e ai campionati che raccontiamo nel podcast."},
+    {"q": "Come posso proporre un'intervista?",
+     "a": "Puoi scriverci dalla pagina Contatti o sui nostri canali social. Per collaborazioni editoriali trovi i dettagli nella pagina Collaborazioni."},
+]
+PRESS_INTRO = [
+    "«Parlano di noi» raccoglie le menzioni reali di UnoXdue e dei suoi protagonisti sulla stampa e sui "
+    "media online. Selezioniamo solo articoli verificati, riconducibili a testate identificabili, e ne "
+    "salviamo titolo, fonte e data insieme al logo dell'editore.",
+    "Ogni segnalazione rimanda all'articolo originale: non riproduciamo i testi integrali, ma offriamo un "
+    "punto di accesso ordinato a ciò che è stato scritto sul podcast e sulle persone che lo animano.",
+]
+
+
 def render_episodi_archive(items) -> str:
     cards = [_content_card(e, "episodi") for e in items]
     canonical = f"{SITE_URL}/episodi/"
@@ -816,9 +894,11 @@ def render_episodi_archive(items) -> str:
                  "tattica e racconto di ogni giornata, con dirette su Twitch e puntate complete su YouTube.")
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
     jsonld = _archive_collection_jsonld(page_title, page_desc, canonical, cards)
+    faq_jsonld = _faq_jsonld(EPISODI_FAQS)
     return env.get_template("episodi_archive.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
-        cards=cards, breadcrumb_jsonld=bc, jsonld=jsonld, year=_year())
+        cards=cards, intro=EPISODI_INTRO, faqs=EPISODI_FAQS,
+        breadcrumb_jsonld=bc, jsonld=jsonld, faq_jsonld=faq_jsonld, year=_year())
 
 
 def render_interviste_archive(items) -> str:
@@ -829,6 +909,8 @@ def render_interviste_archive(items) -> str:
                  "e ricordi raccontati senza filtri.")
     bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
     jsonld = _archive_collection_jsonld(page_title, page_desc, canonical, cards)
+    faq_jsonld = _faq_jsonld(INTERVISTE_FAQS)
     return env.get_template("interviste_archive.html").render(
         page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
-        cards=cards, breadcrumb_jsonld=bc, jsonld=jsonld, year=_year())
+        cards=cards, intro=INTERVISTE_INTRO, faqs=INTERVISTE_FAQS,
+        breadcrumb_jsonld=bc, jsonld=jsonld, faq_jsonld=faq_jsonld, year=_year())

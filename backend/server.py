@@ -23,6 +23,7 @@ import results_provider as rp
 import settlement as settle
 import press
 import press_logos as plogo
+import predictions_ai as pai
 import ai_transcript as ait
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
@@ -494,6 +495,31 @@ async def admin_edit_pick(payload: PickEditIn, admin: str = Depends(get_current_
     return {"ok": True}
 
 
+# ---- Pronostici: pipeline testi unici (Perplexity + LLM, stato ai_preview, NO auto-pubblicazione) ----
+class PredAIGenIn(BaseModel):
+    season: str
+    round: int
+
+
+class PredAIBatchIn(BaseModel):
+    season: str | None = None
+    rounds: list[int] | None = None
+    only_missing: bool = True
+    limit: int = 10
+
+
+@api_router.post("/admin/predictions/ai/generate")
+async def admin_predictions_ai_generate(payload: PredAIGenIn, admin: str = Depends(get_current_admin)):
+    return await pai.generate_draft(payload.season, payload.round)
+
+
+@api_router.post("/admin/predictions/ai/batch")
+async def admin_predictions_ai_batch(payload: PredAIBatchIn, admin: str = Depends(get_current_admin)):
+    return await pai.batch_generate(season=payload.season, rounds=payload.rounds,
+                                    only_missing=payload.only_missing, limit=payload.limit)
+
+
+
 # ---- /live/ : destinazione redirezionabile dall'admin (per QR e link) ----
 DEFAULT_LIVE = {"target": "twitch", "url": ""}
 LIVE_PRESETS = {
@@ -896,7 +922,10 @@ async def ssr_collaborazioni():
     )
     return HTMLResponse(seo.render_page("Collaborazioni",
         "Collabora con UnoXdue: sponsorizzazioni, partnership e progetti editoriali sul calcio e la Serie A.",
-        "/collaborazioni/", body))
+        "/collaborazioni/", body, page_type="AboutPage", faqs=[
+            {"q": "Che tipo di partnership accettate?", "a": "Sponsorizzazioni di episodi e dirette, branded content, interviste e ospitate, oltre a partnership con media e creator del mondo calcio."},
+            {"q": "Come funziona una collaborazione?", "a": "Ci scrivi dalla pagina Contatti descrivendo l'obiettivo; ti rispondiamo con formati disponibili, pubblico di riferimento e modalità di realizzazione."},
+        ]))
 
 
 @api_router.get("/seo/contatti", response_class=HTMLResponse)
@@ -913,7 +942,10 @@ async def ssr_contatti():
     )
     return HTMLResponse(seo.render_page("Contatti",
         "Contatta UnoXdue: Twitch, YouTube, Instagram e TikTok. Collaborazioni, interviste e segnalazioni.",
-        "/contatti/", body))
+        "/contatti/", body, page_type="ContactPage", faqs=[
+            {"q": "Qual è il modo più veloce per contattarvi?", "a": "I canali social ufficiali (Instagram e TikTok @unoxdue_) sono il modo più rapido per scriverci; per le dirette siamo su Twitch e per gli episodi completi su YouTube."},
+            {"q": "Posso proporre un ospite o un'intervista?", "a": "Sì: scrivici tramite i canali social indicando ospite e tema. Valutiamo le proposte in linea con il taglio del podcast sulla Serie A."},
+        ]))
 
 
 @api_router.get("/seo/privacy", response_class=HTMLResponse)
@@ -1130,10 +1162,12 @@ app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads"
 (ROOT_DIR / "static").mkdir(exist_ok=True)
 app.mount("/api/static", StaticFiles(directory=str(ROOT_DIR / "static")), name="static")
 
+_cors_env = os.environ.get("CORS_ORIGINS", "*").strip()
+_cors_origins = ["*"] if _cors_env in ("", "*") else [o.strip() for o in _cors_env.split(",") if o.strip()]
 app.add_middleware(
     CORSMiddleware,
     allow_credentials=True,
-    allow_origins=["*"],
+    allow_origins=_cors_origins,
     allow_methods=["*"],
     allow_headers=["*"],
 )

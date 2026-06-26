@@ -8,9 +8,15 @@
     <meta property="og:description" content="{{ page_desc }}" />
     <meta property="og:url" content="{{ canonical }}" />
     <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    {% if page_jsonld %}<script type="application/ld+json">
+{{ page_jsonld | safe }}
+    </script>{% endif %}
     <script type="application/ld+json">
 {{ breadcrumb_jsonld | safe }}
     </script>
+    {% if faq_jsonld %}<script type="application/ld+json">
+{{ faq_jsonld | safe }}
+    </script>{% endif %}
 {% endblock %}
 {% block main %}
 {% import "_macros.html" as m %}
@@ -31,4 +37,5 @@
         {{ body_html | safe }}
       </div>
     </section>
+    {{ m.faq_section(faqs) }}
 {% endblock %}
