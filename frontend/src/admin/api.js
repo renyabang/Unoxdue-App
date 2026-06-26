@@ -89,6 +89,16 @@ export const api = {
   pressSetStatus: (id, status) => req("/admin/press/set-status", { method: "POST", body: { id, status } }),
   pressLink: (body) => req("/admin/press/link", { method: "POST", body }),
   pressLinkOptions: () => req("/admin/press/link-options"),
+  pressLogoExtract: (id) => req("/admin/press/logo/extract", { method: "POST", body: { id } }),
+  pressLogoExtractAll: (onlyMissing = false) => req(`/admin/press/logo/extract-all?only_missing=${onlyMissing}`, { method: "POST", body: {} }),
+  pressLogoApprove: (id) => req("/admin/press/logo/approve", { method: "POST", body: { id } }),
+  pressLogoInitials: (id) => req("/admin/press/logo/initials", { method: "POST", body: { id } }),
+  pressLogoManual: (id, file) => {
+    const fd = new FormData();
+    fd.append("id", id);
+    fd.append("image", file);
+    return req("/admin/press/logo/manual", { method: "POST", form: fd });
+  },
   transcriptSeoStatus: () => req("/admin/transcripts/seo/status"),
   transcriptSeoGenerate: (slug) => req(`/admin/transcripts/seo/generate/${slug}`, { method: "POST" }),
   transcriptSeoPreview: (slug) => req(`/admin/transcripts/seo/preview/${slug}`),

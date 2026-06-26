@@ -1,0 +1,93 @@
+{% extends "base.html" %}
+{% block title %}Il team | UnoXdue{% endblock %}
+{% block head %}
+    <meta name="description" content="{{ page_desc }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="Il team | UnoXdue" />
+    <meta property="og:description" content="{{ page_desc }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    <meta name="twitter:image" content="{{ site_url }}/logo.jpg" />
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+{% import "_macros.html" as m %}
+    {# ===== HERO ===== #}
+    <section class="relative overflow-hidden bg-[#14100e] pt-12 pb-0">
+      <div class="pointer-events-none absolute -top-28 -right-20 w-[34rem] h-[34rem] rounded-full bg-[#EA4E1B]/20 blur-[120px]"></div>
+      <div class="pointer-events-none absolute -bottom-32 -left-20 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
+      <div class="relative max-w-7xl mx-auto px-5 lg:px-8 pb-16">
+        <nav class="flex items-center gap-2 text-xs text-white/50" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">Il team</span>
+        </nav>
+        <span class="inline-flex items-center gap-2 mt-6 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.users("w-4 h-4") }} Le voci di UnoXdue</span>
+        <h1 class="font-anton text-white text-5xl sm:text-6xl lg:text-7xl mt-3 leading-[0.92]">Il team</h1>
+        <p class="text-white/70 text-lg sm:text-xl leading-relaxed mt-6 max-w-3xl">{{ page_desc }}</p>
+      </div>
+      {{ m.marquee_strip() }}
+    </section>
+
+    {# ===== HOST (Antonello, in evidenza) ===== #}
+    {% if host %}
+    <section class="bg-[#fbf7f2] py-16 lg:py-24">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="flex items-center gap-4 mb-8">
+          <span class="font-archivo font-extrabold uppercase tracking-[0.2em] text-sm text-[#1a1411]">L'host</span>
+          <span class="h-px flex-1 bg-[#e6d8c6]"></span>
+        </div>
+        {{ m.host_card(host, site_url) }}
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== TIPSTER (Marziano · Micuccio · Ninja → gesti 1 · X · 2) ===== #}
+    {% if tipsters %}
+    <section class="bg-[#f4ebe1] py-16 lg:py-24 border-y border-[#ecdfce]">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="max-w-2xl">
+          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Uno · X · Due</span>
+          <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">I tipster</h2>
+          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Tre stili, tre segni: l'1 del Marziano, la X di Micuccio e il 2 del Ninja. Insieme firmano le giocate di ogni giornata di Serie A.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-12" data-testid="team-tipsters">
+          {% for t in tipsters %}{{ m.tipster_card(t, site_url) }}{% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== ALTRI COMPONENTI E COLLABORATORI ===== #}
+    {% if collaborators %}
+    <section class="bg-[#fbf7f2] py-16 lg:py-24">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="max-w-2xl">
+          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">La squadra si allarga</span>
+          <h2 class="font-anton text-[#1a1411] text-3xl sm:text-4xl lg:text-5xl mt-3 leading-none">Altri componenti e collaboratori</h2>
+          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Chi contribuisce a UnoXdue dietro e davanti al microfono.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-12" data-testid="team-collaborators">
+          {% for c in collaborators %}{{ m.collab_card(c, site_url) }}{% endfor %}
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== CTA ===== #}
+    <section class="bg-[#EA4E1B] py-16 lg:py-20">
+      <div class="max-w-5xl mx-auto px-5 lg:px-8 text-center">
+        <h2 class="font-anton text-[#14100e] text-3xl sm:text-4xl lg:text-5xl leading-none">Vivi UnoXdue in diretta</h2>
+        <p class="text-[#3a1e10] text-base sm:text-lg mt-4 font-medium max-w-2xl mx-auto">Segui il team ogni settimana su Twitch e ritrova episodi, interviste e pronostici sul sito.</p>
+        <div class="flex flex-col sm:flex-row gap-4 mt-8 justify-center">
+          <a href="https://www.twitch.tv/unoxdue_" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 bg-[#14100e] hover:bg-black text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">{{ m.twitch("w-5 h-5") }} Segui su Twitch</a>
+          <a href="{{ site_url }}/episodi/" class="inline-flex items-center justify-center gap-2 bg-white/90 hover:bg-white text-[#14100e] font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">Esplora gli episodi {{ m.chevron("w-4 h-4") }}</a>
+        </div>
+      </div>
+    </section>
+{% endblock %}

@@ -22,6 +22,7 @@ import youtube as yt
 import results_provider as rp
 import settlement as settle
 import press
+import press_logos as plogo
 import ai_transcript as ait
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
@@ -617,6 +618,46 @@ async def admin_press_runs(limit: int = 20, admin: str = Depends(get_current_adm
     return await press.list_runs(limit)
 
 
+# ---- Loghi testate "Parlano di noi" (estrazione gerarchica, revisione manuale, no auto-pubblicazione) ----
+class PressLogoIn(BaseModel):
+    id: str
+
+
+@api_router.post("/admin/press/logo/extract")
+async def admin_press_logo_extract(payload: PressLogoIn, admin: str = Depends(get_current_admin)):
+    return await plogo.extract_for(payload.id)
+
+
+@api_router.post("/admin/press/logo/extract-all")
+async def admin_press_logo_extract_all(only_missing: bool = False,
+                                       admin: str = Depends(get_current_admin)):
+    return await plogo.extract_all(only_missing=only_missing)
+
+
+@api_router.post("/admin/press/logo/approve")
+async def admin_press_logo_approve(payload: PressLogoIn, admin: str = Depends(get_current_admin)):
+    return await plogo.approve_logo(payload.id)
+
+
+@api_router.post("/admin/press/logo/initials")
+async def admin_press_logo_initials(payload: PressLogoIn, admin: str = Depends(get_current_admin)):
+    return await plogo.use_initials(payload.id)
+
+
+@api_router.post("/admin/press/logo/manual")
+async def admin_press_logo_manual(id: str = Form(...), image: UploadFile = File(...),
+                                  admin: str = Depends(get_current_admin)):
+    content = await image.read()
+    opt = plogo._validate_and_optimize(content)
+    if not opt:
+        raise HTTPException(status_code=400, detail="Immagine logo non valida (troppo piccola, vuota o formato non supportato)")
+    fname, h = plogo._save_webp(id, opt["bytes"])
+    image_url = f"{SITE_URL}/api/static/press_logos/{fname}"
+    return await plogo.set_manual(id, image_url, opt["w"], opt["h"], "image/webp")
+
+
+
+
 # Cron protetto (scheduler esterno). schedule: weekly=30gg, monthly=90gg. Backfill NON automatico.
 @api_router.post("/cron/press")
 async def cron_press(secret: str = Query(...), schedule: str = Query("weekly")):
@@ -946,12 +987,7 @@ async def ssr_prediction(season: str, round_: int):
 @api_router.get("/seo/team", response_class=HTMLResponse)
 async def ssr_team_archive():
     items = await db.team.find({}, {"_id": 0}).sort("order", 1).to_list(100)
-    cards = [{"url": f'{SITE_URL}/team/{m["slug"]}/', "title": m.get("name"),
-              "kicker": m.get("badge", ""),
-              "thumbnail": (m.get("photo") if str(m.get("photo","")).startswith("http") else f'{SITE_URL}{m.get("photo","")}')}
-             for m in items]
-    return HTMLResponse(seo.render_archive("Il team",
-        "Un host e tre tipster: il team di UnoXdue.", "/team/", cards))
+    return HTMLResponse(seo.render_team(items))
 
 
 @api_router.get("/seo/team/{slug}", response_class=HTMLResponse)

@@ -279,6 +279,43 @@ def render_press_archive(items) -> str:
     )
 
 
+def render_team(team) -> str:
+    """Pagina /team/: host in alto, i 3 tipster (gesti 1·X·2), poi altri componenti/collaboratori."""
+    host, tip_by_slug, collaborators = None, {}, []
+    for t in team:
+        t = dict(t); t.pop("_id", None)
+        t["photo_abs"] = _abs_url(t.get("photo"))
+        if t.get("is_host"):
+            host = t
+        elif t.get("slug") in HOME_TIPSTER_ORDER:
+            tip_by_slug[t.get("slug")] = t
+        else:
+            t["draft"] = (t.get("status") == "bozza") or not (t.get("bio") and t.get("role"))
+            collaborators.append(t)
+    tipsters = [tip_by_slug[s] for s in HOME_TIPSTER_ORDER if s in tip_by_slug]
+    collaborators.sort(key=lambda x: x.get("order", 999))
+
+    canonical = f"{SITE_URL}/team/"
+    page_desc = ("Un host e tre tipster, più gli altri componenti e collaboratori: scopri le voci di "
+                 "UnoXdue, il podcast sulla Serie A.")
+    members = ([host] if host else []) + tipsters + collaborators
+    item_list = [{"@type": "ListItem", "position": i + 1,
+                  "url": f'{SITE_URL}/team/{mm.get("slug")}/', "name": mm.get("name")}
+                 for i, mm in enumerate(members) if mm.get("slug")]
+    jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "CollectionPage",
+        "name": "Il team | UnoXdue", "description": page_desc, "url": canonical, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "mainEntity": {"@type": "ItemList", "numberOfItems": len(item_list), "itemListElement": item_list},
+    }, ensure_ascii=False, indent=2)
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), ("Il team", canonical)])
+    return env.get_template("team.html").render(
+        host=host, tipsters=tipsters, collaborators=collaborators,
+        canonical=canonical, page_desc=page_desc, site_url=SITE_URL,
+        jsonld=jsonld, breadcrumb_jsonld=bc, year=_year(),
+    )
+
+
 def _abs_url(u: str) -> str:
     if not u:
         return f"{SITE_URL}/logo.jpg"
@@ -349,9 +386,6 @@ def render_home(episodes, interviews, team=None, prediction=None, press=None) ->
         else:
             tipsters_by_slug[t.get("slug")] = t
     tipsters = [tipsters_by_slug[s] for s in HOME_TIPSTER_ORDER if s in tipsters_by_slug]
-    for s, t in tipsters_by_slug.items():
-        if t not in tipsters:
-            tipsters.append(t)
 
     pred = None
     if prediction:
@@ -650,9 +684,6 @@ def render_il_podcast(team=None, content=None) -> str:
         else:
             tipsters_by_slug[t.get("slug")] = t
     tipsters = [tipsters_by_slug[s] for s in HOME_TIPSTER_ORDER if s in tipsters_by_slug]
-    for s, t in tipsters_by_slug.items():
-        if t not in tipsters:
-            tipsters.append(t)
 
     # contenuti editoriali modificabili dall'admin (fallback ai default)
     c = il_podcast_defaults()

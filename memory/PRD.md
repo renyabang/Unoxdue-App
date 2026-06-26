@@ -324,3 +324,38 @@ TODO deploy futuro: split di `server.py` in `routes/`+`models/` quando il file d
 ### Backlog confermato (dopo parità visiva, NON mescolare al Blocco 2):
 - testi SEO originali su pagine e archivi; contenuti unici per ogni giornata Pronostici; pipeline Perplexity con fonti reali e stato `ai_preview`; controllo similarità tra pagine; keyword map per DataForSEO/Ahrefs; "Parlano di noi" completo; recupero automatico logo testata; approvazione manuale menzioni; audit Schema.org completo; test SSR/structured data/sitemap/canonical.
 
+
+
+
+---
+
+## ✅ BLOCCO 3 — COMPLETATO (26 giugno 2026)
+
+Ultimo blocco di parità visiva SSR. Testato: backend 11/11 (pytest `test_block3_press_logos.py`, `iteration_16.json`), frontend admin essenziali OK, screenshot desktop+mobile.
+
+### Team (`/team/`)
+- Nuovo template `templates/team.html` + `seo.render_team()`; route `/api/seo/team` (prima usava archivio generico).
+- Layout: hero scuro → **host Antonello** in evidenza → **3 tipster** (ordine il-marziano `1`, sono-micuccio `X`, il-ninja `2`) → sezione **"Altri componenti e collaboratori"** → CTA.
+- Foto gesti: macro `tipster_card` ora usa `aspect-[3/4]` (= rapporto sorgente 900×1200, ZERO crop) + classe `.gesture-img` con `object-position`/scala configurabili per membro via CSS vars. Campi DB: `image_position_x/y`, `mobile_image_position_x/y`, `image_scale` (default 50/50, scala 1). Gesti 1·X·2 + microfono completamente visibili desktop e mobile. Stesso fix applicato al profilo singolo `team_member.html`.
+- **Sono Gianmarco**: aggiunto a `db.team` (slug `sono-gianmarco`, IG `_.sonogianmarco_`, `status='bozza'`, `order=10`). Card bozza (`collab_card`: solo nome+foto+IG, badge "Scheda in arrivo"). Visibile SOLO in `/team/`: `render_home`/`render_il_podcast` filtrano i tipster a `HOME_TIPSTER_ORDER` (Gianmarco escluso da home e il-podcast — verificato).
+- ⚠️ Foto Gianmarco: l'immagine fornita (`photo_2026-06-24 10.16.58.jpeg`) è un grafico/logo su sfondo bianco, NON un ritratto → da sostituire con un ritratto reale.
+
+### Parlano di noi — loghi testate
+- Nuovo modulo `press_logos.py`: estrazione gerarchica (JSON-LD publisher.logo → metadata og:logo/itemprop/image_src/TileImage → apple-touch-icon → favicon → /favicon.ico → manuale → fallback iniziali). Validazione (min 32px, no trasparente/monocolore/banner, ratio max 6:1), ottimizzazione WebP ≤512px, **copia locale** in `static/press_logos/` (servita su `/api/static/press_logos/...`), niente hotlink. Metadati salvati per logo (dominio, source_url, metodo, data, mime, dim orig/ott, sha1, http_status, errore, review_status, approved).
+- Endpoint admin: `/api/admin/press/logo/{extract|extract-all|approve|initials|manual}`. **Nessuna auto-pubblicazione**: approvare il logo NON pubblica la menzione (conferma separata).
+- Admin `Press.jsx`: pulsante bulk "Estrai loghi" + report; pannello anteprima con blocco logo (preview/iniziali, metodo, dimensioni, source URL, badge stato) e pulsanti Rigenera/Approva logo/Sostituisci/Usa iniziali (update ottimistico).
+- `press.py` `published_archive`/`published_for` mostrano il logo solo se `approved` (altrimenti iniziali). Pagina pubblica `/parlano-di-noi/` e anteprima home: solo menzioni `published` (al momento 0 → stato vuoto, corretto).
+- **Estrazione eseguita sui 5 record**: Cosenzachannel ×2 (metadata 144×144 ✓), Parmalive (jsonld 144×144 ✓), Calabria7 (irraggiungibile → iniziali), Forzaparma (HTTP 403 → iniziali). Nessuno pubblicato (attende approvazione manuale).
+
+### Pagine istituzionali & footer
+- `/collaborazioni`, `/contatti`, `/privacy`, `/cookie` e 404 condividono hero/layout comune (`page.html`) — render 200 verificato. Footer brand "UnoXdue" e link già corretti (nessuna modifica necessaria).
+
+### Note operative
+- `must_change_password` admin impostato a `false` (login diretto). Credenziali in `/app/memory/test_credentials.md`.
+- CSS SSR ricompilato (`scripts/build_ssr_css.sh`) per le nuove classi (`aspect-[3/4]`).
+
+### Prossimi passi (in attesa approvazione Blocco 3)
+1. Sostituire la foto di "Sono Gianmarco" con un ritratto reale (l'attuale è un placeholder).
+2. Revisione/approvazione manuale dei 5 loghi + eventuale pubblicazione menzioni in admin.
+3. Deploy esterno Docker/Nginx (solo dopo approvazione).
+4. Backlog SEO: testi originali, pipeline Perplexity (`ai_preview`), audit Schema.org + `VideoObject` con `hasPart`/`Clip` sui capitoli trascrizione.

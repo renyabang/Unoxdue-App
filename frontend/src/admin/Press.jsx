@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import {
   Newspaper, Search, Loader2, ExternalLink, CheckCircle2, XCircle, AlertTriangle, Link2, Eye,
-  History, Ban, ChevronDown, Plus,
+  History, Ban, ChevronDown, Plus, Image as ImageIcon, Upload, RefreshCw, Type,
 } from "lucide-react";
 import { api } from "./api";
 
@@ -91,6 +91,34 @@ export default function Press() {
     setBusy("");
   };
 
+  const logoExtract = async (id) => {
+    setBusy(`logo-${id}`);
+    try { const r = await api.pressLogoExtract(id); if (r.logo) setPreview((p) => (p && p.id === id ? { ...p, logo: r.logo } : p)); await refresh(); } catch (e) { /* noop */ }
+    setBusy("");
+  };
+  const logoApprove = async (id) => {
+    setBusy(`logo-${id}`);
+    try { await api.pressLogoApprove(id); setPreview((p) => (p && p.id === id ? { ...p, logo: { ...(p.logo || {}), approved: true, review_status: "approved" } } : p)); await refresh(); } catch (e) { /* noop */ }
+    setBusy("");
+  };
+  const logoInitials = async (id) => {
+    setBusy(`logo-${id}`);
+    try { const r = await api.pressLogoInitials(id); setPreview((p) => (p && p.id === id ? { ...p, logo: { method: "initials", url: null, initials: r.initials, approved: true, review_status: "approved" } } : p)); await refresh(); } catch (e) { /* noop */ }
+    setBusy("");
+  };
+  const logoManual = async (id, file) => {
+    if (!file) return;
+    setBusy(`logo-${id}`);
+    try { await api.pressLogoManual(id, file); await refresh(); } catch (e) { alert(e.message); }
+    setBusy("");
+  };
+  const logoExtractAll = async () => {
+    setBusy("logo-all");
+    try { const r = await api.pressLogoExtractAll(false); setRunRes({ ok: true, logo_report: r.results, window_label: "Estrazione loghi" }); await refresh(); }
+    catch (e) { /* noop */ }
+    setBusy("");
+  };
+
   const demo = status?.demo;
 
   return (
@@ -127,12 +155,43 @@ export default function Press() {
           <button data-testid="press-run-btn" onClick={run} disabled={busy === "run"} className="inline-flex items-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
             {busy === "run" ? <Loader2 className="w-4 h-4 animate-spin" /> : <Search className="w-4 h-4" />} Cerca rassegna
           </button>
+          <button data-testid="press-logo-extract-all-btn" onClick={logoExtractAll} disabled={busy === "logo-all"} className="inline-flex items-center gap-2 border border-[#e2d4c2] text-[#4a3d34] hover:bg-[#fbf7f2] text-sm font-bold uppercase tracking-wide px-4 py-2.5 rounded-lg disabled:opacity-60 transition-colors">
+            {busy === "logo-all" ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImageIcon className="w-4 h-4" />} Estrai loghi
+          </button>
         </div>
         <p className="text-[#6b5d52] text-xs mt-2">Nessuna pubblicazione automatica: i risultati restano in <b>Trovato</b> o <b>Da revisionare</b>. Esclusi i social e i duplicati; i falsi positivi non vengono associati.</p>
         {busy === "run" && <p className="text-[#6b5d52] text-xs mt-1 inline-flex items-center gap-1"><Loader2 className="w-3 h-3 animate-spin" /> Ricerca reale in corso (può richiedere ~30-60s)…</p>}
         {runRes && (
           <div data-testid="press-run-result" className="mt-3 text-sm bg-[#fbf7f2] rounded-lg p-3 text-[#4a3d34]">
             {runRes.ok ? (
+              runRes.logo_report ? (
+                <div data-testid="press-logo-report">
+                  <p className="font-semibold text-[#1a1411] inline-flex items-center gap-2"><ImageIcon className="w-4 h-4 text-[#EA4E1B]" /> Estrazione loghi completata ({runRes.logo_report.length})</p>
+                  <div className="overflow-x-auto mt-2">
+                    <table className="w-full text-xs">
+                      <thead className="text-[#9c8b7d] text-left"><tr>
+                        <th className="py-1.5 pr-3 font-semibold">Testata</th>
+                        <th className="py-1.5 pr-3 font-semibold">Metodo</th>
+                        <th className="py-1.5 pr-3 font-semibold">Originale</th>
+                        <th className="py-1.5 pr-3 font-semibold">Ottimizzato</th>
+                        <th className="py-1.5 pr-3 font-semibold">Revisione</th>
+                      </tr></thead>
+                      <tbody>
+                        {runRes.logo_report.map((r) => (
+                          <tr key={r.id} className="border-t border-[#f0e7da]">
+                            <td className="py-1.5 pr-3 text-[#4a3d34]">{r.source}</td>
+                            <td className="py-1.5 pr-3">{r.method || "—"}</td>
+                            <td className="py-1.5 pr-3">{r.orig || "—"}</td>
+                            <td className="py-1.5 pr-3">{r.optimized || "—"}</td>
+                            <td className="py-1.5 pr-3">{r.review_status}{r.error ? ` · ${r.error}` : ""}</td>
+                          </tr>
+                        ))}
+                      </tbody>
+                    </table>
+                  </div>
+                  <p className="text-[11px] text-[#9c8b7d] mt-2">Loghi salvati come copia locale ottimizzata. Nessuna pubblicazione automatica: approva il logo e poi pubblica la menzione.</p>
+                </div>
+              ) : (
               <div>
                 <p className="font-semibold text-[#1a1411] inline-flex items-center gap-2"><CheckCircle2 className="w-4 h-4 text-green-600" /> Ricerca completata · {runRes.window_label}</p>
                 <div className="grid grid-cols-2 sm:grid-cols-4 gap-2 mt-2">
@@ -156,6 +215,7 @@ export default function Press() {
                 </div>
                 <p className="text-[11px] text-[#9c8b7d] mt-2">Categorie esclusive: grezzi − duplicati = unici = social + non-articolo + irraggiungibili + falsi positivi + validi. {runRes.stats?.funnel_balanced ? "✓ funnel coerente" : "⚠ verifica funnel"}</p>
               </div>
+              )
             ) : <span className="text-red-600">Errore: {runRes.error}</span>}
           </div>
         )}
@@ -249,6 +309,43 @@ export default function Press() {
                     </div>
                   </div>
                 )}
+              </div>
+
+              <div className="mt-4 pt-4 border-t border-[#f0e7da]" data-testid="press-logo-block">
+                <div className="flex items-center justify-between mb-2">
+                  <p className="text-xs font-semibold text-[#6b5d52] uppercase tracking-wide">Logo testata</p>
+                  {preview.logo?.approved && <span className="text-[10px] font-bold uppercase tracking-wide bg-green-100 text-green-700 px-2 py-0.5 rounded-full">Approvato</span>}
+                  {preview.logo && !preview.logo.approved && <span className="text-[10px] font-bold uppercase tracking-wide bg-amber-100 text-amber-700 px-2 py-0.5 rounded-full">{preview.logo.review_status === "ok" ? "Da approvare" : "Da revisionare"}</span>}
+                </div>
+                <div className="flex items-start gap-3">
+                  {preview.logo?.url
+                    ? <img src={preview.logo.url} alt={preview.source} data-testid="press-logo-preview" className="w-16 h-16 rounded-xl object-contain bg-white border border-[#ecdfce] p-1.5 flex-shrink-0" />
+                    : <span data-testid="press-logo-initials" className="w-16 h-16 rounded-xl bg-[#14100e] text-white font-anton text-xl flex items-center justify-center flex-shrink-0">{preview.logo?.initials || "?"}</span>}
+                  <div className="text-xs text-[#6b5d52] space-y-0.5 min-w-0">
+                    <p><b>{preview.source}</b> {preview.logo?.domain ? `· ${preview.logo.domain}` : ""}</p>
+                    <p>Metodo: <b>{preview.logo?.method || "—"}</b>{preview.logo?.orig_w ? ` · ${preview.logo.orig_w}×${preview.logo.orig_h}px → ${preview.logo.w}×${preview.logo.h}px` : ""}</p>
+                    {preview.logo?.source_url && <a href={preview.logo.source_url} target="_blank" rel="noopener noreferrer" className="text-[#EA4E1B] hover:text-[#d3430f] break-all block">{preview.logo.source_url}</a>}
+                    {preview.logo?.error && <p className="text-amber-700">{preview.logo.error}</p>}
+                    {!preview.logo && <p className="text-[#9c8b7d] italic">Logo non ancora estratto.</p>}
+                  </div>
+                </div>
+                <div className="flex flex-wrap gap-2 mt-3">
+                  <button data-testid="press-logo-extract-btn" onClick={() => logoExtract(preview.id)} disabled={busy === `logo-${preview.id}`} className="inline-flex items-center gap-1.5 border border-[#e2d4c2] text-[#4a3d34] hover:bg-[#fbf7f2] text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg disabled:opacity-60">
+                    {busy === `logo-${preview.id}` ? <Loader2 className="w-3.5 h-3.5 animate-spin" /> : <RefreshCw className="w-3.5 h-3.5" />} {preview.logo ? "Rigenera" : "Estrai"}
+                  </button>
+                  {preview.logo?.url && !preview.logo?.approved && (
+                    <button data-testid="press-logo-approve-btn" onClick={() => logoApprove(preview.id)} disabled={busy === `logo-${preview.id}`} className="inline-flex items-center gap-1.5 bg-green-600 hover:bg-green-700 text-white text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg disabled:opacity-60">
+                      <CheckCircle2 className="w-3.5 h-3.5" /> Approva logo
+                    </button>
+                  )}
+                  <label data-testid="press-logo-manual-btn" className="inline-flex items-center gap-1.5 border border-[#e2d4c2] text-[#4a3d34] hover:bg-[#fbf7f2] text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg cursor-pointer">
+                    <Upload className="w-3.5 h-3.5" /> Sostituisci
+                    <input type="file" accept="image/*" className="hidden" onChange={(e) => logoManual(preview.id, e.target.files?.[0])} />
+                  </label>
+                  <button data-testid="press-logo-initials-btn" onClick={() => logoInitials(preview.id)} disabled={busy === `logo-${preview.id}`} className="inline-flex items-center gap-1.5 border border-[#e2d4c2] text-[#4a3d34] hover:bg-[#fbf7f2] text-xs font-bold uppercase tracking-wide px-2.5 py-1.5 rounded-lg disabled:opacity-60">
+                    <Type className="w-3.5 h-3.5" /> Usa iniziali
+                  </button>
+                </div>
               </div>
 
               <div className="mt-5 flex flex-wrap gap-2">

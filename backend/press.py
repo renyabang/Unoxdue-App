@@ -23,6 +23,7 @@ import requests
 
 from config_db import db, SITE_URL, PERPLEXITY_API_KEY
 import automations as auto
+import press_logos as pl
 
 ALLOWED_STATUS = {"found", "verified", "review", "published", "discarded", "error"}
 CURATED = {"published", "discarded", "verified"}  # non sovrascritti dal re-run
@@ -660,8 +661,10 @@ async def published_for(slug: str):
         if cu in seen:
             continue
         seen.add(cu)
+        lg = pl.public_logo(it)
         out.append({"source": it.get("source"), "title": it.get("title"), "date": it.get("date"),
-                    "summary": it.get("summary"), "url": it.get("url")})
+                    "summary": it.get("summary"), "url": it.get("url"),
+                    "logo": lg["url"], "initials": lg["initials"]})
     return out
 
 
@@ -681,7 +684,8 @@ async def published_archive():
                                   "label": LINK_LABEL.get(l.get("type"), "Collegato"),
                                   "title": l.get("title")})
         out.append({"source": it.get("source"), "title": it.get("title"), "date": it.get("date"),
-                    "summary": it.get("summary"), "url": it.get("url"), "internals": internals})
+                    "summary": it.get("summary"), "url": it.get("url"), "internals": internals,
+                    "logo": pl.public_logo(it)["url"], "initials": pl.public_logo(it)["initials"]})
     return out
 
 

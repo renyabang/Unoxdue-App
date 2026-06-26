@@ -29,7 +29,7 @@
         <div class="grid md:grid-cols-[minmax(0,0.8fr)_minmax(0,1.2fr)] gap-8 lg:gap-12 items-center mt-6">
           <div class="relative">
             <div class="absolute -inset-3 rounded-[2rem] bg-[#EA4E1B]/20 blur-2xl"></div>
-            <img src="{{ m_.photo_abs }}" alt="{{ m_.name }}" class="relative w-full aspect-[4/5] object-cover object-top rounded-[2rem] ring-1 ring-white/10 shadow-2xl max-w-sm mx-auto md:mx-0" />
+            <img src="{{ m_.photo_abs }}" alt="{{ m_.name }}" class="gesture-img relative w-full aspect-[3/4] object-cover rounded-[2rem] ring-1 ring-white/10 shadow-2xl max-w-sm mx-auto md:mx-0" style="{{ m.frame_style(m_) }}" />
           </div>
           <div>
             {% if m_.badge %}<span class="inline-flex items-center bg-[#EA4E1B] text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{{ m_.badge }}</span>{% endif %}

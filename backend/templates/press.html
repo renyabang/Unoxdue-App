@@ -31,9 +31,12 @@
         {% if items %}
         <div class="grid md:grid-cols-2 gap-5" data-testid="press-archive">
           {% for a in items %}
-          <article class="bg-white border border-[#ecdfce] rounded-2xl p-6 flex flex-col">
-            <p class="text-[11px] font-bold uppercase tracking-wide text-[#9c8b7d]">{{ a.source }}{% if a.date %} &middot; {{ a.date }}{% endif %}</p>
-            <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="font-archivo font-extrabold text-lg text-[#1a1411] mt-1.5 hover:text-[#EA4E1B] transition-colors">{{ a.title }}</a>
+          <article class="bg-white border border-[#ecdfce] rounded-2xl p-6 flex flex-col" data-testid="press-archive-card">
+            <div class="flex items-center gap-3">
+              {{ m.press_logo(a, "w-12 h-12") }}
+              <p class="text-[11px] font-bold uppercase tracking-wide text-[#9c8b7d]">{{ a.source }}{% if a.date %} &middot; {{ a.date }}{% endif %}</p>
+            </div>
+            <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="font-archivo font-extrabold text-lg text-[#1a1411] mt-3 hover:text-[#EA4E1B] transition-colors">{{ a.title }}</a>
             {% if a.summary %}<p class="text-sm text-[#6b5d52] mt-2 leading-relaxed flex-1">{{ a.summary }}</p>{% endif %}
             <div class="flex items-center justify-between gap-3 mt-4 pt-4 border-t border-[#f0e7da] flex-wrap">
               <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#EA4E1B] hover:text-[#d3430f]">Leggi l'articolo {{ m.chevron("w-3.5 h-3.5") }}</a>

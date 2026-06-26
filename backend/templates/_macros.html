@@ -81,12 +81,15 @@
 </article>
 {% endmacro %}
 
-{# ===== Card tipster ===== #}
+{# ===== Inquadratura foto (gesti 1·X·2): object-position + scala configurabili per membro ===== #}
+{% macro frame_style(t) %}--op:{{ t.get('image_position_x', 50) }}% {{ t.get('image_position_y', 50) }}%;--op-m:{{ t.get('mobile_image_position_x', t.get('image_position_x', 50)) }}% {{ t.get('mobile_image_position_y', t.get('image_position_y', 52)) }}%;--sc:{{ t.get('image_scale', 1) }}{% endmacro %}
+
+{# ===== Card tipster (foto coi gesti: niente crop che nasconda le mani) ===== #}
 {% macro tipster_card(t, site_url) %}
-<a href="{{ site_url }}/team/{{ t.slug }}/" class="lift group h-full bg-white rounded-3xl overflow-hidden border border-[#ecdfce] shadow-sm hover:shadow-2xl hover:border-[#EA4E1B]/40 flex flex-col">
-  <div class="relative aspect-[4/5] overflow-hidden bg-[#14100e]">
-    <img src="{{ t.photo_abs }}" alt="{{ t.name }} — {{ t.role }}" loading="lazy" class="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105" />
-    <span class="absolute inset-0 bg-gradient-to-t from-[#14100e] via-[#14100e]/20 to-transparent"></span>
+<a href="{{ site_url }}/team/{{ t.slug }}/" class="lift group h-full bg-white rounded-3xl overflow-hidden border border-[#ecdfce] shadow-sm hover:shadow-2xl hover:border-[#EA4E1B]/40 flex flex-col" data-testid="tipster-card-{{ t.slug }}">
+  <div class="relative aspect-[3/4] overflow-hidden bg-[#14100e]">
+    <img src="{{ t.photo_abs }}" alt="{{ t.name }} — {{ t.role }}" loading="lazy" class="gesture-img w-full h-full object-cover" style="{{ frame_style(t) }}" />
+    <span class="absolute inset-0 bg-gradient-to-t from-[#14100e] via-[#14100e]/15 to-transparent"></span>
     {% if t.badge %}<span class="absolute top-4 left-4 bg-[#EA4E1B] text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{{ t.badge }}</span>{% endif %}
     <div class="absolute bottom-4 left-4 right-4">
       <h3 class="font-anton text-white text-2xl xl:text-3xl leading-none">{{ t.name }}</h3>
@@ -99,6 +102,28 @@
   </div>
 </a>
 {% endmacro %}
+
+{# ===== Card collaboratore / altri componenti (bozza: solo nome + foto + Instagram) ===== #}
+{% macro collab_card(c, site_url) %}
+<article class="lift group h-full bg-white rounded-3xl overflow-hidden border border-[#ecdfce] shadow-sm hover:shadow-2xl hover:border-[#EA4E1B]/40 flex flex-col" data-testid="collab-card-{{ c.slug }}">
+  <div class="relative aspect-[3/4] overflow-hidden bg-[#14100e]">
+    {% if c.photo_abs %}<img src="{{ c.photo_abs }}" alt="{{ c.name }}" loading="lazy" class="gesture-img w-full h-full object-cover" style="{{ frame_style(c) }}" />{% endif %}
+    <span class="absolute inset-0 bg-gradient-to-t from-[#14100e] via-[#14100e]/15 to-transparent"></span>
+    {% if c.draft %}<span class="absolute top-4 left-4 bg-white/90 text-[#1a1411] text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">Scheda in arrivo</span>{% endif %}
+    <div class="absolute bottom-4 left-4 right-4">
+      <h3 class="font-anton text-white text-2xl leading-none">{{ c.name }}</h3>
+      {% if c.role %}<p class="text-[#F6D9BF] text-sm font-semibold mt-1">{{ c.role }}</p>{% endif %}
+    </div>
+  </div>
+  <div class="p-6 flex flex-col flex-1">
+    {% if c.bio %}<p class="text-[#6b5d52] text-sm leading-relaxed flex-1">{{ c.bio }}</p>{% else %}<p class="text-[#9c8b7d] text-sm leading-relaxed flex-1 italic">Profilo in aggiornamento: presto la scheda completa.</p>{% endif %}
+    {% if c.instagram %}<a href="{{ c.instagram }}" target="_blank" rel="noopener noreferrer" class="mt-5 inline-flex items-center gap-2 text-[#1a1411] font-bold uppercase tracking-wide text-sm hover:text-[#EA4E1B] transition-colors">{{ instagram("w-4 h-4") }} Instagram</a>{% endif %}
+  </div>
+</article>
+{% endmacro %}
+
+{# ===== Logo testata rassegna stampa (immagine approvata o fallback iniziali) ===== #}
+{% macro press_logo(a, size="w-12 h-12") %}{% if a.logo %}<img src="{{ a.logo }}" alt="{{ a.source }} logo" loading="lazy" class="{{ size }} rounded-xl object-contain bg-white border border-[#ecdfce] p-1.5 flex-shrink-0" />{% else %}<span class="{{ size }} rounded-xl bg-[#14100e] text-white font-anton flex items-center justify-center flex-shrink-0">{{ a.initials or '?' }}</span>{% endif %}{% endmacro %}
 
 {# ===== Schedina pronostico (slip) ===== #}
 {% macro slip_card(p) %}
@@ -138,9 +163,12 @@
 
 {# ===== Card "Parlano di noi" (anteprima home) ===== #}
 {% macro press_card(a) %}
-<article class="bg-white border border-[#ecdfce] rounded-2xl p-6 flex flex-col">
-  <p class="text-[11px] font-bold uppercase tracking-wide text-[#9c8b7d]">{{ a.source }}{% if a.date %} &middot; {{ a.date }}{% endif %}</p>
-  <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="font-archivo font-extrabold text-lg text-[#1a1411] mt-1.5 hover:text-[#EA4E1B] transition-colors">{{ a.title }}</a>
+<article class="bg-white border border-[#ecdfce] rounded-2xl p-6 flex flex-col" data-testid="press-card">
+  <div class="flex items-center gap-3">
+    {{ press_logo(a, "w-11 h-11") }}
+    <p class="text-[11px] font-bold uppercase tracking-wide text-[#9c8b7d]">{{ a.source }}{% if a.date %} &middot; {{ a.date }}{% endif %}</p>
+  </div>
+  <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="font-archivo font-extrabold text-lg text-[#1a1411] mt-3 hover:text-[#EA4E1B] transition-colors">{{ a.title }}</a>
   {% if a.summary %}<p class="text-sm text-[#6b5d52] mt-2 leading-relaxed flex-1">{{ a.summary }}</p>{% endif %}
   <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#EA4E1B] hover:text-[#d3430f]">Leggi l'articolo {{ chevron("w-3.5 h-3.5") }}</a>
 </article>
