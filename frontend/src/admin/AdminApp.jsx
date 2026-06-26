@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper, FileText,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper, FileText, LayoutTemplate,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -15,6 +15,7 @@ import YouTube from "./YouTube";
 import Results from "./Results";
 import Press from "./Press";
 import TranscriptSEO from "./TranscriptSEO";
+import SitePages from "./SitePages";
 
 function Login({ onLogged }) {
   const [email, setEmail] = useState("admin@unoxdue.net");
@@ -105,6 +106,7 @@ const nav = [
   { to: "/admin/trascrizioni", label: "Trascrizioni SEO", icon: FileText },
   { to: "/admin/schedine", label: "Schedine / Pronostici", icon: Ticket },
   { to: "/admin/grafiche", label: "Grafiche", icon: ImageIcon },
+  { to: "/admin/pagine", label: "Pagine", icon: LayoutTemplate },
   { to: "/admin/risultati", label: "Risultati", icon: Trophy },
   { to: "/admin/rassegna", label: "Rassegna stampa", icon: Newspaper },
   { to: "/admin/log", label: "Log automazioni", icon: ScrollText },
@@ -160,6 +162,7 @@ export default function AdminApp() {
           <Route path="trascrizioni" element={<TranscriptSEO />} />
           <Route path="schedine" element={<SlipUploader />} />
           <Route path="grafiche" element={<Graphics />} />
+          <Route path="pagine" element={<SitePages />} />
           <Route path="risultati" element={<Results />} />
           <Route path="rassegna" element={<Press />} />
           <Route path="log" element={<Logs />} />

@@ -1,5 +1,5 @@
-import React, { useEffect, useState } from "react";
-import { Image as ImageIcon, Loader2, RefreshCw, Download, Link2, Pencil, Save, X, Radio, AlertTriangle } from "lucide-react";
+import React, { useEffect, useState, useRef } from "react";
+import { Image as ImageIcon, Loader2, RefreshCw, Download, Link2, Pencil, Save, X, Radio, AlertTriangle, ImagePlus, Upload, RotateCcw } from "lucide-react";
 import { api } from "./api";
 
 const FORMATS = [
@@ -179,6 +179,129 @@ function PickCard({ pred, pick, idx, onChanged }) {
   );
 }
 
+function CoverCard({ pred, onChanged }) {
+  const [busy, setBusy] = useState(false);
+  const [msg, setMsg] = useState("");
+  const [bust, setBust] = useState(Date.now());
+  const fileRef = useRef(null);
+  const cover = pred.cover || {};
+  const fmts = cover.formats || {};
+  const hor = fmts.horizontal || {};
+  const sq = fmts.square || {};
+  const tb = fmts.thumb || {};
+  const isManual = cover.source === "manual";
+  const hasErr = cover.errors && Object.keys(cover.errors).length > 0;
+  const kb = (b) => (b ? (b / 1024).toFixed(0) + " KB" : "");
+
+  const gen = async (force) => {
+    setBusy(true); setMsg("");
+    try {
+      const r = await api.coverGenerate({ season: pred.season, round: pred.round, force: !!force });
+      setBust(Date.now());
+      setMsg(
+        r.skipped === "manual" ? "Copertina manuale presente: usa «Ripristina automatica» per sostituirla." :
+        r.skipped === "unchanged" ? "Nessuna modifica: copertina già aggiornata (idempotente)." :
+        r.ok ? "Copertina generata." : "Errore: " + JSON.stringify(r.errors || r.error)
+      );
+      onChanged && onChanged();
+    } catch (e) { setMsg("Errore: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  const revert = async () => {
+    if (isManual && !window.confirm("Sostituire la copertina manuale con quella automatica?")) return;
+    setBusy(true); setMsg("");
+    try {
+      const r = await api.coverRevert({ season: pred.season, round: pred.round });
+      setBust(Date.now());
+      setMsg(r.ok ? "Copertina automatica ripristinata." : "Errore.");
+      onChanged && onChanged();
+    } catch (e) { setMsg("Errore: " + e.message); }
+    finally { setBusy(false); }
+  };
+
+  const onManualPick = async (e) => {
+    const f = e.target.files && e.target.files[0];
+    if (!f) return;
+    if (cover.source && !window.confirm("Caricare una copertina manuale? Sostituirà quella attuale e non verrà più rigenerata automaticamente.")) {
+      e.target.value = ""; return;
+    }
+    setBusy(true); setMsg("");
+    try {
+      await api.coverManual(pred.season, pred.round, f);
+      setBust(Date.now());
+      setMsg("Copertina manuale caricata.");
+      onChanged && onChanged();
+    } catch (err) { setMsg("Errore: " + err.message); }
+    finally { setBusy(false); e.target.value = ""; }
+  };
+
+  return (
+    <div className="bg-white rounded-xl border border-[#ecdfce] p-4 mb-4" data-testid={`cover-card-${pred.season}-${pred.round}`}>
+      <div className="flex items-center justify-between gap-3 flex-wrap">
+        <div className="flex items-center gap-2">
+          <ImageIcon className="w-5 h-5 text-[#EA4E1B]" />
+          <h3 className="font-archivo font-extrabold text-[#1a1411]">Copertina pronostico</h3>
+          {cover.source && <span data-testid={`cover-source-${pred.season}-${pred.round}`} className={`text-xs font-bold px-2 py-1 rounded-full ${isManual ? "bg-violet-100 text-violet-700" : "bg-emerald-100 text-emerald-700"}`}>{isManual ? "Manuale" : "Automatica"}</span>}
+          {hasErr && <span className="text-xs font-bold px-2 py-1 rounded-full bg-red-100 text-red-700 inline-flex items-center gap-1"><AlertTriangle className="w-3 h-3" /> Errore parziale</span>}
+        </div>
+        <div className="flex items-center gap-2 flex-wrap">
+          <button onClick={() => gen(false)} disabled={busy} data-testid={`cover-generate-${pred.season}-${pred.round}`}
+            className="inline-flex items-center gap-2 bg-[#14100e] hover:bg-[#EA4E1B] text-white text-sm font-bold uppercase tracking-wide px-3 py-2 rounded-lg disabled:opacity-60">
+            {busy ? <Loader2 className="w-4 h-4 animate-spin" /> : <ImagePlus className="w-4 h-4" />} {cover.source ? "Genera" : "Genera copertina"}
+          </button>
+          <button onClick={() => gen(true)} disabled={busy} data-testid={`cover-regen-${pred.season}-${pred.round}`}
+            className="inline-flex items-center gap-2 border border-[#ecdfce] hover:border-[#EA4E1B] text-[#1a1411] text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-60">
+            <RefreshCw className="w-4 h-4" /> Rigenera
+          </button>
+          <button onClick={() => fileRef.current && fileRef.current.click()} disabled={busy} data-testid={`cover-manual-${pred.season}-${pred.round}`}
+            className="inline-flex items-center gap-2 border border-[#ecdfce] hover:border-[#EA4E1B] text-[#1a1411] text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-60">
+            <Upload className="w-4 h-4" /> Usa immagine manuale
+          </button>
+          <input ref={fileRef} type="file" accept="image/*" className="hidden" onChange={onManualPick} />
+          {isManual && (
+            <button onClick={revert} disabled={busy} data-testid={`cover-revert-${pred.season}-${pred.round}`}
+              className="inline-flex items-center gap-2 border border-[#ecdfce] hover:border-[#EA4E1B] text-[#1a1411] text-sm font-bold px-3 py-2 rounded-lg disabled:opacity-60">
+              <RotateCcw className="w-4 h-4" /> Ripristina automatica
+            </button>
+          )}
+        </div>
+      </div>
+
+      {(hor.url || sq.url) ? (
+        <div className="grid sm:grid-cols-3 gap-4 mt-4">
+          {hor.url && (
+            <div className="border border-[#f0e7da] rounded-lg p-2" data-testid={`cover-horizontal-${pred.season}-${pred.round}`}>
+              <p className="text-xs font-semibold text-[#6b5d52] mb-1">1200×675 · OG / pagina / archivio</p>
+              <img src={`${hor.url}?t=${bust}`} alt="Copertina orizzontale" className="w-full rounded border border-[#ecdfce] bg-[#14100e]" />
+              <p className="text-[11px] text-[#9c8b7d] mt-1">{hor.format || "webp"} · {hor.w}×{hor.h}{hor.bytes ? " · " + kb(hor.bytes) : ""}</p>
+            </div>
+          )}
+          {sq.url && (
+            <div className="border border-[#f0e7da] rounded-lg p-2" data-testid={`cover-square-${pred.season}-${pred.round}`}>
+              <p className="text-xs font-semibold text-[#6b5d52] mb-1">1200×1200 · social</p>
+              <img src={`${sq.url}?t=${bust}`} alt="Copertina quadrata" className="w-full rounded border border-[#ecdfce] bg-[#14100e]" />
+              <p className="text-[11px] text-[#9c8b7d] mt-1">{sq.format || "webp"} · {sq.w}×{sq.h}{sq.bytes ? " · " + kb(sq.bytes) : ""}</p>
+            </div>
+          )}
+          {tb.url && (
+            <div className="border border-[#f0e7da] rounded-lg p-2" data-testid={`cover-thumb-${pred.season}-${pred.round}`}>
+              <p className="text-xs font-semibold text-[#6b5d52] mb-1">600×338 · miniatura card</p>
+              <img src={`${tb.url}?t=${bust}`} alt="Miniatura card" className="w-full rounded border border-[#ecdfce] bg-[#14100e]" />
+              <p className="text-[11px] text-[#9c8b7d] mt-1">{tb.format || "webp"} · {tb.w}×{tb.h}{tb.bytes ? " · " + kb(tb.bytes) : ""}</p>
+            </div>
+          )}
+        </div>
+      ) : (
+        <p className="text-sm text-[#9c8b7d] mt-3">Nessuna copertina generata. Viene creata automaticamente alla pubblicazione di una giornata valida, oppure manualmente da qui.</p>
+      )}
+
+      {cover.generated_at && <p className="text-[11px] text-[#9c8b7d] mt-3">Generata: {new Date(cover.generated_at).toLocaleString("it-IT")}{cover.template_version ? " · template v" + cover.template_version : ""}{cover.content_hash ? " · hash " + cover.content_hash : ""}</p>}
+      {msg && <p className="text-xs text-[#4a3d34] mt-2 break-all" data-testid={`cover-msg-${pred.season}-${pred.round}`}>{msg}</p>}
+    </div>
+  );
+}
+
 export default function Graphics() {
   const [preds, setPreds] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -206,6 +329,7 @@ export default function Graphics() {
         {preds.map((p) => (
           <div key={`${p.season}-${p.round}`} data-testid={`pred-${p.season}-${p.round}`}>
             <h2 className="font-archivo font-extrabold text-[#1a1411] text-lg mb-3">{p.competition || "Serie A"} · {p.season} · {p.round}ª giornata</h2>
+            <CoverCard pred={p} onChanged={load} />
             <div className="space-y-4">
               {(p.picks || []).map((pick, i) => (
                 <PickCard key={i} pred={p} pick={pick} idx={i} onChanged={load} />

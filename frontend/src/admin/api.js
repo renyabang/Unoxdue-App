@@ -55,9 +55,20 @@ export const api = {
   aiProcessBatch: (body) => req("/admin/ai/process-batch", { method: "POST", body }),
   adminPredictions: () => req("/admin/predictions"),
   generateGraphics: (body) => req("/admin/graphics/generate", { method: "POST", body }),
+  coverGenerate: (body) => req("/admin/covers/generate", { method: "POST", body }),
+  coverRevert: (body) => req("/admin/covers/revert", { method: "POST", body }),
+  coverManual: (season, round, file) => {
+    const fd = new FormData();
+    fd.append("season", season);
+    fd.append("round", round);
+    fd.append("image", file);
+    return req("/admin/covers/manual", { method: "POST", form: fd });
+  },
   editPick: (body) => req("/admin/predictions/pick", { method: "PUT", body }),
   getLive: () => req("/admin/live"),
   setLive: (body) => req("/admin/live", { method: "PUT", body }),
+  ilPodcastContent: () => req("/admin/site-content/il-podcast"),
+  saveIlPodcastContent: (content) => req("/admin/site-content/il-podcast", { method: "PUT", body: { content } }),
   youtubeStats: () => req("/admin/youtube/stats"),
   youtubeBackfill: (body) => req("/admin/youtube/backfill", { method: "POST", body }),
   websubStatus: () => req("/admin/youtube/websub"),

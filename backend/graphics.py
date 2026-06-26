@@ -10,6 +10,7 @@ Pipeline approvata: HTML/CSS/SVG controllato -> Playwright/Chromium headless -> 
 """
 import asyncio
 import base64
+import hashlib
 import io
 import os
 import re
@@ -396,7 +397,7 @@ async def generate_pick(season: str, round_: int, pick_index: int) -> dict:
 # Solo: logo UnoXdue, "Pronostici Serie A", stagione, giornata, sfondo nero/arancione,
 # elementi tattici discreti. Nessun dato di giocata, nessun bookmaker. WebP 1200x675 + 1200x1200.
 # ============================================================
-COVER_FORMATS = {"horizontal": (1200, 675), "square": (1200, 1200)}
+COVER_FORMATS = {"horizontal": (1200, 675), "square": (1200, 1200), "thumb": (600, 338)}
 COVERS_DIR = UPLOAD_DIR / "covers"
 COVERS_DIR.mkdir(parents=True, exist_ok=True)
 
@@ -477,14 +478,55 @@ async def build_cover_html(pred: dict, w: int, h: int, logo_uri) -> str:
 </div></body></html>"""
 
 
-async def generate_cover(season: str, round_: int) -> dict:
+# Versione del template grafico: cambiala quando modifichi il rendering della copertina
+# per forzare una rigenerazione controllata (l'hash del contenuto la include).
+COVER_TEMPLATE_VERSION = "1"
+
+
+def _cover_content_hash(pred: dict) -> str:
+    """Hash deterministico dei dati che influenzano la copertina (idempotenza)."""
+    parts = [
+        str(pred.get("season", "")),
+        str(pred.get("round", "")),
+        str(pred.get("competition", "Serie A")),
+        str(pred.get("public_title") or pred.get("h1") or ""),
+        "logo:/logo.jpg",
+        COVER_TEMPLATE_VERSION,
+    ]
+    return hashlib.sha1("||".join(parts).encode("utf-8")).hexdigest()[:16]
+
+
+def _cover_files_exist(season: str, round_: int) -> bool:
+    out_dir = COVERS_DIR / season / str(round_)
+    return all((out_dir / f"{fmt}.webp").exists() for fmt in COVER_FORMATS)
+
+
+async def generate_cover(season: str, round_: int, force: bool = False, source: str = "automatic") -> dict:
+    """Genera le copertine WebP (1200x675 + 1200x1200). Idempotente e rispettosa dell'override manuale."""
     pred = await db.predictions.find_one({"season": season, "round": round_})
     if not pred:
         return {"ok": False, "error": "Pronostico non trovato."}
+    existing = pred.get("cover") or {}
+
+    # Override manuale: non sovrascrivere automaticamente una copertina caricata a mano.
+    if existing.get("source") == "manual" and source != "manual" and not force:
+        return {"ok": True, "cover": existing, "skipped": "manual"}
+
+    new_hash = _cover_content_hash(pred)
+    # Idempotenza: stesso contenuto + stessa versione grafica -> nessuna rigenerazione, nessun file duplicato.
+    if (not force and source == "automatic"
+            and existing.get("source") == "automatic"
+            and existing.get("content_hash") == new_hash
+            and existing.get("template_version") == COVER_TEMPLATE_VERSION
+            and _cover_files_exist(season, round_)):
+        return {"ok": True, "cover": existing, "skipped": "unchanged"}
+
     logo_uri = await _embed_image("/logo.jpg")
     out_dir = COVERS_DIR / season / str(round_)
     out_dir.mkdir(parents=True, exist_ok=True)
-    cover, errors = {}, {}
+
+    from datetime import datetime, timezone
+    formats_out, errors = {}, {}
     for fmt, (w, h) in COVER_FORMATS.items():
         last_err = None
         for _ in range(2):
@@ -492,23 +534,96 @@ async def generate_cover(season: str, round_: int) -> dict:
                 html = await build_cover_html(pred, w, h, logo_uri)
                 png = await asyncio.wait_for(_render_png(html, w, h), timeout=30)
                 webp = _png_to_webp(png)
+                # path deterministico -> sovrascrittura in place, URL stabile (mai casuale)
                 (out_dir / f"{fmt}.webp").write_bytes(webp)
                 rel = f"/api/uploads/covers/{season}/{round_}/{fmt}.webp"
-                cover[fmt] = {"url": f"{SITE_URL}{rel}", "w": w, "h": h}
+                formats_out[fmt] = {
+                    "url": f"{SITE_URL}{rel}", "w": w, "h": h, "format": "webp",
+                    "bytes": len(webp), "hash": hashlib.sha1(webp).hexdigest()[:16],
+                }
                 last_err = None
                 break
             except Exception as e:
                 last_err = str(e)
         if last_err:
             errors[fmt] = last_err
-    from datetime import datetime, timezone
-    cover["alt"] = f"Pronostici {pred.get('competition','Serie A')} {_season_short(season)} {round_}ª giornata — UnoXdue"
-    cover["generated_at"] = datetime.now(timezone.utc).isoformat()
+
+    cover = {
+        "source": "automatic",
+        "template_version": COVER_TEMPLATE_VERSION,
+        "content_hash": new_hash,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "alt": f"Pronostici {pred.get('competition','Serie A')} {_season_short(season)} {round_}ª giornata — UnoXdue",
+        "formats": formats_out,
+    }
+    if errors:
+        cover["errors"] = errors
     await db.predictions.update_one({"season": season, "round": round_}, {"$set": {"cover": cover}})
     import automations as auto
-    status = "ok" if cover.get("horizontal") else "error"
+    status = "ok" if formats_out.get("horizontal") else "error"
     await auto.log_automation("cover", status,
-                              f"Copertine giornata {round_} ({season}): {len([k for k in cover if k in COVER_FORMATS])}/2 formati"
+                              f"Copertine giornata {round_} ({season}): {len(formats_out)}/{len(COVER_FORMATS)} formati"
                               + (f", errori: {list(errors)}" if errors else ""),
                               {"season": season, "round": round_})
-    return {"ok": bool(cover.get("horizontal")), "cover": cover, "errors": errors}
+    return {"ok": bool(formats_out.get("horizontal")), "cover": cover, "errors": errors}
+
+
+def _is_cover_eligible(pred: dict) -> bool:
+    """Regole di eleggibilità per la generazione AUTOMATICA della copertina."""
+    if not pred:
+        return False
+    if (pred.get("status") or "") != "pubblicato":   # niente bozze/anteprime/noindex
+        return False
+    if not pred.get("season") or pred.get("round") in (None, ""):
+        return False
+    picks = pred.get("picks") or []
+    if not any((p.get("selections") or p.get("total_odds")) for p in picks):  # almeno un pronostico reale
+        return False
+    if pred.get("is_demo") or pred.get("demo") or pred.get("fixture"):  # mai per record di test/demo
+        return False
+    return True
+
+
+async def auto_generate_cover(season: str, round_: int) -> dict:
+    """Generazione automatica alla pubblicazione. NON blocca mai la pubblicazione: errori solo loggati."""
+    try:
+        pred = await db.predictions.find_one({"season": season, "round": round_})
+        if not _is_cover_eligible(pred):
+            return {"ok": False, "skipped": "ineligible"}
+        if (pred.get("cover") or {}).get("source") == "manual":
+            return {"ok": True, "skipped": "manual"}
+        return await generate_cover(season, round_, source="automatic")
+    except Exception as e:
+        try:
+            import automations as auto
+            await auto.log_automation("cover", "error",
+                                      f"Auto-cover giornata {round_} ({season}) fallita: {e}",
+                                      {"season": season, "round": round_})
+        except Exception:
+            pass
+        return {"ok": False, "error": str(e)}
+
+
+async def set_manual_cover(season: str, round_: int, image_url: str,
+                           w: int = 1200, h: int = 675, bytes_: int = 0, square_url: str = None) -> dict:
+    """Salva una copertina manuale (cover_source=manual). Non verrà sovrascritta automaticamente."""
+    pred = await db.predictions.find_one({"season": season, "round": round_})
+    if not pred:
+        return {"ok": False, "error": "Pronostico non trovato."}
+    from datetime import datetime, timezone
+    formats_out = {"horizontal": {"url": image_url, "w": w, "h": h, "format": "manual", "bytes": bytes_}}
+    if square_url:
+        formats_out["square"] = {"url": square_url, "w": 1200, "h": 1200, "format": "manual"}
+    cover = {
+        "source": "manual",
+        "template_version": None,
+        "content_hash": None,
+        "generated_at": datetime.now(timezone.utc).isoformat(),
+        "alt": f"Pronostici {pred.get('competition','Serie A')} {_season_short(season)} {round_}ª giornata — UnoXdue",
+        "formats": formats_out,
+    }
+    await db.predictions.update_one({"season": season, "round": round_}, {"$set": {"cover": cover}})
+    import automations as auto
+    await auto.log_automation("cover", "ok", f"Copertina MANUALE impostata (giornata {round_}, {season})",
+                              {"season": season, "round": round_})
+    return {"ok": True, "cover": cover}

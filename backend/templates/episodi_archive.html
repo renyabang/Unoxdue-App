@@ -1,0 +1,49 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} | UnoXdue{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block head %}
+    <meta name="description" content="{{ page_desc }}" />
+    <link rel="canonical" href="{{ canonical }}" />
+    <meta name="robots" content="index, follow" />
+    <meta property="og:title" content="{{ page_title }} | UnoXdue" />
+    <meta property="og:description" content="{{ page_desc }}" />
+    <meta property="og:url" content="{{ canonical }}" />
+    <meta property="og:image" content="{{ site_url }}/logo.jpg" />
+    <meta name="twitter:image" content="{{ site_url }}/logo.jpg" />
+    <script type="application/ld+json">
+{{ breadcrumb_jsonld | safe }}
+    </script>
+    <script type="application/ld+json">
+{{ jsonld | safe }}
+    </script>
+{% endblock %}
+{% block main %}
+{% import "_macros.html" as m %}
+    <section class="relative overflow-hidden bg-[#14100e] pt-10 pb-14">
+      <div class="pointer-events-none absolute -top-24 -right-16 w-[32rem] h-[32rem] rounded-full bg-[#EA4E1B]/15 blur-[120px]"></div>
+      <div class="relative max-w-7xl mx-auto px-5 lg:px-8">
+        <nav class="flex items-center gap-2 text-xs text-white/50" aria-label="breadcrumb">
+          <a href="{{ site_url }}/" class="hover:text-white">Home</a> {{ m.chevron("w-3 h-3") }}
+          <span class="text-white/70">Episodi</span>
+        </nav>
+        <span class="inline-flex items-center gap-2 mt-6 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.youtube("w-4 h-4") }} Contenuti recenti</span>
+        <h1 class="font-anton text-white text-5xl sm:text-6xl lg:text-7xl mt-3 leading-[0.92]">Episodi</h1>
+        <p class="text-white/65 text-lg leading-relaxed mt-5 max-w-2xl">{{ page_desc }}</p>
+      </div>
+    </section>
+
+    <section class="bg-[#f4ebe1] py-16 lg:py-24">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        {% if cards %}
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7">
+          {% for c in cards %}{{ m.episode_card(c) }}{% endfor %}
+        </div>
+        {% else %}
+        <p class="text-center text-[#9c8b7d] py-10">Nessun episodio pubblicato al momento. Torna presto!</p>
+        {% endif %}
+        <div class="text-center mt-12">
+          <a href="https://www.youtube.com/@unoXdue" target="_blank" rel="noopener noreferrer" class="inline-flex items-center gap-2 bg-[#1a1411] hover:bg-[#EA4E1B] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">{{ m.youtube("w-5 h-5") }} Vedi tutti su YouTube</a>
+        </div>
+      </div>
+    </section>
+{% endblock %}

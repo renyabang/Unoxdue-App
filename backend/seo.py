@@ -209,12 +209,18 @@ def render_prediction(p: dict, noindex: bool = False) -> str:
     p.setdefault("intro", "")
     p.setdefault("picks", [])
     canonical = f'{SITE_URL}/pronostici/serie-a/{season}/giornata-{rnd}/'
-    jsonld = json.dumps({
+    ci = _cover_image(p)
+    article = {
         "@context": "https://schema.org", "@type": "Article",
         "headline": p["h1"], "description": p["meta_description"], "url": canonical,
         "inLanguage": "it",
         "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
-    }, ensure_ascii=False, indent=2)
+    }
+    if ci["has_cover"]:
+        article["image"] = {"@type": "ImageObject", "url": ci["og"], "width": ci["w"], "height": ci["h"]}
+    else:
+        article["image"] = f"{SITE_URL}/logo.jpg"
+    jsonld = json.dumps(article, ensure_ascii=False, indent=2)
     bc = breadcrumb_jsonld([
         ("Home", f"{SITE_URL}/"),
         ("Pronostici", f"{SITE_URL}/pronostici/"),
@@ -224,6 +230,7 @@ def render_prediction(p: dict, noindex: bool = False) -> str:
         p=p, canonical=canonical, site_url=SITE_URL, jsonld=jsonld,
         breadcrumb_jsonld=bc, year=_year(),
         results_attribution=_results_attribution(), noindex=noindex,
+        og_image=ci["og"], og_image_w=ci["w"], og_image_h=ci["h"], og_image_alt=ci["alt"],
     )
 
 
@@ -273,6 +280,30 @@ def _abs_url(u: str) -> str:
     if not u:
         return f"{SITE_URL}/logo.jpg"
     return u if u.startswith("http") else f"{SITE_URL}{u}"
+
+
+def _season_short(season: str) -> str:
+    parts = (season or "").split("-")
+    if len(parts) == 2 and len(parts[1]) == 4:
+        return f"{parts[0]}/{parts[1][2:]}"
+    return season or ""
+
+
+def _cover_image(p: dict) -> dict:
+    """Estrae la copertina (WebP automatica o manuale) per OG/Twitter/JSON-LD, con fallback al logo."""
+    cover = p.get("cover") or {}
+    fmts = cover.get("formats") or {}
+    hor = fmts.get("horizontal") or {}
+    sq = fmts.get("square") or {}
+    has = bool(hor.get("url"))
+    return {
+        "og": hor.get("url") or f"{SITE_URL}/logo.jpg",
+        "square": sq.get("url"),
+        "w": hor.get("w") or 1200,
+        "h": hor.get("h") or 630,
+        "alt": cover.get("alt") or p.get("h1") or "Pronostici UnoXdue",
+        "has_cover": has,
+    }
 
 
 # Ordine fisso del team in homepage (host in evidenza + tipster). Modificabile da qui.
@@ -407,3 +438,280 @@ def render_transcript(ep: dict, clean: str, chapters: list) -> str:
         paragraphs=paras, chapters=ep.get("chapters", []), jsonld=jsonld,
         breadcrumb_jsonld=bc, year=_year(),
     )
+
+
+# ============================ Archivio Pronostici ============================
+PRONOSTICI_INTRO = [
+    "I pronostici di UnoXdue nascono dal lavoro settimanale del team: Sono Micuccio, il Ninja e il "
+    "Marziano studiano la giornata di Serie A e propongono le loro selezioni, partita per partita. "
+    "In questa sezione raccogliamo le giocate di ogni turno, così come sono state presentate in diretta "
+    "e nelle puntate del podcast.",
+    "Pubblichiamo solo dati reali. Per ogni selezione indichiamo competizione, partita, mercato ed esito "
+    "proposto; le quote riportate sono quelle rilevate dalla grafica comparativa fornita dal team al "
+    "momento della pubblicazione e hanno valore puramente indicativo, perché possono variare nel tempo e "
+    "tra i diversi operatori.",
+    "Dopo le partite verifichiamo l'esito di ogni selezione con i risultati ufficiali e ne tracciamo lo "
+    "stato (vinta, persa, void o da verificare). L'obiettivo non è inseguire la giocata perfetta, ma "
+    "raccontare un metodo: come si legge una partita, perché si sceglie un mercato e cosa è successo "
+    "davvero in campo.",
+    "I contenuti di questa sezione sono editoriali e pensati per l'intrattenimento e l'approfondimento. "
+    "Non costituiscono un invito al gioco né una garanzia di vincita: 18+, gioca responsabilmente.",
+]
+PRONOSTICI_FAQS = [
+    {"q": "Ogni quanto pubblicate i pronostici?",
+     "a": "Pubblichiamo le giocate del team per ogni giornata di Serie A, in concomitanza con le dirette su Twitch e le puntate settimanali del podcast."},
+    {"q": "Da dove provengono le quote?",
+     "a": "Le quote sono rilevate dalla grafica comparativa fornita dal team al momento della pubblicazione. Sono indicative e possono variare nel tempo e tra i diversi operatori: non vengono mai inventate né aggiornate automaticamente."},
+    {"q": "Verificate i risultati delle selezioni?",
+     "a": "Sì. Dopo le partite confrontiamo ogni selezione con i risultati ufficiali e ne aggiorniamo lo stato (vinta, persa, void o da verificare) sulla pagina della giornata."},
+    {"q": "I pronostici garantiscono una vincita?",
+     "a": "No. Sono contenuti editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Il gioco è riservato ai maggiorenni: 18+, gioca responsabilmente."},
+]
+
+
+def render_pronostici_archive(predictions) -> str:
+    canonical = f"{SITE_URL}/pronostici/"
+    page_title = "Pronostici Serie A"
+    page_desc = ("I pronostici di UnoXdue per ogni giornata di Serie A: le giocate reali del team, "
+                 "quote indicative e verifica dei risultati. 18+, gioca responsabilmente.")
+    groups, order = {}, []
+    for p in predictions:
+        s = p.get("season", "")
+        if s not in groups:
+            groups[s] = []; order.append(s)
+        cover = p.get("cover") or {}
+        fmts = cover.get("formats") or {}
+        hor = fmts.get("horizontal") or {}
+        thumb = fmts.get("thumb") or {}
+        groups[s].append({
+            "url": f'{SITE_URL}/pronostici/serie-a/{p.get("season")}/giornata-{p.get("round")}/',
+            "cover": thumb.get("url") or hor.get("url"),
+            "alt": cover.get("alt") or f'Pronostici {p.get("competition","Serie A")} {_season_short(s)} {p.get("round")}ª giornata — UnoXdue',
+            "logo": f"{SITE_URL}/logo.jpg",
+            "season_short": _season_short(s),
+            "round": p.get("round"),
+            "competition": p.get("competition", "Serie A"),
+            "season": s,
+        })
+    order.sort(reverse=True)
+    seasons = [{"season": s, "cards": sorted(groups[s], key=lambda c: (c["round"] or 0), reverse=True)}
+               for s in order]
+
+    item_list, pos = [], 1
+    for grp in seasons:
+        for c in grp["cards"]:
+            item_list.append({"@type": "ListItem", "position": pos, "url": c["url"],
+                              "name": f'{c["competition"]} {c["season"]} — {c["round"]}ª giornata'})
+            pos += 1
+    jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "CollectionPage",
+        "name": page_title, "description": page_desc, "url": canonical, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "mainEntity": {"@type": "ItemList", "numberOfItems": len(item_list), "itemListElement": item_list},
+    }, ensure_ascii=False, indent=2)
+    faq_jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": [{"@type": "Question", "name": f["q"],
+                        "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in PRONOSTICI_FAQS],
+    }, ensure_ascii=False, indent=2) if PRONOSTICI_FAQS else None
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+
+    og_image = f"{SITE_URL}/logo.jpg"
+    for grp in seasons:
+        hit = next((c["cover"] for c in grp["cards"] if c["cover"]), None)
+        if hit:
+            og_image = hit; break
+
+    return env.get_template("pronostici_archive.html").render(
+        page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
+        seasons=seasons, intro=PRONOSTICI_INTRO, faqs=PRONOSTICI_FAQS,
+        breadcrumb_jsonld=bc, jsonld=jsonld, faq_jsonld=faq_jsonld, og_image=og_image, year=_year(),
+    )
+
+
+# ============================ Pagina "Il podcast" ============================
+IL_PODCAST_LEAD = (
+    "UnoXdue è il podcast indipendente dedicato alla Serie A: un host e tre tipster che ogni settimana "
+    "trasformano l'analisi del campionato in un racconto vivo, tra tattica, numeri, pronostici e "
+    "interviste ai protagonisti."
+)
+IL_PODCAST_ABOUT = [
+    "Nato dalla passione per il calcio italiano, UnoXdue mette al centro il confronto: non un monologo, "
+    "ma quattro voci che discutono, si sfidano e leggono la Serie A da prospettive diverse. Il risultato "
+    "è un podcast in cui l'analisi tecnica convive con l'ironia e con il gusto della scommessa ragionata.",
+    "Ogni puntata parte dalle partite di giornata e arriva ai temi caldi del campionato: moduli e scelte "
+    "degli allenatori, momenti di forma, calendario, mercato e ripercussioni sulla corsa per lo scudetto, "
+    "per l'Europa e per la salvezza. Quando l'attualità lo richiede, lo sguardo si allarga anche al calcio "
+    "internazionale e ad altri sport.",
+    "UnoXdue non è solo diretta: è un archivio in continua crescita di episodi, interviste e pronostici, "
+    "pensato per chi vuole capire la Serie A più a fondo e ritrovare i contenuti quando vuole.",
+]
+IL_PODCAST_FEATURES = [
+    {"icon": "radio", "title": "Dirette settimanali",
+     "text": "Appuntamento live su Twitch per commentare la giornata in tempo reale, rispondere al pubblico e costruire le giocate insieme."},
+    {"icon": "clapperboard", "title": "Episodi on demand",
+     "text": "Ogni puntata resta disponibile su YouTube e in archivio sul sito, con titoli, sommari e capitoli per ritrovare i momenti chiave."},
+    {"icon": "target", "title": "Pronostici di giornata",
+     "text": "Le selezioni reali dei tipster per ogni turno di Serie A, con quote indicative e verifica dei risultati a fine giornata."},
+    {"icon": "users", "title": "Interviste esclusive",
+     "text": "Calciatori, allenatori e protagonisti del calcio italiano raccontati senza filtri, in conversazioni lunghe e curate."},
+]
+IL_PODCAST_FORMAT = [
+    "Una puntata tipo di UnoXdue segue un ritmo riconoscibile: si apre con il quadro della giornata, si "
+    "entra nell'analisi delle partite più importanti, si confrontano le letture tattiche dei tipster e si "
+    "chiude con le giocate proposte per il turno.",
+    "Le interviste vivono invece di tempi propri: nessuna fretta, domande preparate e spazio al racconto, "
+    "perché ogni ospite possa restituire la sua storia e la sua visione del gioco.",
+]
+IL_PODCAST_FAQS = [
+    {"q": "Ogni quanto esce un nuovo episodio di UnoXdue?",
+     "a": "Pubblichiamo nuove puntate con cadenza settimanale, in concomitanza con le giornate di Serie A. Le dirette vanno in onda su Twitch e gli episodi completi restano poi disponibili su YouTube e in archivio sul sito."},
+    {"q": "Dove posso ascoltare e guardare il podcast?",
+     "a": "Le dirette sono su Twitch (@unoxdue_), gli episodi completi su YouTube (@unoXdue) e una selezione di clip e contenuti brevi su Instagram e TikTok. Tutti i canali sono raggiungibili dal sito."},
+    {"q": "Di cosa parla UnoXdue?",
+     "a": "Soprattutto di Serie A: analisi delle partite, tattica, momenti di forma, calendario e mercato. Trovano spazio anche i pronostici di giornata, le interviste ai protagonisti e, all'occorrenza, il calcio internazionale e altri sport."},
+    {"q": "Chi compone il team?",
+     "a": "Il podcast è condotto dall'host Antonello Santopaolo insieme ai tre tipster Sono Micuccio, il Ninja e il Marziano. Ognuno porta uno stile e una specialità diversi all'analisi della giornata."},
+    {"q": "I pronostici garantiscono una vincita?",
+     "a": "No. I pronostici di UnoXdue sono contenuti editoriali a scopo di intrattenimento: pubblichiamo le giocate reali del team con quote indicative, senza alcuna garanzia di risultato. Il gioco è riservato ai maggiorenni: 18+, gioca responsabilmente."},
+    {"q": "Come posso proporre una collaborazione o un'intervista?",
+     "a": "Puoi scriverci attraverso la pagina Contatti o i nostri canali social. Per partnership e progetti editoriali trovi i dettagli nella pagina Collaborazioni."},
+]
+
+
+def il_podcast_defaults() -> dict:
+    import copy
+    return {
+        "hero_lead": IL_PODCAST_LEAD,
+        "about": list(IL_PODCAST_ABOUT),
+        "format_text": list(IL_PODCAST_FORMAT),
+        "features": copy.deepcopy(IL_PODCAST_FEATURES),
+        "faqs": copy.deepcopy(IL_PODCAST_FAQS),
+    }
+
+
+def render_il_podcast(team=None, content=None) -> str:
+    team = team or []
+    host, tipsters_by_slug = None, {}
+    for t in team:
+        t = dict(t); t.pop("_id", None)
+        t["photo_abs"] = _abs_url(t.get("photo"))
+        if t.get("is_host"):
+            host = t
+        else:
+            tipsters_by_slug[t.get("slug")] = t
+    tipsters = [tipsters_by_slug[s] for s in HOME_TIPSTER_ORDER if s in tipsters_by_slug]
+    for s, t in tipsters_by_slug.items():
+        if t not in tipsters:
+            tipsters.append(t)
+
+    # contenuti editoriali modificabili dall'admin (fallback ai default)
+    c = il_podcast_defaults()
+    if content:
+        for k in c:
+            if content.get(k):
+                c[k] = content[k]
+    hero_lead, about, format_text, features, faqs = (
+        c["hero_lead"], c["about"], c["format_text"], c["features"], c["faqs"])
+
+    canonical = f"{SITE_URL}/il-podcast/"
+    page_title = "Il podcast"
+    page_desc = ("Scopri UnoXdue: il podcast sulla Serie A con un host e tre tipster. Format, voci, "
+                 "dirette, episodi, interviste e pronostici di giornata.")
+    webpage = {
+        "@type": "WebPage", "@id": f"{canonical}#webpage", "url": canonical,
+        "name": f"{page_title} | UnoXdue", "description": page_desc, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "about": {"@id": f"{SITE_URL}/#podcast"},
+    }
+    series = {
+        "@type": "PodcastSeries", "@id": f"{SITE_URL}/#podcast", "name": "UnoXdue",
+        "url": f"{SITE_URL}/", "image": f"{SITE_URL}/logo.jpg", "inLanguage": "it",
+        "genre": "Sport", "description": hero_lead,
+        "sameAs": [s["url"] for s in HOME_SOCIALS],
+    }
+    jsonld = json.dumps({"@context": "https://schema.org", "@graph": [webpage, series]},
+                        ensure_ascii=False, indent=2)
+    faq_jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": [{"@type": "Question", "name": f["q"],
+                        "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in faqs],
+    }, ensure_ascii=False, indent=2) if faqs else None
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+
+    return env.get_template("il_podcast.html").render(
+        page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
+        hero_lead=hero_lead, about=about, features=features,
+        format_text=format_text, faqs=faqs, host=host, tipsters=tipsters,
+        socials=HOME_SOCIALS, jsonld=jsonld, faq_jsonld=faq_jsonld, breadcrumb_jsonld=bc, year=_year(),
+    )
+
+
+# ============================ Archivi Episodi / Interviste ============================
+def _archive_date(published_at):
+    if not published_at:
+        return ""
+    try:
+        d = datetime.fromisoformat(str(published_at))
+        return f"{d.day} {MESI[d.month - 1]} {d.year}"
+    except Exception:
+        return str(published_at)
+
+
+def _content_card(ep, section):
+    yid = ep.get("youtube_id") or ""
+    thumb = ep.get("thumbnail") or (f"https://img.youtube.com/vi/{yid}/maxresdefault.jpg" if yid else f"{SITE_URL}/logo.jpg")
+    fallback = f"https://img.youtube.com/vi/{yid}/hqdefault.jpg" if yid else f"{SITE_URL}/logo.jpg"
+    excerpt = ep.get("excerpt")
+    if not excerpt:
+        summ = ep.get("summary") or []
+        excerpt = (summ[0] if summ else "") or ep.get("meta_description") or ""
+    tags = [t for t in (ep.get("topics") or [])[:3] if t]
+    return {
+        "url": f'{SITE_URL}/{section}/{ep.get("slug")}/',
+        "thumb": thumb, "thumb_fallback": fallback,
+        "title": ep.get("website_title") or ep.get("title") or "",
+        "date": _archive_date(ep.get("published_at")),
+        "duration": ep.get("duration") or "",
+        "excerpt": excerpt,
+        "guest": ep.get("guest_name") or "",
+        "role": ep.get("guest_role") or "",
+        "tags": tags,
+    }
+
+
+def _archive_collection_jsonld(page_title, page_desc, canonical, cards):
+    item_list = [{"@type": "ListItem", "position": i + 1, "url": c["url"], "name": c["title"]}
+                 for i, c in enumerate(cards) if c.get("url")]
+    return json.dumps({
+        "@context": "https://schema.org", "@type": "CollectionPage",
+        "name": page_title, "description": page_desc, "url": canonical, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "mainEntity": {"@type": "ItemList", "numberOfItems": len(item_list), "itemListElement": item_list},
+    }, ensure_ascii=False, indent=2)
+
+
+def render_episodi_archive(items) -> str:
+    cards = [_content_card(e, "episodi") for e in items]
+    canonical = f"{SITE_URL}/episodi/"
+    page_title = "Episodi"
+    page_desc = ("Tutti gli episodi del podcast UnoXdue dedicati alla Serie A: analisi delle partite, "
+                 "tattica e racconto di ogni giornata, con dirette su Twitch e puntate complete su YouTube.")
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+    jsonld = _archive_collection_jsonld(page_title, page_desc, canonical, cards)
+    return env.get_template("episodi_archive.html").render(
+        page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
+        cards=cards, breadcrumb_jsonld=bc, jsonld=jsonld, year=_year())
+
+
+def render_interviste_archive(items) -> str:
+    cards = [_content_card(e, "interviste") for e in items]
+    canonical = f"{SITE_URL}/interviste/"
+    page_title = "Interviste"
+    page_desc = ("Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano: storie, carriere "
+                 "e ricordi raccontati senza filtri.")
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+    jsonld = _archive_collection_jsonld(page_title, page_desc, canonical, cards)
+    return env.get_template("interviste_archive.html").render(
+        page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
+        cards=cards, breadcrumb_jsonld=bc, jsonld=jsonld, year=_year())

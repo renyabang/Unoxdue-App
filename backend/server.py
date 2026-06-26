@@ -163,6 +163,8 @@ async def upsert_prediction(payload: PredictionIn, admin: str = Depends(get_curr
         {"competition": doc["competition"], "season": doc["season"], "round": doc["round"]},
         {"$set": doc}, upsert=True,
     )
+    # copertina automatica (rigenerata se cambiano stagione/giornata/competizione/titolo)
+    await gfx.auto_generate_cover(doc["season"], doc["round"])
     url = f'{SITE_URL}/pronostici/serie-a/{doc["season"]}/giornata-{doc["round"]}/'
     return {"ok": True, "public_url": url}
 
@@ -210,6 +212,8 @@ async def add_pick(payload: PickIn, admin: str = Depends(get_current_admin)):
                                                    "confirmed_at": datetime.now(timezone.utc).isoformat()}})
     # pubblicazione condizionata (publish_min_valid)
     pub = await settle.apply_publish_rule(payload.competition, payload.season, payload.round)
+    # copertina automatica alla pubblicazione (non blocca mai: errori solo loggati)
+    await gfx.auto_generate_cover(payload.season, payload.round)
     url = f'{SITE_URL}/pronostici/serie-a/{payload.season}/giornata-{payload.round}/'
     await auto.log_automation("prediction", "ok", f"Giocata di {payload.tipster} salvata (giornata {payload.round})")
     return {"ok": True, "public_url": url, "published": pub}
@@ -298,6 +302,19 @@ async def get_settings(admin: str = Depends(get_current_admin)):
 async def put_settings(data: dict, admin: str = Depends(get_current_admin)):
     data["_id"] = "global"
     await db.settings.update_one({"_id": "global"}, {"$set": data}, upsert=True)
+    return {"ok": True}
+
+
+@api_router.get("/admin/site-content/il-podcast")
+async def get_il_podcast_content(admin: str = Depends(get_current_admin)):
+    s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "il_podcast": 1}) or {}
+    return {"content": s.get("il_podcast") or {}, "defaults": seo.il_podcast_defaults()}
+
+
+@api_router.put("/admin/site-content/il-podcast")
+async def put_il_podcast_content(data: dict, admin: str = Depends(get_current_admin)):
+    content = data.get("content", data)
+    await db.settings.update_one({"_id": "global"}, {"$set": {"il_podcast": content}}, upsert=True)
     return {"ok": True}
 
 
@@ -411,6 +428,39 @@ class GraphicsIn(BaseModel):
 @api_router.post("/admin/graphics/generate")
 async def admin_graphics_generate(payload: GraphicsIn, admin: str = Depends(get_current_admin)):
     return await gfx.generate_pick(payload.season, payload.round, payload.pick_index)
+
+
+# ---- Copertine pronostici (WebP automatiche/manuali, OG/social) ----
+class CoverIn(BaseModel):
+    season: str
+    round: int
+    force: bool = False
+
+
+@api_router.post("/admin/covers/generate")
+async def admin_covers_generate(payload: CoverIn, admin: str = Depends(get_current_admin)):
+    """Genera/rigenera la copertina automatica. force=true bypassa l'idempotenza e l'override manuale."""
+    return await gfx.generate_cover(payload.season, payload.round, force=payload.force, source="automatic")
+
+
+@api_router.post("/admin/covers/revert")
+async def admin_covers_revert(payload: CoverIn, admin: str = Depends(get_current_admin)):
+    """Ripristina la copertina automatica (sovrascrive un'eventuale immagine manuale)."""
+    return await gfx.generate_cover(payload.season, payload.round, force=True, source="automatic")
+
+
+@api_router.post("/admin/covers/manual")
+async def admin_covers_manual(season: str = Form(...), round: int = Form(...),
+                              image: UploadFile = File(...), admin: str = Depends(get_current_admin)):
+    """Carica una copertina manuale (cover_source=manual): non verrà sovrascritta automaticamente."""
+    content = await image.read()
+    mime = image.content_type or "image/jpeg"
+    ext = ".png" if "png" in mime else (".webp" if "webp" in mime else ".jpg")
+    (UPLOAD_DIR / "covers").mkdir(parents=True, exist_ok=True)
+    fname = f"manual-{season}-{round}-{uuid.uuid4().hex[:8]}{ext}"
+    (UPLOAD_DIR / "covers" / fname).write_bytes(content)
+    image_url = f"{SITE_URL}/api/uploads/covers/{fname}"
+    return await gfx.set_manual_cover(season, round, image_url, bytes_=len(content))
 
 
 class PickEditIn(BaseModel):
@@ -782,18 +832,9 @@ async def ssr_home():
 
 @api_router.get("/seo/il-podcast", response_class=HTMLResponse)
 async def ssr_il_podcast():
-    body = (
-        "<p class='lead'>UnoXdue e' il podcast sulla Serie A con tre tipster e un host.</p>"
-        "<p>Ogni settimana Sono Micuccio, il Ninja e il Marziano si ritrovano in diretta "
-        "insieme all'host Antonello Santopaolo per analizzare le giornate di Serie A, studiare i "
-        "palinsesti, commentare partite e notizie e presentare i pronostici. Spazio anche alle "
-        "interviste ai protagonisti del calcio e, occasionalmente, ad altri sport.</p>"
-        "<h2>Cosa trovi</h2><ul>"
-        "<li>Dirette settimanali su Twitch</li><li>Episodi completi su YouTube</li>"
-        "<li>Interviste esclusive ai calciatori</li><li>Pronostici per ogni giornata di Serie A</li></ul>"
-    )
-    return HTMLResponse(seo.render_page("Il podcast",
-        "Scopri UnoXdue: il podcast sulla Serie A con tre tipster e un host.", "/il-podcast/", body))
+    team = await db.team.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+    s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "il_podcast": 1}) or {}
+    return HTMLResponse(seo.render_il_podcast(team=team, content=s.get("il_podcast")))
 
 
 @api_router.get("/seo/collaborazioni", response_class=HTMLResponse)
@@ -878,31 +919,20 @@ async def ssr_press():
 
 @api_router.get("/seo/episodi", response_class=HTMLResponse)
 async def ssr_episodi():
-    items = await db.episodes.find({"type": "episodio"}, {"_id": 0}).sort("published_at", -1).to_list(500)
-    cards = [{"url": f'{SITE_URL}/episodi/{i["slug"]}/', "title": i.get("website_title") or i.get("title"), "kicker": "Episodio",
-              "thumbnail": i.get("thumbnail")} for i in items]
-    return HTMLResponse(seo.render_archive("Episodi",
-        "Tutti gli episodi del podcast UnoXdue dedicati alla Serie A.", "/episodi/", cards, show_play=True))
+    items = await db.episodes.find({"type": "episodio", "status": {"$ne": "bozza"}}, {"_id": 0}).sort("published_at", -1).to_list(500)
+    return HTMLResponse(seo.render_episodi_archive(items))
 
 
 @api_router.get("/seo/interviste", response_class=HTMLResponse)
 async def ssr_interviste():
-    items = await db.episodes.find({"type": "intervista"}, {"_id": 0}).sort("published_at", -1).to_list(500)
-    cards = [{"url": f'{SITE_URL}/interviste/{i["slug"]}/', "title": i.get("website_title") or i.get("title"), "kicker": "Intervista",
-              "thumbnail": i.get("thumbnail")} for i in items]
-    return HTMLResponse(seo.render_archive("Interviste",
-        "Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano.", "/interviste/", cards, show_play=True))
+    items = await db.episodes.find({"type": "intervista", "status": {"$ne": "bozza"}}, {"_id": 0}).sort("published_at", -1).to_list(500)
+    return HTMLResponse(seo.render_interviste_archive(items))
 
 
 @api_router.get("/seo/pronostici", response_class=HTMLResponse)
 async def ssr_pronostici_archive():
-    items = await db.predictions.find({"status": {"$ne": "bozza"}}, {"_id": 0}).sort("season", -1).to_list(500)
-    cards = [{"url": f'{SITE_URL}/pronostici/serie-a/{p.get("season")}/giornata-{p.get("round")}/',
-              "title": f'{p.get("competition","Serie A")} {p.get("season")} — {p.get("round")}ª giornata',
-              "kicker": "Pronostici", "thumbnail": None} for p in items]
-    return HTMLResponse(seo.render_archive("Pronostici",
-        "I pronostici di UnoXdue per ogni giornata di Serie A. 18+, gioca responsabilmente.",
-        "/pronostici/", cards))
+    items = await db.predictions.find({"status": {"$ne": "bozza"}}, {"_id": 0}).sort([("season", -1), ("round", -1)]).to_list(500)
+    return HTMLResponse(seo.render_pronostici_archive(items))
 
 
 @api_router.get("/seo/pronostici/serie-a/{season}/giornata-{round_}", response_class=HTMLResponse)

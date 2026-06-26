@@ -39,7 +39,7 @@
     </section>
 
     {# ===== ARCHIVIO per stagione ===== #}
-    <section class="bg-[#f4ebe1] py-16 lg:py-24 min-h-[40vh]">
+    <section class="bg-[#f4ebe1] py-16 lg:py-24">
       <div class="max-w-7xl mx-auto px-5 lg:px-8">
         {% if seasons %}
         {% for grp in seasons %}
@@ -47,10 +47,10 @@
           <div class="flex items-center gap-4">
             <h2 class="font-anton text-[#1a1411] text-2xl sm:text-3xl">Serie A {{ grp.season }}</h2>
             <span class="h-px flex-1 bg-[#e6d8c6]"></span>
-            <span class="text-xs font-bold uppercase tracking-wide text-[#9c8b7d]">{{ grp.items|length }} giornat{{ 'a' if grp.items|length == 1 else 'e' }}</span>
+            <span class="text-xs font-bold uppercase tracking-wide text-[#9c8b7d]">{{ grp.cards|length }} giornat{{ 'a' if grp.cards|length == 1 else 'e' }}</span>
           </div>
           <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-7">
-            {% for c in grp.items %}{{ m.pred_card(c) }}{% endfor %}
+            {% for c in grp.cards %}{{ m.pred_card(c) }}{% endfor %}
           </div>
         </div>
         {% endfor %}
