@@ -1,105 +1,143 @@
-# Deploy UnoXdue su hosting esterno
+# Deploy UnoXdue su hosting esterno (Docker + Nginx)
 
-Stack: **React (build statico) + FastAPI + Jinja2 (SSR) + MongoDB**, dietro **Nginx**.
-Emergent e' usato solo come ambiente di sviluppo/test. Il progetto e' portabile.
+Stack: **React (SPA admin) + FastAPI + Jinja2 (SSR pubblico) + MongoDB**, dietro **Nginx**.
+Emergent è usato SOLO come ambiente di sviluppo/test. Questo percorso rende il sito portabile e
+mantiene il routing ibrido: **pubblico = SSR**, **/admin = SPA React**.
 
-## 1. Requisiti
-- Docker + Docker Compose
-- Un dominio (es. `unoxdue.net`) puntato al server
-- (consigliato) Certbot/Let's Encrypt o un proxy TLS davanti a Nginx
+> ⚠️ Perché non l'hosting gestito Emergent per il pubblico: l'ingress gestito instrada tutto ciò che
+> non è `/api/*` alla build statica React, quindi le URL pubbliche pulite (`/episodi/...`) verrebbero
+> servite dalla SPA e NON dall'SSR. Con Nginx controlliamo noi il routing.
 
-## 2. Configurazione
-```bash
-cp .env.example .env
-# Compila: NEXT_PUBLIC_SITE_URL, SITE_URL (dominio reale), JWT_SECRET,
-# ADMIN_PASSWORD, EMERGENT_LLM_KEY (o chiave OpenAI), CRON_SECRET e le API che hai.
-```
-`SITE_URL` e `NEXT_PUBLIC_SITE_URL` DEVONO essere il dominio pubblico definitivo:
-canonical, Open Graph, sitemap e link interni useranno solo URL pulite (niente `/api/seo/`).
+---
 
-## 3. Avvio con un comando
-```bash
-docker compose up -d --build
-```
-Servizi: `mongo`, `backend` (FastAPI:8001), `frontend` (Nginx:80 con reverse proxy + SSR routing).
+## 1. File di deploy (creati/verificati)
 
-## 4. Routing definitivo (gestito da `deploy/nginx.conf`)
-| URL pubblica | Sorgente |
+| File | Ruolo |
 |---|---|
-| `/` | SSR `/api/seo/home` |
-| `/il-podcast/` | SSR |
-| `/episodi/` e `/episodi/[slug]/` | SSR |
-| `/interviste/` e `/interviste/[slug]/` | SSR |
-| `/pronostici/` e `/pronostici/serie-a/[stagione]/giornata-[n]/` | SSR |
-| `/team/` e `/team/[slug]/` | SSR |
-| `/parlano-di-noi/` | SSR |
-| `/sitemap.xml`, `/video-sitemap.xml`, `/robots.txt` | FastAPI |
-| `/admin` e `/admin/*` | React SPA (non indicizzato) |
-| `/api/*` (incl. `/api/static/css/unoxdue.css`, `/api/static/fonts/*.woff2`) | FastAPI |
-| asset SPA (`/logo.jpg`, `/hosts/*`, `/team/*.jpg`, JS/CSS del build React) | statici dal build |
+| `Dockerfile.backend` | Backend FastAPI + SSR. Multi-stage: ricompila il CSS Tailwind condiviso e installa Chromium (Playwright) per le grafiche. Healthcheck su `/api/health`. |
+| `Dockerfile.admin` | Web tier: build React (SPA admin) + Nginx (reverse proxy + routing SSR). Healthcheck su `/admin`. |
+| `deploy/nginx.conf` | Routing definitivo (pubblico→SSR, `/api/`→FastAPI, `/admin/`→React, fallback pubblico→404 SSR). |
+| `docker-compose.yml` | Orchestrazione `mongo` + `backend` + `web`; volumi persistenti `mongo_data` e `backend_uploads`. |
+| `.env.example` | Template variabili (valori reali SOLO sul server). |
+| `deploy/start.sh` | Avvio con verifica variabili obbligatorie + attesa health backend. |
+| `scripts/backup_mongo.sh` | Backup MongoDB (formato `--archive`). |
+| `scripts/restore_mongo.sh` | Restore da `--archive` o da cartella mongodump (`--out`). |
+| `scripts/smoke_test.sh` | Checklist post-deploy (status + SSR/SPA per ogni route chiave). |
+| `scripts/build_ssr_css.sh`, `scripts/fetch_fonts.py` | Build CSS SSR / font locali (riprodotti anche nel Dockerfile). |
 
-> Nota nginx: la location API usa `location ^~ /api/` così le richieste come
-> `/api/static/css/unoxdue.css` o `/api/static/fonts/*.woff2` vanno al backend e NON vengono
-> intercettate dalla regex degli asset statici (che altrimenti darebbe 404).
+---
 
-Le URL tecniche `/api/seo/...` sono interne: non vanno nei canonical ne' nelle sitemap.
+## 2. Matrice di routing (gestita da `deploy/nginx.conf`)
 
-## 4.bis CSS condiviso e font (pagine SSR)
-Il design delle pagine SSR usa lo **stesso CSS Tailwind** del frontend React, ma servito come file
-statico locale (niente CDN, niente generazione lato browser):
-- `Dockerfile.backend` è **multi-stage**: lo stage `css-build` (node:20) ricompila il CSS
-  analizzando `frontend/src/**` + `backend/templates/**` e produce `backend/static/css/unoxdue.css`
-  (minificato, classi inutilizzate rimosse). L'immagine NON dipende da CSS pre-generati nell'ambiente di sviluppo.
-- I **font sono ospitati localmente** in `backend/static/fonts/*.woff2` (Anton, Archivo, Inter — subset
-  latin + latin-ext). Sono asset sorgente versionati nel repo.
-- **Cache busting**: il backend serve gli asset con `?v=<mtime>` (helper `asset()` in `backend/seo.py`).
-- Build locale (per l'anteprima): `bash scripts/build_ssr_css.sh` (usa la stessa CLI standalone del Docker).
-- Per ri-scaricare i font: `python scripts/fetch_fonts.py`.
+| URL pubblica | Destinazione | Tipo |
+|---|---|---|
+| `/` | `→ /api/seo/home` | SSR |
+| `/il-podcast/` | `→ /api/seo/il-podcast` | SSR |
+| `/episodi/` · `/episodi/{slug}/` | `→ /api/seo/episodi[...]` | SSR |
+| `/episodi/{slug}/trascrizione/` | `→ /api/seo/episodi/{slug}/trascrizione` | SSR |
+| `/interviste/` · `/interviste/{slug}/` · `…/trascrizione/` | `→ /api/seo/interviste[...]` | SSR |
+| `/pronostici/` · `/pronostici/serie-a/{stagione}/giornata-{n}/` | `→ /api/seo/pronostici[...]` | SSR |
+| `/team/` · `/team/{slug}/` | `→ /api/seo/team[...]` | SSR |
+| `/parlano-di-noi/`, `/contatti/`, `/collaborazioni/`, `/privacy/`, `/cookie/` | `→ /api/seo/...` | SSR |
+| **qualsiasi altra URL pubblica (anche inesistente)** | `→ /api/seo$request_uri` (catch-all) | **404 HTML SSR** |
+| `/sitemap.xml`, `/video-sitemap.xml`, `/robots.txt` | `→ /api/...` | FastAPI |
+| `/live/` | `→ /api/live` (302 redirect gestito da admin) | FastAPI |
+| `/api/*` (incl. `/api/static/css/unoxdue.css`, `/api/static/fonts/*.woff2`, `/api/uploads/*`) | FastAPI | API/SSR asset |
+| `/admin`, `/admin/*` (refresh incluso) | `index.html` React | SPA (noindex) |
+| asset build React (`/logo.jpg`, `/static/*`, favicon, manifest) | filesystem | statico |
 
-## 4.ter Grafiche pronostici (Playwright/Chromium)
-Le grafiche social (Step 5) sono renderizzate da HTML/CSS/SVG con Playwright/Chromium headless -> PNG + WebP.
-- Dipendenze Python: `playwright`, `qrcode`, `pillow`, `httpx` (in `backend/requirements.txt`).
-- Il `Dockerfile.backend` installa il browser con `python -m playwright install --with-deps chromium`.
-- In sviluppo Emergent i browser sono in `/pw-browsers` (auto-rilevato da `backend/graphics.py`); in Docker si usa il path di default.
-- Font e immagini (logo, foto tipster) sono embeddati in base64 a runtime -> rendering deterministico, niente attese di rete. Gli asset brand sono in `backend/static/public/` (copiati dal frontend) cosi' il backend è autosufficiente anche in Docker.
-- Le immagini generate sono salvate in `backend/uploads/graphics/...` e servite da `/api/uploads/...`.
-- Una sola istanza Chromium viene avviata e riusata; viene chiusa allo shutdown del backend.
+**Garanzie**: nessun fallback pubblico restituisce `index.html` della SPA; le route pubbliche inesistenti
+danno **404 HTML reale** (noindex) dal backend; le URL tecniche `/api/seo/...` restano interne (mai in
+canonical/sitemap). Le URL pulite con slash finale sono mappate alle route backend **senza** slash finale
+(niente redirect 307 che farebbero trapelare `/api/seo/...`).
 
-## 4.quater /live/ (destinazione QR redirezionabile)
-La route `/live/` reindirizza (302) verso una destinazione gestita dall'admin (Twitch / live YouTube /
-ultimo episodio / URL personalizzata). In produzione Nginx la inoltra al backend
-(`location ~ ^/live/?$ { proxy_pass .../api/live; }`); in dev si usa `/api/live`.
+---
 
-## Sicurezza credenziali
-La password admin NON è mai in chiaro in report/log/seed. È solo in `ADMIN_PASSWORD` (env).
-Rotazione: `python scripts/rotate_admin.py` (nuova password casuale + invalidazione JWT via token_version).
+## 3. Variabili necessarie (`.env`, dal template `.env.example`)
 
-## 5. TLS / dominio
-Mettere un proxy TLS (Caddy/Traefik/Nginx+Certbot) davanti, oppure terminare HTTPS sul load balancer e inoltrare alla porta 80 del container `frontend`.
+Obbligatorie: `SITE_URL`, `MONGO_URL`, `DB_NAME`, `JWT_SECRET`, `ADMIN_EMAIL`, `ADMIN_PASSWORD`.
+LLM/AI: `EMERGENT_LLM_KEY` (o chiave OpenAI nel connettore), `VISION_MODEL`.
+Integrazioni: `YOUTUBE_CHANNEL_ID`, `YOUTUBE_API_KEY`, `GOOGLE_OAUTH_CLIENT_ID/SECRET/REFRESH_TOKEN`,
+`WEBSUB_HUB`, `WEBSUB_SECRET`, `PERPLEXITY_API_KEY`, `SPORT_RESULTS_API_PROVIDER/URL/KEY`,
+`OPENAI_AUDIO_API_KEY`, `CRON_SECRET`. (Deprecate/disattivate: `ODDS_API_*`.)
 
-## 6. Backup e seed dati
+> 🔐 In `docker-compose.yml`, `MONGO_URL`/`DB_NAME` sono forzati al servizio interno `mongo`.
+> I segreti NON vanno nel repo: usa `.env` sul server, i secret del provider, le env di Compose o un secret manager.
+> ⚠️ **CORS**: il codice usa attualmente `allow_origins=["*"]`. Da **restringere** al dominio prima del lancio definitivo.
+
+---
+
+## 4. Requisiti minimi del server
+- Linux x86_64, **Docker + Docker Compose v2**.
+- **2 vCPU / 4 GB RAM** consigliati (Chromium headless per le grafiche è il componente più pesante).
+- ~5 GB disco (immagini + Mongo + uploads). Volume persistente per `mongo_data` e `backend_uploads`.
+- Porte 80/443 aperte; dominio puntato al server.
+
+---
+
+## 5. Installazione e avvio
 ```bash
-# Backup
-bash scripts/backup_mongo.sh         # crea ./backups/unoxdue-YYYYmmdd.archive
-# Restore
-mongorestore --archive=backups/unoxdue-XXXX.archive --nsInclude='unoxdue.*'
+git clone <repo> unoxdue && cd unoxdue
+cp .env.example .env
+# Compila .env (SITE_URL=dominio reale, JWT_SECRET, ADMIN_PASSWORD, chiavi API...)
+bash deploy/start.sh           # build + up -d + attesa health backend
+# equivalente manuale:
+docker compose up -d --build
+docker compose ps
+docker compose logs -f backend
 ```
-Il seed iniziale (team, contenuti, pronostici) viene applicato all'avvio solo se le collezioni sono vuote.
+Servizi: `mongo`, `backend` (FastAPI:8001 interno), `web` (Nginx:80 = reverse proxy + SSR routing + SPA admin).
+Il seed iniziale (team/contenuti/pronostici) parte all'avvio SOLO se le collezioni sono vuote.
 
-## 7. Automazioni / scheduler esterno
-Lo scheduler del nuovo hosting (cron) deve chiamare endpoint protetti del backend:
+## 6. DNS
+- Record **A** (e **AAAA** se IPv6) di `unoxdue.net` → IP del server.
+- `www` opzionale: CNAME → `unoxdue.net` (gestisci il redirect www↔apex nel proxy TLS).
+- Propaga prima di richiedere il certificato TLS.
+
+## 7. HTTPS
+Il container `web` espone HTTP:80. Termina TLS davanti, una delle due:
+- **Caddy/Traefik** come reverse proxy TLS automatico verso `web:80`; oppure
+- **Nginx host + Certbot**: `certbot --nginx -d unoxdue.net -d www.unoxdue.net`, proxy verso `127.0.0.1:80`.
+Dopo HTTPS, imposta `SITE_URL=https://unoxdue.net` e ricostruisci (`docker compose up -d --build web`).
+
+## 8. Backup e restore
 ```bash
-# Riconciliazione YouTube (ogni 15-30 min)
-curl -X POST "https://unoxdue.net/api/cron/youtube?secret=$CRON_SECRET"
+# Backup (archivio singolo)
+DB_NAME=unoxdue MONGO_URL=mongodb://localhost:27017 bash scripts/backup_mongo.sh
+#   -> ./backups/unoxdue-YYYYmmdd-HHMMSS.archive
+# In Docker (DB nel container mongo):
+docker compose exec -T mongo sh -c 'mongodump --db unoxdue --archive' > backups/unoxdue-$(date +%F).archive
+
+# Restore (--drop): da archivio o da cartella mongodump
+DB_NAME=unoxdue bash scripts/restore_mongo.sh backups/unoxdue-YYYYmmdd-HHMMSS.archive
+docker compose exec -T mongo sh -c 'mongorestore --drop --archive' < backups/unoxdue-XXXX.archive
 ```
-Tutta la logica resta nel backend e visibile nel pannello `/admin`.
+Backup automatico consigliato: cron giornaliero che esegue `backup_mongo.sh` + copia off-site.
 
-## 8. Health check
-- Backend: `GET /api/health`
-- Database: `GET /api/health/db`
+## 9. Smoke test post-deploy
+```bash
+bash scripts/smoke_test.sh https://unoxdue.net <slug-episodio> <slug-team>
+```
+Verifica per ogni route: status, render **SSR vs SPA**, e che le route pubbliche siano SSR, `/admin` SPA,
+le route inesistenti **404 HTML** (non 200 SPA), `/api/health` 200, sitemap/robots 200.
+Controlli manuali extra: `curl -s URL | grep '<h1'`, `grep canonical`, `grep 'application/ld+json'`.
 
-## 9. Note di portabilita'
-- L'OCR usa `emergentintegrations` + Emergent LLM key (installabile via pip). Per piena
-  indipendenza si puo' sostituire con il client OpenAI ufficiale in `backend/automations.py`
-  (funzione `ocr_slip`) usando una propria `OPENAI_API_KEY`.
-- Nessuna altra dipendenza e' legata all'hosting Emergent.
+## 10. Rollback
+- **Immagini taggate**: builda con tag (`docker build -t unoxdue-backend:<git-sha> ...`) e in caso di problemi
+  riavvia la versione precedente (`docker compose up -d` puntando al tag buono).
+- **Codice**: ogni step su Emergent crea un checkpoint; in alternativa usa i tag/commit Git del repo.
+- **Dati**: ripristina l'ultimo `.archive` con `scripts/restore_mongo.sh` (`--drop`).
+- **Veloce**: `docker compose down` (mantiene i volumi) → ripristina immagine/tag precedente → `up -d`.
+  `docker compose down -v` cancella i volumi (DB+uploads): usare solo per reset totale.
+
+---
+
+## Note tecniche
+- **CSS SSR**: ricompilato nel `Dockerfile.backend` (stage node) da `frontend/src/**` + `backend/templates/**`
+  → `backend/static/css/unoxdue.css`. Font locali in `backend/static/fonts/*.woff2` (no CDN). Cache-busting `?v=<mtime>`.
+- **Grafiche pronostici**: Playwright/Chromium installato in immagine; in Docker usa il path browser di default
+  (in Emergent `/pw-browsers`). Output in `backend/uploads/` → volume `backend_uploads`.
+- **Scheduler esterno**: cron del server chiama endpoint protetti, es.
+  `curl -X POST "https://unoxdue.net/api/cron/youtube?secret=$CRON_SECRET"`,
+  `.../api/cron/press?secret=...&schedule=weekly`, `.../api/cron/settle?secret=...&season=...&round=...`.
+- **Health**: backend `GET /api/health`, DB `GET /api/health/db`.

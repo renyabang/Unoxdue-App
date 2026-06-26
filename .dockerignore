@@ -1,0 +1,33 @@
+# Docker build context — esclusioni (sicurezza + dimensione).
+# CRITICO: i .env reali NON devono finire nell'immagine. Le variabili arrivano a runtime
+# (env_file/environment in docker-compose, secret del provider).
+
+# Segreti / ambiente
+**/.env
+**/.env.*
+
+# Dipendenze e build già ricostruiti in immagine
+**/node_modules
+frontend/build
+backend/static/css/unoxdue.css
+
+# Dati runtime (persistiti via volume, non vanno nell'immagine)
+backend/uploads
+backups
+
+# Cache Python
+**/__pycache__
+**/*.pyc
+**/*.pyo
+
+# VCS / piattaforma / IDE
+.git
+.gitignore
+.emergent
+.idea
+.vscode
+
+# Log e materiale di lavoro non necessario al runtime
+**/*.log
+test_reports
+memory

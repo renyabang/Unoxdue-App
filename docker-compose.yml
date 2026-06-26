@@ -1,4 +1,6 @@
-version: "3.9"
+# UnoXdue — stack di produzione esterno (Docker Compose).
+# Servizi: mongo (DB persistente) + backend (FastAPI:8001) + web (Nginx:80, React admin + reverse proxy SSR).
+# Avvio: cp .env.example .env && (compila .env) && bash deploy/start.sh   (oppure: docker compose up -d --build)
 
 services:
   mongo:
@@ -7,7 +9,7 @@ services:
     volumes:
       - mongo_data:/data/db
     healthcheck:
-      test: ["CMD", "mongosh", "--eval", "db.adminCommand('ping')"]
+      test: ["CMD", "mongosh", "--quiet", "--eval", "db.adminCommand('ping').ok"]
       interval: 20s
       timeout: 5s
       retries: 5
@@ -19,25 +21,39 @@ services:
     restart: unless-stopped
     env_file: .env
     environment:
+      # MONGO_URL/DB_NAME forzati al servizio interno: sovrascrivono eventuali valori del .env.
       - MONGO_URL=mongodb://mongo:27017
       - DB_NAME=${DB_NAME:-unoxdue}
     depends_on:
       mongo:
         condition: service_healthy
+    volumes:
+      # Persistenza delle immagini generate (grafiche pronostici) e degli upload OCR.
+      - backend_uploads:/app/backend/uploads
     expose:
       - "8001"
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8001/api/health"]
+      interval: 30s
+      timeout: 5s
+      retries: 5
 
-  frontend:
+  web:
     build:
       context: .
-      dockerfile: Dockerfile.frontend
+      dockerfile: Dockerfile.admin
       args:
-        REACT_APP_BACKEND_URL: ${NEXT_PUBLIC_SITE_URL}
+        # Dominio pubblico (stessa origin). L'admin chiama ${REACT_APP_BACKEND_URL}/api/...
+        REACT_APP_BACKEND_URL: ${SITE_URL}
     restart: unless-stopped
     depends_on:
-      - backend
+      backend:
+        condition: service_healthy
     ports:
       - "80:80"
+      # Per HTTPS diretto sul container, gestisci TLS con un proxy davanti (Caddy/Traefik/Certbot)
+      # oppure termina TLS sul load balancer e inoltra alla porta 80.
 
 volumes:
   mongo_data:
+  backend_uploads:
