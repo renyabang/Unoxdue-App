@@ -519,6 +519,61 @@ async def admin_predictions_ai_batch(payload: PredAIBatchIn, admin: str = Depend
                                     only_missing=payload.only_missing, limit=payload.limit)
 
 
+@api_router.get("/admin/predictions/ai/list")
+async def admin_predictions_ai_list(admin: str = Depends(get_current_admin)):
+    return await pai.list_drafts()
+
+
+@api_router.get("/admin/predictions/ai/detail")
+async def admin_predictions_ai_detail(season: str, round: int, admin: str = Depends(get_current_admin)):
+    return await pai.get_detail(season, round)
+
+
+@api_router.get("/admin/predictions/ai/safety")
+async def admin_predictions_ai_safety(season: str, round: int, admin: str = Depends(get_current_admin)):
+    return await pai.publish_safety(season, round)
+
+
+class PredAIEditIn(BaseModel):
+    season: str
+    round: int
+    fields: dict = {}
+    matches: Optional[List[dict]] = None
+
+
+@api_router.post("/admin/predictions/ai/edit")
+async def admin_predictions_ai_edit(payload: PredAIEditIn, admin: str = Depends(get_current_admin)):
+    return await pai.edit_draft(payload.season, payload.round, payload.fields, payload.matches)
+
+
+class PredAIStatusIn(BaseModel):
+    season: str
+    round: int
+    action: str  # approve | reject | review
+
+
+@api_router.post("/admin/predictions/ai/status")
+async def admin_predictions_ai_status(payload: PredAIStatusIn, admin: str = Depends(get_current_admin)):
+    return await pai.set_ai_status(payload.season, payload.round, payload.action)
+
+
+@api_router.post("/admin/predictions/ai/regenerate")
+async def admin_predictions_ai_regenerate(payload: PredAIGenIn, admin: str = Depends(get_current_admin)):
+    await pai.log_audit("regenerate", payload.season, payload.round)
+    return await pai.generate_draft(payload.season, payload.round)
+
+
+class PredAIPublishIn(BaseModel):
+    season: str
+    round: int
+    confirm: bool = False
+
+
+@api_router.post("/admin/predictions/ai/publish")
+async def admin_predictions_ai_publish(payload: PredAIPublishIn, admin: str = Depends(get_current_admin)):
+    return await pai.promote(payload.season, payload.round, confirm=payload.confirm)
+
+
 
 # ---- /live/ : destinazione redirezionabile dall'admin (per QR e link) ----
 DEFAULT_LIVE = {"target": "twitch", "url": ""}

@@ -169,6 +169,30 @@ def _draft_text(d):
     return " ".join(p for p in parts if p)
 
 
+HEDGE_RE = re.compile(r"\b(forse|probabilmente|potrebbe|dovrebbe|sembra|pare che|si dice|"
+                      r"in teoria|presumibilmente|verosimilmente|chissà)\b", re.I)
+
+
+def _low_confidence(draft):
+    """Segnala frasi con linguaggio incerto (da rivedere prima della pubblicazione)."""
+    out = []
+    blocks = [("intro", draft.get("intro", "")), ("context", draft.get("context", "")),
+              ("picks_summary", draft.get("picks_summary", ""))]
+    blocks += [("match", m.get("comment", "")) for m in draft.get("matches", [])]
+    for where, txt in blocks:
+        for sent in re.split(r"(?<=[.!?])\s+", txt or ""):
+            if HEDGE_RE.search(sent):
+                out.append({"where": where, "text": sent.strip()[:200]})
+    return out
+
+
+async def log_audit(action, season, round_, admin="admin", details=None):
+    await db.audit_log.insert_one({
+        "entity": "prediction_ai", "action": action, "season": season, "round": round_,
+        "admin": admin, "at": _now(), "details": details or {},
+    })
+
+
 async def _similarity_report(draft, season, round_):
     others = await db.predictions.find(
         {"ai_draft": {"$exists": True}, "$nor": [{"season": season, "round": round_}]},
@@ -243,12 +267,18 @@ async def generate_draft(season, round_):
         "matches": draft.get("matches", []),
         "generated_at": _now(), "model": AI_MODEL, "tokens": tokens, "cost_estimate": cost,
         "sources": src.get("sources", []), "sources_demo": bool(src.get("demo")),
+        "external_facts": (src.get("text") or "")[:4000],
+        "low_confidence": _low_confidence(draft),
         "similarity": sim, "antihallucination": anti,
+        "ai_status": "ai_preview", "edited": False,
         "ready": anti["passed"] and sim["passed"],
     }
     await db.predictions.update_one(
         {"season": season, "round": round_},
         {"$set": {"ai_draft": ai_draft, "ai_status": "ai_preview", "updated_at": _now()}})
+    await log_audit("generate", season, round_,
+                    details={"ready": ai_draft["ready"], "sources": len(ai_draft["sources"]),
+                             "similarity": sim["max_similarity"], "cost": cost})
     await auto.log_automation(
         "predictions_ai", "ok",
         f"Bozza ai_preview g{round_} {season} (sim {sim['max_similarity']}, fonti {len(ai_draft['sources'])}, ~${cost})",
@@ -271,3 +301,174 @@ async def batch_generate(season=None, rounds=None, only_missing=True, limit=10):
         results.append({"season": it["season"], "round": it["round"], "ok": r.get("ok"),
                         "ready": (r.get("ai_draft") or {}).get("ready"), "error": r.get("error")})
     return {"ok": True, "processed": len(results), "results": results}
+
+
+# ===================== Cruscotto admin "Bozze AI Pronostici" =====================
+EDITABLE_FIELDS = ("intro", "context", "picks_summary", "episode_link_text", "results_note", "disclaimer")
+SEASON_RE = re.compile(r"^\d{4}-\d{4}$")
+
+
+async def list_drafts():
+    docs = await db.predictions.find(
+        {"ai_draft": {"$exists": True}},
+        {"_id": 0, "season": 1, "round": 1, "competition": 1, "status": 1, "ai_status": 1,
+         "episode_url": 1, "ai_draft": 1, "editorial": 1, "cover": 1, "picks": 1}
+    ).sort([("season", -1), ("round", -1)]).to_list(500)
+    out = []
+    for d in docs:
+        ad = d.get("ai_draft", {})
+        warnings = list(ad.get("antihallucination", {}).get("issues", []))
+        if ad.get("low_confidence"):
+            warnings.append(f'{len(ad["low_confidence"])} frasi a bassa confidence')
+        out.append({
+            "season": d.get("season"), "round": d.get("round"),
+            "competition": d.get("competition", "Serie A"),
+            "status": d.get("status"), "ai_status": ad.get("ai_status") or d.get("ai_status"),
+            "generated_at": ad.get("generated_at"), "sources_count": len(ad.get("sources", [])),
+            "cost": ad.get("cost_estimate"),
+            "similarity": ad.get("similarity", {}).get("max_similarity"),
+            "similarity_passed": ad.get("similarity", {}).get("passed"),
+            "warnings": warnings, "ready": ad.get("ready"),
+            "episode_url": d.get("episode_url"),
+            "has_published_editorial": bool(d.get("editorial")),
+            "picks_count": len(d.get("picks", [])),
+            "has_cover": bool((d.get("cover") or {}).get("formats", {}).get("horizontal")),
+        })
+    return {"ok": True, "count": len(out), "drafts": out}
+
+
+async def get_detail(season, round_):
+    d = await db.predictions.find_one({"season": season, "round": round_}, {"_id": 0})
+    if not d or not d.get("ai_draft"):
+        return {"ok": False, "error": "Bozza non trovata"}
+    picks_used = [{"tipster": p.get("tipster"), "type": p.get("type"), "total_odds": p.get("total_odds"),
+                   "selections": [{"match": s.get("match"), "market": s.get("market"),
+                                   "pick": s.get("pick"), "odds": s.get("odds")}
+                                  for s in p.get("selections", [])]}
+                  for p in d.get("picks", [])]
+    return {"ok": True, "season": season, "round": round_, "competition": d.get("competition", "Serie A"),
+            "status": d.get("status"), "ai_draft": d.get("ai_draft"),
+            "picks_used": picks_used, "episode_url": d.get("episode_url"),
+            "published_editorial": d.get("editorial"),
+            "canonical": f'{SITE_URL}/pronostici/serie-a/{season}/giornata-{round_}/',
+            "cover": d.get("cover")}
+
+
+async def edit_draft(season, round_, fields, matches=None):
+    d = await db.predictions.find_one({"season": season, "round": round_})
+    if not d or not d.get("ai_draft"):
+        return {"ok": False, "error": "Bozza non trovata"}
+    ad = dict(d["ai_draft"])
+    for k, v in (fields or {}).items():
+        if k in EDITABLE_FIELDS and isinstance(v, str):
+            ad[k] = v
+    if matches is not None:
+        ad["matches"] = [{"match": m.get("match", ""), "comment": m.get("comment", "")} for m in matches]
+    # ricontrolla coerenza con i dati reali dopo la modifica manuale
+    matches_real, odds = _matches_and_odds(d.get("picks", []))
+    ad["antihallucination"] = _antihallucination(ad, matches_real, odds)
+    ad["similarity"] = await _similarity_report(ad, season, round_)
+    ad["low_confidence"] = _low_confidence(ad)
+    ad["edited"] = True
+    ad["ai_status"] = "in_review"
+    ad["ready"] = ad["antihallucination"]["passed"] and ad["similarity"]["passed"]
+    await db.predictions.update_one({"season": season, "round": round_},
+                                    {"$set": {"ai_draft": ad, "ai_status": "in_review", "updated_at": _now()}})
+    await log_audit("edit", season, round_, details={"fields": list((fields or {}).keys())})
+    return {"ok": True, "ai_draft": ad}
+
+
+async def set_ai_status(season, round_, action):
+    mapping = {"approve": "approved", "reject": "rejected", "review": "in_review"}
+    if action not in mapping:
+        return {"ok": False, "error": "Azione non valida"}
+    d = await db.predictions.find_one({"season": season, "round": round_})
+    if not d or not d.get("ai_draft"):
+        return {"ok": False, "error": "Bozza non trovata"}
+    new_status = mapping[action]
+    await db.predictions.update_one({"season": season, "round": round_},
+                                    {"$set": {"ai_draft.ai_status": new_status, "ai_status": new_status,
+                                              "updated_at": _now()}})
+    await log_audit(action, season, round_)
+    return {"ok": True, "ai_status": new_status}
+
+
+def _reachable_sync(url):
+    try:
+        r = requests.head(url, timeout=8, allow_redirects=True,
+                          headers={"User-Agent": "Mozilla/5.0 UnoXdueBot"})
+        if r.status_code >= 400:
+            r = requests.get(url, timeout=10, allow_redirects=True,
+                             headers={"User-Agent": "Mozilla/5.0 UnoXdueBot"}, stream=True)
+        return r.status_code < 400
+    except Exception:
+        return False
+
+
+async def publish_safety(season, round_):
+    """Controlli editoriali pre-pubblicazione. Ritorna passed + checklist dettagliata."""
+    d = await db.predictions.find_one({"season": season, "round": round_})
+    if not d or not d.get("ai_draft"):
+        return {"ok": False, "error": "Bozza non trovata"}
+    ad = d["ai_draft"]
+    picks = d.get("picks", [])
+    has_real_pick = any(p.get("selections") for p in picks)
+    sources = ad.get("sources", [])
+    loop = asyncio.get_event_loop()
+    reach = []
+    for s in sources[:8]:
+        ok = await loop.run_in_executor(None, _reachable_sync, s.get("url"))
+        reach.append({"url": s.get("url"), "publisher": s.get("publisher"), "reachable": ok})
+    sources_ok = (not sources) or any(r["reachable"] for r in reach)
+    cover_ok = bool((d.get("cover") or {}).get("formats", {}).get("horizontal"))
+    season_ok = bool(SEASON_RE.match(season or "")) and isinstance(round_, int) and 1 <= round_ <= 60
+    canonical = f"{SITE_URL}/pronostici/serie-a/{season}/giornata-{round_}/"
+    slug_ok = canonical.endswith(f"/giornata-{round_}/") and "/serie-a/" in canonical
+    disclaimer_ok = bool((ad.get("disclaimer") or "").strip())
+    checks = {
+        "almeno_un_pronostico_reale": has_real_pick,
+        "fonti_raggiungibili": sources_ok,
+        "nessuna_informazione_inventata": ad.get("antihallucination", {}).get("passed", False),
+        "similarita_sotto_soglia": ad.get("similarity", {}).get("passed", False),
+        "stagione_giornata_valide": season_ok,
+        "canonical_slug_corretti": slug_ok,
+        "copertina_automatica_disponibile": cover_ok,
+        "disclaimer_presente": disclaimer_ok,
+    }
+    return {"ok": True, "passed": all(checks.values()), "checks": checks,
+            "sources_reachability": reach, "canonical": canonical}
+
+
+async def promote(season, round_, confirm=False):
+    if not confirm:
+        return {"ok": False, "error": "Conferma esplicita richiesta (confirm=true)"}
+    safety = await publish_safety(season, round_)
+    if not safety.get("ok"):
+        return safety
+    if not safety["passed"]:
+        await log_audit("publish_blocked", season, round_, details={"checks": safety["checks"]})
+        return {"ok": False, "error": "Controlli di sicurezza non superati", "checks": safety["checks"],
+                "sources_reachability": safety.get("sources_reachability")}
+    d = await db.predictions.find_one({"season": season, "round": round_})
+    ad = d["ai_draft"]
+    editorial = {
+        "intro": ad.get("intro", ""), "context": ad.get("context", ""),
+        "matches": ad.get("matches", []), "picks_summary": ad.get("picks_summary", ""),
+        "results_note": ad.get("results_note", ""), "disclaimer": ad.get("disclaimer", ""),
+        "sources": ad.get("sources", []), "published_at": _now(), "source": "ai_promoted",
+    }
+    update = {"editorial": editorial, "status": "pubblicato",
+              "ai_status": "published", "ai_draft.ai_status": "published", "updated_at": _now()}
+    # promuovi l'intro AI solo se l'intro pubblica è assente/molto breve (NON tocca le giocate reali)
+    if len((d.get("intro") or "").strip()) < 40 and ad.get("intro"):
+        update["intro"] = ad["intro"]
+    await db.predictions.update_one({"season": season, "round": round_}, {"$set": update})
+    # assicura la copertina automatica (non blocca)
+    try:
+        import graphics as gfx
+        await gfx.auto_generate_cover(season, round_)
+    except Exception:
+        pass
+    await log_audit("publish", season, round_, details={"checks": safety["checks"]})
+    return {"ok": True, "status": "pubblicato", "ai_status": "published",
+            "public_url": f"{SITE_URL}/pronostici/serie-a/{season}/giornata-{round_}/"}

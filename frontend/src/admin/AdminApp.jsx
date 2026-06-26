@@ -14,6 +14,7 @@ import Graphics from "./Graphics";
 import YouTube from "./YouTube";
 import Results from "./Results";
 import Press from "./Press";
+import PredictionsAI from "./PredictionsAI";
 import TranscriptSEO from "./TranscriptSEO";
 import SitePages from "./SitePages";
 
@@ -105,6 +106,7 @@ const nav = [
   { to: "/admin/ai", label: "AI / SEO", icon: Sparkles },
   { to: "/admin/trascrizioni", label: "Trascrizioni SEO", icon: FileText },
   { to: "/admin/schedine", label: "Schedine / Pronostici", icon: Ticket },
+  { to: "/admin/pronostici-ai", label: "Bozze AI Pronostici", icon: Sparkles },
   { to: "/admin/grafiche", label: "Grafiche", icon: ImageIcon },
   { to: "/admin/pagine", label: "Pagine", icon: LayoutTemplate },
   { to: "/admin/risultati", label: "Risultati", icon: Trophy },
@@ -161,6 +163,7 @@ export default function AdminApp() {
           <Route path="ai" element={<AIGen />} />
           <Route path="trascrizioni" element={<TranscriptSEO />} />
           <Route path="schedine" element={<SlipUploader />} />
+          <Route path="pronostici-ai" element={<PredictionsAI />} />
           <Route path="grafiche" element={<Graphics />} />
           <Route path="pagine" element={<SitePages />} />
           <Route path="risultati" element={<Results />} />

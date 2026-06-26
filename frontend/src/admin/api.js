@@ -99,6 +99,14 @@ export const api = {
     fd.append("image", file);
     return req("/admin/press/logo/manual", { method: "POST", form: fd });
   },
+  predAiList: () => req("/admin/predictions/ai/list"),
+  predAiDetail: (season, round) => req(`/admin/predictions/ai/detail?season=${encodeURIComponent(season)}&round=${round}`),
+  predAiSafety: (season, round) => req(`/admin/predictions/ai/safety?season=${encodeURIComponent(season)}&round=${round}`),
+  predAiGenerate: (season, round) => req("/admin/predictions/ai/generate", { method: "POST", body: { season, round } }),
+  predAiRegenerate: (season, round) => req("/admin/predictions/ai/regenerate", { method: "POST", body: { season, round } }),
+  predAiEdit: (season, round, fields, matches) => req("/admin/predictions/ai/edit", { method: "POST", body: { season, round, fields, matches } }),
+  predAiStatus: (season, round, action) => req("/admin/predictions/ai/status", { method: "POST", body: { season, round, action } }),
+  predAiPublish: (season, round) => req("/admin/predictions/ai/publish", { method: "POST", body: { season, round, confirm: true } }),
   transcriptSeoStatus: () => req("/admin/transcripts/seo/status"),
   transcriptSeoGenerate: (slug) => req(`/admin/transcripts/seo/generate/${slug}`, { method: "POST" }),
   transcriptSeoPreview: (slug) => req(`/admin/transcripts/seo/preview/${slug}`),

@@ -1,0 +1,49 @@
+{
+  "summary": "Iteration 18 — Cruscotto admin 'Bozze AI Pronostici' + regressione SSR/API. BACKEND: 14/14 pytest PASS in test_iteration18.py (admin login da .env, list drafts, detail, safety 8/8 passed=true, edit fields persiste, status review/approve/reject/review, publish con confirm=false rifiutato correttamente, public editorial visibile su 2025-2026 g38, SSR /home /episodi /team /parlano-di-noi 200). Suite completa: 104/104 PASS in ~39s. FRONTEND: tutti i flussi UI verdi. Login admin via .env ok; /admin/pronostici-ai mostra predictions-ai-page + pred-ai-list con 2 bozze (2026-2027 g38 + 2025-2026 g38); Apri anteprima apre pred-ai-detail con 5 campi editabili (intro/context/picks_summary/results_note/disclaimer) + sezione 'Pronostici reali utilizzati' + Partite (2) + Fonti esterne (9 link cliccabili). EDIT: testo 'TEST_iter18 UI saved results_note ...' su results_note + Salva modifiche -> persiste alla riapertura. STATUS: review→Approva→Rifiuta→In revisione: badge si aggiorna correttamente ad ogni click (In revisione / Approvata / Rifiutata / In revisione). SAFETY: cliccando Verifica appare pred-ai-safety con esattamente 8 voci richieste (almeno_un_pronostico_reale, fonti_raggiungibili, nessuna_informazione_inventata, similarita_sotto_soglia, stagione_giornata_valide, canonical_slug_corretti, copertina_automatica_disponibile, disclaimer_presente). PUBLISH: cliccando Promuovi a pubblicato si apre il confirm() del browser; accettando, su 2026-2027 g38 la pubblicazione è bloccata da safety (copertina_automatica_disponibile fallisce) -> badge resta 'In revisione' (= comportamento corretto, NESSUN auto-publish). Su 2025-2026 g38 la pagina pubblica espone già data-testid='prediction-editorial' (verificato via fetch).",
+  "backend_issues": {
+    "critical": [],
+    "minor": []
+  },
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_results_detail": {
+    "backend_iteration18_pytest": "14/14 PASS (test_iteration18.py: list, safety 8/8 passed, detail, edit+persist, status review/approve/reject/review, publish-no-confirm rifiutato, public editorial visibile, SSR 4 endpoint 200)",
+    "backend_full_suite": "104/104 PASS (test_iteration18 + test_iteration17 + test_public_ssr + test_404_regression + test_block3_press_logos) in ~39s",
+    "ui_admin_login_env": "PASS - ADMIN_EMAIL/ADMIN_PASSWORD da /app/backend/.env via dotenv_values; bottone 'Entra' funziona; SPA carica /admin",
+    "ui_cruscotto_visibility": "PASS - voce menu sidebar 'Bozze AI Pronostici' presente, click naviga a /admin/pronostici-ai, predictions-ai-page visibile, pred-ai-list mostra 2 bozze (2026-2027 g38 + 2025-2026 g38), card mostrano stagione/giornata/stato (badge)/fonti/costo/similarità/giocate",
+    "ui_apri_anteprima": "PASS - pred-ai-open-2026-2027-38 apre pred-ai-detail; 5 textarea editabili visibili (pred-ai-field-intro/context/picks_summary/results_note/disclaimer); blocco 'Pronostici reali utilizzati' mostra 'Il Marziano (Multipla, 5.00): Juventus - Inter 1@2.50; Milan - Roma 1@2.00'; 2 partite con commento; 9 fonti esterne cliccabili",
+    "ui_save_edit_persistence": "PASS - results_note modificato a 'TEST_iter18 UI saved results_note 377363.989' + Salva -> alla riapertura il valore è persistito (verificato via input_value)",
+    "ui_status_badge_transitions": "PASS - tutte 4 transizioni aggiornano il pill badge entro 2.8s: review→'In revisione', approve→'Approvata', reject→'Rifiutata', review→'In revisione' (NO auto-publish, lo status non diventa 'Pubblicata' né tramite approve né tramite review/reject)",
+    "ui_safety_box": "PASS - pred-ai-safety appare con 8/8 voci attese; su 2026-2027 g38 una voce (copertina_automatica_disponibile) risulta ⛔ -> safety.passed=false (corretto), la pagina non viene pubblicata",
+    "ui_publish_with_confirm": "PASS - pred-ai-publish-btn apre window.confirm(); accettando, la richiesta viene inviata. Su 2026-2027 g38 safety fallisce -> badge resta 'In revisione' (NO pubblicazione forzata, NO auto-publish). Su 2025-2026 g38 (già pubblicato in run precedente) la pagina pubblica /api/seo/pronostici/serie-a/2025-2026/giornata-38 contiene data-testid='prediction-editorial' (status 200)",
+    "ssr_regression": "PASS - /api/seo/home, /api/seo/episodi, /api/seo/team, /api/seo/parlano-di-noi tutti 200 con body > 500B"
+  },
+  "test_report_links": [
+    "/app/backend/tests/test_iteration18.py",
+    "/app/test_reports/pytest/iteration_18.xml",
+    "/app/test_reports/pytest/iteration_18_full.xml"
+  ],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "predictions_ai.py edit_draft: accetta payload con chiave 'fields' (dict) — coerente con la spec; il frontend invia correttamente l'oggetto edit. Non-issue.",
+    "publish_safety: la verifica della reachability delle fonti via HEAD/GET richiede fino a ~15s; ho dovuto estendere il timeout UI a 20s. Considerare di parallelizzare le richieste o aggiungere un loader esplicito sul pulsante Verifica (è già presente Loader2 ma il box safety appare solo a completamento — UX accettabile).",
+    "PredictionsAI.jsx publish: ottimo l'uso di window.confirm() + alert su errore controlli + setSafety(...) per mostrare quali check sono falliti dopo un tentativo di pubblicazione bloccato. Nessun auto-publish riscontrato.",
+    "Possibile micro-bug UX (non bloccante): dopo SAVE su results_note il campo viene ricaricato dal server (corretto) ma se l'utente ha altre modifiche pending non salvate, vengono perse. Mostrare un toast/feedback di salvataggio (oggi c'è solo l'assenza di errore). Non bloccante."
+  ],
+  "updated_files": [
+    "/app/backend/tests/test_iteration18.py (NEW - 14 test pytest per admin AI cruscotto + regressione SSR)"
+  ],
+  "success_rate": {
+    "backend": "104/104 = 100% (di cui 14/14 nuovi iteration 18)",
+    "frontend": "8/8 critical flows = 100% (login, page load, list, detail, save+persist, status x4, safety 8/8, publish con confirm + no auto-publish + public editorial visibile)"
+  },
+  "test_credentials": "Caricate runtime da /app/backend/.env via python-dotenv (ADMIN_EMAIL / ADMIN_PASSWORD). Password ruotata. Non hardcoded.",
+  "seed_data_creation": "Nessuna nuova seed; usate le 2 bozze esistenti (2025-2026 g38 già pubblicata, 2026-2027 g38 in ai_preview). Il test ha modificato results_note di 2026-2027 g38 a 'TEST_iter18 UI saved results_note ...' (campo testuale interno alla bozza, non pubblico).",
+  "retest_needed": false,
+  "main_agent_can_self_test": true,
+  "context_for_next_testing_agent": "Cruscotto Bozze AI Pronostici completamente funzionante. La promozione richiede ESPLICITAMENTE: 1) confirm browser, 2) safety.passed=true (8 check). Su 2026-2027 g38 safety fallisce per copertina_automatica_disponibile -> publish viene bloccato (corretto). Su 2025-2026 g38 la pagina pubblica espone già data-testid='prediction-editorial'. L'endpoint /api/admin/predictions/ai/edit accetta payload {season, round, fields: dict, matches?: list} — NON {field, value}. Per cambiare lo stato senza pubblicare, usare /api/admin/predictions/ai/status con action in {approve, reject, review}. Nessun auto-publish riscontrato in nessun flusso. Suite pytest completa 104/104 in ~39s.",
+  "rca_of_the_issue": "n/a - tutti i flussi verdi. Unico bug iniziale del mio test (edit_draft con payload {field, value}) immediatamente individuato leggendo server.py: l'endpoint richiede {fields: dict}. Test corretto e passato."
+}

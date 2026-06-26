@@ -94,6 +94,31 @@
           {% endfor %}
         </div>
 
+        {% if p.editorial %}
+        <div class="mt-14 max-w-3xl mx-auto" data-testid="prediction-editorial">
+          {% if p.editorial.context %}
+          <h2 class="font-anton text-white text-2xl sm:text-3xl leading-none">La giornata</h2>
+          <p class="text-white/65 text-base leading-relaxed mt-4 whitespace-pre-line">{{ p.editorial.context }}</p>
+          {% endif %}
+          {% if p.editorial.matches %}
+          <h2 class="font-anton text-white text-2xl sm:text-3xl leading-none mt-10">Le partite</h2>
+          <div class="mt-4 space-y-4">
+            {% for mt in p.editorial.matches %}
+            <div class="bg-white/[0.04] border border-white/10 rounded-2xl px-5 py-4">
+              <h3 class="font-archivo font-extrabold text-white text-base">{{ mt.match }}</h3>
+              <p class="text-white/60 text-sm leading-relaxed mt-1.5">{{ mt.comment }}</p>
+            </div>
+            {% endfor %}
+          </div>
+          {% endif %}
+          {% if p.editorial.picks_summary %}
+          <h2 class="font-anton text-white text-2xl sm:text-3xl leading-none mt-10">Le giocate di UnoXdue</h2>
+          <p class="text-white/65 text-base leading-relaxed mt-4 whitespace-pre-line">{{ p.editorial.picks_summary }}</p>
+          {% endif %}
+          {% if p.editorial.results_note %}<p class="text-white/45 text-sm mt-6 italic">{{ p.editorial.results_note }}</p>{% endif %}
+        </div>
+        {% endif %}
+
         <div class="mt-12 max-w-3xl mx-auto">
           <div class="flex items-start gap-3 bg-white/[0.04] border border-white/10 rounded-2xl px-5 py-4">
             {{ m.shield("w-5 h-5 text-[#EA4E1B] flex-shrink-0 mt-0.5") }}
