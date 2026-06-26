@@ -400,3 +400,26 @@ Testing E2E `iteration_17.json`: **backend 90/90 pytest (100%)**, frontend 5/5 f
 ### Note operative
 - `/live` risponde 404 in preview (ingress instrada solo `/api/*`); in prod Nginx/Caddy lo proxa.
 - Backlog: pannello admin revisione bozze pronostici AI; sostituzione foto Gianmarco; approvazione/pubblicazione manuale loghi+menzioni.
+
+
+---
+
+## ✅ CRUSCOTTO "Bozze AI Pronostici" + READINESS DEPLOY (26 giugno 2026)
+
+Testing `iteration_18.json`: **backend 104/104 pytest (100%)**, frontend 8/8 flussi (100%), nessun problema, `retest_needed=false`. Deployment-readiness (deployment_agent): **PASS, zero blocker**.
+
+### Cruscotto admin `/admin/pronostici-ai` (`PredictionsAI.jsx`)
+- **Lista bozze**: stagione, giornata, stato, data generazione, n° fonti, costo, similarità, warning, contenuto collegato, "Apri anteprima". Generatore (stagione+giornata) per giornate reali.
+- **Anteprima**: giocate reali utilizzate (read-only), campi editabili (intro/context/picks_summary/results_note/disclaimer), partite, fonti esterne cliccabili (titolo/editore/URL/data), fatti esterni, frasi a bassa confidence, confronto con il pubblicato.
+- **Azioni**: salva modifiche, approva, rifiuta, in revisione, rigenera, verifica, **promuovi a pubblicato** (con `window.confirm` + `confirm=true`). Nessuna pubblicazione/approvazione automatica; l'AI non tocca mai le giocate reali.
+- **Backend** (`predictions_ai.py` + endpoint `/admin/predictions/ai/{list,detail,safety,edit,status,regenerate,publish}`): controlli pre-pubblicazione (≥1 pronostico reale, fonti raggiungibili, no info inventate, similarità sotto soglia, stagione/giornata valide, canonical/slug, copertina automatica, disclaimer). **Audit log** (`db.audit_log`) su ogni azione. La promozione copia il testo in `prediction.editorial` (sezione resa in `prediction.html`) e imposta `status=pubblicato`, `ai_status=published`.
+- Verificato end-to-end: bozza g38 2025-2026 promossa → pagina pubblica mostra `data-testid="prediction-editorial"`.
+
+### Giornate future
+- Nessun batch automatico di giornate future generato. La pipeline parte solo su giornate reali con selezioni caricate (manuale via cruscotto o automazione autorizzata). Le bozze `ai_preview` NON entrano in sitemap (solo pronostici `pubblicato`).
+
+### Stato deploy esterno
+- File pronti e validati staticamente: `docker-compose.tls.yml` (Caddy HTTPS auto), `deploy/Caddyfile` (HSTS/CSP/redirect www→apex), `deploy/DEPLOY.md`, `.env.example`/`ENV_MATRIX.md`, CORS env-driven. deployment_agent: PASS.
+- ⚠️ **NON collaudato su server Docker esterno** (assente nel pod: niente Docker host/DNS pubblico). Passi 5-7 (avvio Docker+Caddy, test HTTPS reale) da eseguire sul server di destinazione. Il deploy NON è dichiarato concluso finché lo stack non gira realmente su Docker.
+- Comando produzione: `docker compose -f docker-compose.tls.yml up -d --build` (staging con `CADDY_ACME_CA=...acme-staging...`). Poi collegare `unoxdue.net`.
+
