@@ -767,13 +767,17 @@ def _enrich_status_filter():
 
 @api_router.get("/seo/home", response_class=HTMLResponse)
 async def ssr_home():
-    eps = await db.episodes.find({"type": "episodio"}, {"_id": 0}).sort("published_at", -1).to_list(6)
-    ints = await db.episodes.find({"type": "intervista"}, {"_id": 0}).sort("published_at", -1).to_list(6)
+    eps = await db.episodes.find({"type": "episodio", "status": {"$ne": "bozza"}}, {"_id": 0}).sort("published_at", -1).to_list(3)
+    ints = await db.episodes.find({"type": "intervista", "status": {"$ne": "bozza"}}, {"_id": 0}).sort("published_at", -1).to_list(2)
+    team = await db.team.find({}, {"_id": 0}).sort("order", 1).to_list(50)
+    pred = await db.predictions.find_one({"status": {"$ne": "bozza"}}, {"_id": 0}, sort=[("season", -1), ("round", -1)])
+    press_items = (await press.published_archive())[:2]
     def card(i):
         sec = "interviste" if i.get("type") == "intervista" else "episodi"
         return {"url": f'{SITE_URL}/{sec}/{i["slug"]}/', "title": i.get("website_title") or i.get("title"),
                 "thumbnail": i.get("thumbnail") or f'https://img.youtube.com/vi/{i.get("youtube_id","")}/maxresdefault.jpg'}
-    return HTMLResponse(seo.render_home([card(i) for i in eps], [card(i) for i in ints]))
+    return HTMLResponse(seo.render_home([card(i) for i in eps], [card(i) for i in ints],
+                                        team=team, prediction=pred, press=press_items))
 
 
 @api_router.get("/seo/il-podcast", response_class=HTMLResponse)
@@ -892,7 +896,7 @@ async def ssr_interviste():
 
 @api_router.get("/seo/pronostici", response_class=HTMLResponse)
 async def ssr_pronostici_archive():
-    items = await db.predictions.find({}, {"_id": 0}).sort("season", -1).to_list(500)
+    items = await db.predictions.find({"status": {"$ne": "bozza"}}, {"_id": 0}).sort("season", -1).to_list(500)
     cards = [{"url": f'{SITE_URL}/pronostici/serie-a/{p.get("season")}/giornata-{p.get("round")}/',
               "title": f'{p.get("competition","Serie A")} {p.get("season")} — {p.get("round")}ª giornata',
               "kicker": "Pronostici", "thumbnail": None} for p in items]
@@ -906,7 +910,7 @@ async def ssr_prediction(season: str, round_: int):
     p = await db.predictions.find_one({"season": season, "round": round_})
     if not p:
         return _render_ssr_404()
-    return HTMLResponse(seo.render_prediction(p))
+    return HTMLResponse(seo.render_prediction(p, noindex=(p.get("status") == "bozza")))
 
 
 @api_router.get("/seo/team", response_class=HTMLResponse)
@@ -1000,7 +1004,7 @@ async def _render_transcript_page(slug: str, section: str):
 async def sitemap():
     from xml.sax.saxutils import escape
     eps = await db.episodes.find({}, {"_id": 0}).to_list(2000)
-    preds = await db.predictions.find({}, {"_id": 0}).to_list(2000)
+    preds = await db.predictions.find({"status": {"$ne": "bozza"}}, {"_id": 0}).to_list(2000)
     team = await db.team.find({}, {"_id": 0}).to_list(200)
     urls = [f"{SITE_URL}/", f"{SITE_URL}/il-podcast/", f"{SITE_URL}/episodi/",
             f"{SITE_URL}/interviste/", f"{SITE_URL}/pronostici/", f"{SITE_URL}/team/",

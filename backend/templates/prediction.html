@@ -3,7 +3,7 @@
 {% block head %}
     <meta name="description" content="{{ p.meta_description }}" />
     <link rel="canonical" href="{{ canonical }}" />
-    <meta name="robots" content="index, follow" />
+    <meta name="robots" content="{% if noindex %}noindex, follow{% else %}index, follow{% endif %}" />
     <meta property="og:title" content="{{ p.seo_title }}" />
     <meta property="og:description" content="{{ p.meta_description }}" />
     <meta property="og:url" content="{{ canonical }}" />

@@ -12,6 +12,12 @@
 {% macro shield(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20 13c0 5-3.5 7.5-7.66 8.95a1 1 0 0 1-.67-.01C7.5 20.5 4 18 4 13V6a1 1 0 0 1 1-1c2 0 4.5-1.2 6.24-2.72a1.17 1.17 0 0 1 1.52 0C14.51 3.81 17 5 19 5a1 1 0 0 1 1 1z"/><path d="M12 8v4"/><path d="M12 16h.01"/></svg>{% endmacro %}
 {% macro mic(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M12 2a3 3 0 0 0-3 3v7a3 3 0 0 0 6 0V5a3 3 0 0 0-3-3Z"/><path d="M19 10v2a7 7 0 0 1-14 0v-2"/><line x1="12" x2="12" y1="19" y2="22"/></svg>{% endmacro %}
 {% macro quote(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="currentColor" aria-hidden="true"><path d="M3 21c3 0 7-1 7-8V5c0-1.25-.756-2.017-2-2H4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2 1 0 1 0 1 1v1c0 1-1 2-2 2s-1 .008-1 1.031V20c0 1 0 1 1 1z"/><path d="M15 21c3 0 7-1 7-8V5c0-1.25-.757-2.017-2-2h-4c-1.25 0-2 .75-2 1.972V11c0 1.25.75 2 2 2h.75c0 2.25.25 4-2.75 4v3c0 1 0 1 1 1z"/></svg>{% endmacro %}
+{% macro radio(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4.9 19.1C1 15.2 1 8.8 4.9 4.9"/><path d="M7.8 16.2c-2.3-2.3-2.3-6.1 0-8.5"/><circle cx="12" cy="12" r="2"/><path d="M16.2 7.8c2.3 2.3 2.3 6.1 0 8.5"/><path d="M19.1 4.9C23 8.8 23 15.1 19.1 19"/></svg>{% endmacro %}
+{% macro target(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="10"/><circle cx="12" cy="12" r="6"/><circle cx="12" cy="12" r="2"/></svg>{% endmacro %}
+{% macro users(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M22 21v-2a4 4 0 0 0-3-3.87"/><path d="M16 3.13a4 4 0 0 1 0 7.75"/></svg>{% endmacro %}
+{% macro clapperboard(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M20.2 6 3 11l-.9-2.4c-.3-1.1.3-2.2 1.3-2.5l13.5-4c1.1-.3 2.2.3 2.5 1.4Z"/><path d="m6.2 5.3 3.1 3.9"/><path d="m12.4 3.4 3.1 4"/><path d="M3 11h18v8a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/></svg>{% endmacro %}
+{% macro download(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" x2="12" y1="15" y2="3"/></svg>{% endmacro %}
+{% macro arrow_up_right(cls="") %}<svg class="{{ cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 7h10v10"/><path d="M7 17 17 7"/></svg>{% endmacro %}
 
 {# ===== Social icon scelta per chiave ===== #}
 {% macro social(key, cls="") %}{% if key == "twitch" %}{{ twitch(cls) }}{% elif key == "youtube" %}{{ youtube(cls) }}{% elif key == "instagram" %}{{ instagram(cls) }}{% else %}{{ tiktok(cls) }}{% endif %}{% endmacro %}
@@ -27,18 +33,128 @@
 </div>
 {% endmacro %}
 
-{# ===== Card contenuto (episodio / intervista / archivio) ===== #}
-{% macro content_card(url, title, kicker="", thumbnail=None, badge="", badge_color="#FF0000", show_play=false) %}
-<a href="{{ url }}" class="lift group flex flex-col h-full bg-white rounded-2xl border border-[#ecdfce] overflow-hidden shadow-sm hover:shadow-xl hover:border-[#EA4E1B]/40">
+{# ===== Card contenuto (episodio / intervista / archivio). dark=true per sezioni scure ===== #}
+{% macro content_card(url, title, kicker="", thumbnail=None, badge="", badge_color="#FF0000", show_play=false, dark=false) %}
+<a href="{{ url }}" class="lift group flex flex-col h-full {% if dark %}bg-white/[0.03] border-white/10 hover:border-[#EA4E1B]/50{% else %}bg-white border-[#ecdfce] shadow-sm hover:shadow-xl hover:border-[#EA4E1B]/40{% endif %} rounded-2xl border overflow-hidden">
   <div class="relative aspect-video overflow-hidden bg-[#14100e]">
     {% if thumbnail %}<img src="{{ thumbnail }}" alt="{{ title }}" loading="lazy" class="w-full h-full object-cover transition-transform duration-500 group-hover:scale-105" />{% endif %}
+    {% if dark %}<span class="absolute inset-0 bg-gradient-to-t from-[#14100e] via-transparent to-transparent"></span>{% endif %}
     {% if show_play %}<span class="absolute inset-0 flex items-center justify-center"><span class="w-14 h-14 rounded-full bg-[#EA4E1B] flex items-center justify-center shadow-lg transition-transform group-hover:scale-110">{{ play("w-6 h-6 text-white ml-0.5") }}</span></span>{% endif %}
     {% if badge %}<span class="absolute top-3 left-3 inline-flex items-center gap-1.5 text-[11px] font-bold uppercase tracking-wide text-white px-2.5 py-1 rounded-full" style="background-color:{{ badge_color }}">{{ badge }}</span>{% endif %}
   </div>
   <div class="p-5 flex flex-col flex-1">
     {% if kicker %}<span class="text-xs text-[#EA4E1B] font-bold uppercase tracking-wide">{{ kicker }}</span>{% endif %}
-    <h3 class="font-archivo font-extrabold text-[#1a1411] text-lg mt-1.5 leading-snug">{{ title }}</h3>
+    <h3 class="font-archivo font-extrabold {% if dark %}text-white{% else %}text-[#1a1411]{% endif %} text-lg mt-1.5 leading-snug">{{ title }}</h3>
     <span class="mt-4 inline-flex items-center gap-1.5 text-[#EA4E1B] font-bold uppercase tracking-wide text-sm group-hover:gap-2.5 transition-all">Scopri di più {{ chevron("w-4 h-4") }}</span>
   </div>
+</a>
+{% endmacro %}
+
+{# ===== Card "feature" (sezione Il podcast) ===== #}
+{% macro feature_card(icon, title, text) %}
+<div class="lift h-full bg-white rounded-2xl border border-[#ecdfce] p-6 shadow-sm hover:shadow-xl hover:border-[#EA4E1B]/40">
+  <div class="w-12 h-12 rounded-xl bg-[#EA4E1B]/10 flex items-center justify-center text-[#EA4E1B]">
+    {% if icon == "radio" %}{{ radio("w-6 h-6") }}{% elif icon == "target" %}{{ target("w-6 h-6") }}{% elif icon == "users" %}{{ users("w-6 h-6") }}{% else %}{{ clapperboard("w-6 h-6") }}{% endif %}
+  </div>
+  <h3 class="font-archivo font-extrabold text-[#1a1411] text-lg mt-4">{{ title }}</h3>
+  <p class="text-[#6b5d52] text-sm leading-relaxed mt-2">{{ text }}</p>
+</div>
+{% endmacro %}
+
+{# ===== Card host in evidenza (Antonello) ===== #}
+{% macro host_card(h, site_url) %}
+<article class="relative overflow-hidden rounded-[2rem] bg-[#14100e] grid md:grid-cols-[minmax(0,0.85fr)_minmax(0,1.15fr)] items-stretch shadow-2xl">
+  <div class="pointer-events-none absolute -top-24 -right-16 w-96 h-96 rounded-full bg-[#EA4E1B]/20 blur-[110px]"></div>
+  <div class="relative min-h-[360px] md:min-h-[460px]">
+    <img src="{{ h.photo_abs }}" alt="{{ h.name }} — host di UnoXdue" class="absolute inset-0 w-full h-full object-cover object-center" />
+    <span class="absolute inset-0 bg-gradient-to-r from-transparent via-transparent to-[#14100e] hidden md:block"></span>
+    <span class="absolute inset-0 bg-gradient-to-t from-[#14100e] via-transparent to-transparent md:hidden"></span>
+    <span class="absolute top-5 left-5 inline-flex items-center gap-2 bg-[#14100e]/80 backdrop-blur-sm text-[#F6D9BF] text-[11px] font-bold uppercase tracking-wide px-3.5 py-2 rounded-full ring-1 ring-[#EA4E1B]/50">{{ mic("w-3.5 h-3.5 text-[#EA4E1B]") }} Host</span>
+  </div>
+  <div class="relative p-7 sm:p-10 flex flex-col justify-center">
+    <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.22em] text-xs">La voce di UnoXdue</span>
+    <h3 class="font-anton text-white text-3xl sm:text-4xl lg:text-5xl leading-none mt-3">{{ h.name }}</h3>
+    <div class="flex items-center gap-2 mt-3 text-[#F6D9BF]">{{ mic("w-4 h-4 text-[#EA4E1B]") }}<span class="text-sm font-semibold uppercase tracking-wide">{{ h.role }}</span></div>
+    <div class="relative mt-5">{{ quote("absolute -left-1 -top-2 w-8 h-8 text-[#EA4E1B]/25") }}<p class="text-white/65 text-sm sm:text-base leading-relaxed pl-7">{{ h.bio }}</p></div>
+    <a href="{{ site_url }}/team/{{ h.slug }}/" class="mt-6 inline-flex items-center gap-1.5 text-white font-bold uppercase tracking-wide text-sm hover:text-[#EA4E1B] transition-colors w-max">Profilo completo {{ chevron("w-4 h-4") }}</a>
+  </div>
+</article>
+{% endmacro %}
+
+{# ===== Card tipster ===== #}
+{% macro tipster_card(t, site_url) %}
+<a href="{{ site_url }}/team/{{ t.slug }}/" class="lift group h-full bg-white rounded-3xl overflow-hidden border border-[#ecdfce] shadow-sm hover:shadow-2xl hover:border-[#EA4E1B]/40 flex flex-col">
+  <div class="relative aspect-[4/5] overflow-hidden bg-[#14100e]">
+    <img src="{{ t.photo_abs }}" alt="{{ t.name }} — {{ t.role }}" loading="lazy" class="w-full h-full object-cover object-top transition-transform duration-500 group-hover:scale-105" />
+    <span class="absolute inset-0 bg-gradient-to-t from-[#14100e] via-[#14100e]/20 to-transparent"></span>
+    {% if t.badge %}<span class="absolute top-4 left-4 bg-[#EA4E1B] text-white text-[11px] font-bold uppercase tracking-wide px-3 py-1.5 rounded-full">{{ t.badge }}</span>{% endif %}
+    <div class="absolute bottom-4 left-4 right-4">
+      <h3 class="font-anton text-white text-2xl xl:text-3xl leading-none">{{ t.name }}</h3>
+      <p class="text-[#F6D9BF] text-sm font-semibold mt-1">{{ t.role }}</p>
+    </div>
+  </div>
+  <div class="p-6 flex flex-col flex-1">
+    <p class="text-[#6b5d52] text-sm leading-relaxed flex-1">{{ t.bio }}</p>
+    <span class="mt-5 inline-flex items-center gap-1.5 text-[#1a1411] font-bold uppercase tracking-wide text-sm group-hover:text-[#EA4E1B] transition-colors">Profilo {{ chevron("w-4 h-4") }}</span>
+  </div>
+</a>
+{% endmacro %}
+
+{# ===== Schedina pronostico (slip) ===== #}
+{% macro slip_card(p) %}
+<article class="lift bg-white rounded-2xl overflow-hidden border border-white/10 shadow-xl flex flex-col">
+  <div class="bg-[#14100e] px-5 py-4 flex items-center justify-between">
+    <div class="flex items-center gap-3">
+      {% if p.photo_abs %}<img src="{{ p.photo_abs }}" alt="{{ p.tipster }}" class="w-11 h-11 rounded-full object-cover object-top ring-2 ring-[#EA4E1B]" />{% endif %}
+      <div>
+        <p class="text-white font-archivo font-extrabold leading-tight">{{ p.tipster }}</p>
+        <p class="text-[#EA4E1B] text-xs font-bold uppercase tracking-wide">{{ p.type }} ({{ p.selections|length }})</p>
+      </div>
+    </div>
+  </div>
+  <div class="flex-1 divide-y divide-[#efe4d6]">
+    {% for s in p.selections %}
+    <div class="px-5 py-3.5">
+      <p class="text-[11px] text-[#9c8b7d] font-semibold uppercase tracking-wide">{{ s.competition }}{% if s.date %} &middot; {{ s.date }}{% endif %}</p>
+      <p class="font-archivo font-extrabold text-[#1a1411] mt-0.5">{{ s.match }}</p>
+      <div class="flex items-center justify-between mt-1.5">
+        <span class="text-sm text-[#6b5d52]">{{ s.market }}</span>
+        <span class="inline-flex items-center gap-2">
+          <span class="text-sm font-semibold text-[#1a1411]">{{ s.pick }}</span>
+          {% if s.odds %}<span class="text-sm font-bold text-white bg-[#EA4E1B] px-2 py-0.5 rounded-md tabular-nums">{{ s.odds }}</span>{% endif %}
+        </span>
+      </div>
+    </div>
+    {% endfor %}
+  </div>
+  {% if p.total_odds %}
+  <div class="bg-[#fbf7f2] border-t border-[#efe4d6] px-5 py-4 flex items-center justify-between">
+    <span class="text-xs font-bold uppercase tracking-wide text-[#6b5d52]">Quota totale</span>
+    <span class="font-anton text-[#EA4E1B] text-2xl tabular-nums">{{ p.total_odds }}</span>
+  </div>
+  {% endif %}
+</article>
+{% endmacro %}
+
+{# ===== Card "Parlano di noi" (anteprima home) ===== #}
+{% macro press_card(a) %}
+<article class="bg-white border border-[#ecdfce] rounded-2xl p-6 flex flex-col">
+  <p class="text-[11px] font-bold uppercase tracking-wide text-[#9c8b7d]">{{ a.source }}{% if a.date %} &middot; {{ a.date }}{% endif %}</p>
+  <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="font-archivo font-extrabold text-lg text-[#1a1411] mt-1.5 hover:text-[#EA4E1B] transition-colors">{{ a.title }}</a>
+  {% if a.summary %}<p class="text-sm text-[#6b5d52] mt-2 leading-relaxed flex-1">{{ a.summary }}</p>{% endif %}
+  <a href="{{ a.url }}" target="_blank" rel="noopener noreferrer" class="mt-4 inline-flex items-center gap-1.5 text-xs font-bold uppercase tracking-wide text-[#EA4E1B] hover:text-[#d3430f]">Leggi l'articolo {{ chevron("w-3.5 h-3.5") }}</a>
+</article>
+{% endmacro %}
+
+{# ===== Card social (sezione arancione) ===== #}
+{% macro social_card(s) %}
+<a href="{{ s.url }}" target="_blank" rel="noopener noreferrer" class="lift group block h-full bg-white rounded-2xl p-6 shadow-sm hover:shadow-2xl">
+  <div class="flex items-center justify-between">
+    <span class="w-12 h-12 rounded-xl flex items-center justify-center text-white" style="background-color:{{ s.color }}">{{ social(s.key, "w-6 h-6") }}</span>
+    {{ arrow_up_right("w-5 h-5 text-[#bcaea0] group-hover:text-[#EA4E1B] transition-colors") }}
+  </div>
+  <h3 class="font-archivo font-extrabold text-[#1a1411] text-xl mt-4">{{ s.label }}</h3>
+  <p class="text-[#EA4E1B] font-bold text-sm mt-0.5">{{ s.handle }}</p>
+  <p class="text-[#6b5d52] text-sm leading-relaxed mt-2">{{ s.desc }}</p>
 </a>
 {% endmacro %}

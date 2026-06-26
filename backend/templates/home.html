@@ -14,6 +14,7 @@
 {% endblock %}
 {% block main %}
 {% import "_macros.html" as m %}
+    {# ===== HERO ===== #}
     <section class="relative overflow-hidden bg-[#14100e] pt-16 pb-0">
       <div class="pointer-events-none absolute -top-32 -right-24 w-[36rem] h-[36rem] rounded-full bg-[#EA4E1B]/20 blur-[120px]"></div>
       <div class="pointer-events-none absolute -bottom-40 -left-24 w-[34rem] h-[34rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
@@ -28,10 +29,7 @@
             <a href="https://www.youtube.com/@unoXdue" target="_blank" rel="noopener noreferrer" class="inline-flex items-center justify-center gap-2 border border-white/25 hover:border-white/60 text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all">{{ m.youtube("w-5 h-5") }} Segui su YouTube</a>
           </div>
           <div class="flex items-center gap-3 mt-9 justify-center lg:justify-start">
-            <a href="https://www.twitch.tv/unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="Twitch" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.twitch("w-5 h-5") }}</a>
-            <a href="https://www.youtube.com/@unoXdue" target="_blank" rel="noopener noreferrer" aria-label="YouTube" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.youtube("w-5 h-5") }}</a>
-            <a href="https://www.instagram.com/unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.instagram("w-5 h-5") }}</a>
-            <a href="https://www.tiktok.com/@unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="TikTok" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.tiktok("w-[18px] h-[18px]") }}</a>
+            {% for s in socials %}<a href="{{ s.url }}" target="_blank" rel="noopener noreferrer" aria-label="{{ s.label }}" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.social(s.key, "w-5 h-5") }}</a>{% endfor %}
           </div>
         </div>
         <div class="flex justify-center lg:justify-end">
@@ -44,6 +42,46 @@
       {{ m.marquee_strip() }}
     </section>
 
+    {# ===== IL PODCAST (About) ===== #}
+    <section class="bg-[#fbf7f2] py-20 lg:py-28">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="grid lg:grid-cols-2 gap-12 lg:gap-16 items-start">
+          <div>
+            <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Chi siamo</span>
+            <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Il podcast</h2>
+            <div class="mt-6 space-y-4">
+              {% for p in about_text %}<p class="text-[#4a3d34] text-base sm:text-lg leading-relaxed">{{ p }}</p>{% endfor %}
+            </div>
+            <a href="{{ site_url }}/il-podcast/" class="mt-7 inline-flex items-center gap-2 bg-[#1a1411] hover:bg-[#EA4E1B] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">Scopri il podcast {{ m.chevron("w-4 h-4") }}</a>
+          </div>
+          <div class="grid sm:grid-cols-2 gap-5">
+            {% for f in features %}{{ m.feature_card(f.icon, f.title, f.text) }}{% endfor %}
+          </div>
+        </div>
+      </div>
+    </section>
+
+    {# ===== INTERVISTE ===== #}
+    {% if interviews %}
+    <section class="relative bg-[#14100e] py-20 lg:py-28 overflow-hidden">
+      <div class="pointer-events-none absolute top-0 right-0 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
+      <div class="relative max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto">
+          <span class="inline-flex items-center gap-2 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.mic("w-4 h-4") }} UnoXdue intervista</span>
+          <h2 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Le voci del calcio</h2>
+          <p class="text-white/60 text-base sm:text-lg mt-4">Interviste esclusive ai protagonisti del calcio italiano. Storie, carriere e ricordi raccontati senza filtri.</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-7 mt-14">
+          {% for it in interviews %}{{ m.content_card(it.url, it.title, "Intervista", it.thumbnail, "", "#FF0000", true, true) }}{% endfor %}
+        </div>
+        <div class="text-center mt-12">
+          <a href="{{ site_url }}/interviste/" class="inline-flex items-center gap-2 border border-white/25 hover:border-white/60 text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">Tutte le interviste {{ m.chevron("w-4 h-4") }}</a>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== EPISODI ===== #}
     {% if episodes %}
     <section class="bg-[#f4ebe1] py-20 lg:py-28">
       <div class="max-w-7xl mx-auto px-5 lg:px-8">
@@ -62,30 +100,92 @@
     </section>
     {% endif %}
 
-    {% if interviews %}
-    <section class="bg-[#fbf7f2] py-20 lg:py-28">
-      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+    {# ===== PRONOSTICI (schedine reali) ===== #}
+    {% if prediction %}
+    <section class="relative bg-[#14100e] py-20 lg:py-28 overflow-hidden">
+      <div class="pointer-events-none absolute -bottom-32 right-0 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
+      <div class="relative max-w-7xl mx-auto px-5 lg:px-8">
         <div class="text-center max-w-2xl mx-auto">
-          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Esclusive</span>
-          <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Ultime interviste</h2>
-          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Le interviste esclusive di UnoXdue ai protagonisti del calcio italiano.</p>
+          <span class="inline-flex items-center gap-2 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.trending("w-4 h-4") }} Pronostici</span>
+          <h2 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Le giocate del team</h2>
+          <div class="mt-4 inline-flex items-center gap-2 text-sm font-semibold text-[#F6D9BF] bg-white/5 border border-white/10 rounded-full px-4 py-1.5">
+            <img src="{{ site_url }}/logo.jpg" alt="" class="w-5 h-5 rounded-full" />
+            {{ prediction.competition or "Serie A" }} &middot; {{ prediction.season }} &middot; {{ prediction.round }}ª giornata
+          </div>
+          {% if prediction.intro %}<p class="text-white/60 text-base sm:text-lg mt-4">{{ prediction.intro }}</p>{% endif %}
         </div>
-        <div class="grid md:grid-cols-3 gap-7 mt-14">
-          {% for it in interviews %}{{ m.content_card(it.url, it.title, "Intervista", it.thumbnail, "YouTube", "#FF0000", true) }}{% endfor %}
+        <div class="grid md:grid-cols-2 lg:grid-cols-3 gap-7 mt-14 items-start">
+          {% for p in prediction.picks %}{{ m.slip_card(p) }}{% endfor %}
+        </div>
+        <div class="mt-12 max-w-3xl mx-auto">
+          <div class="flex items-start gap-3 bg-white/[0.04] border border-white/10 rounded-2xl px-5 py-4">
+            {{ m.shield("w-5 h-5 text-[#EA4E1B] flex-shrink-0 mt-0.5") }}
+            <p class="text-white/55 text-sm leading-relaxed"><span class="font-bold text-white/80">18+ · Gioca responsabilmente.</span> I pronostici di UnoXdue sono opinioni editoriali a scopo di intrattenimento e non garantiscono alcun risultato. Le quote sono indicative al momento della pubblicazione e possono variare.</p>
+          </div>
+        </div>
+        <div class="text-center mt-10 flex flex-col sm:flex-row gap-4 justify-center">
+          <a href="{{ site_url }}/pronostici/serie-a/{{ prediction.season }}/giornata-{{ prediction.round }}/" class="inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all hover:scale-[1.03]">Apri la giornata {{ m.chevron("w-4 h-4") }}</a>
+          <a href="{{ site_url }}/pronostici/" class="inline-flex items-center justify-center gap-2 border border-white/25 hover:border-white/60 text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all">Tutti i pronostici</a>
         </div>
       </div>
     </section>
     {% endif %}
 
-    <section class="relative bg-[#14100e] py-20 lg:py-24 overflow-hidden">
-      <div class="pointer-events-none absolute -bottom-32 right-0 w-[30rem] h-[30rem] rounded-full bg-[#EA4E1B]/10 blur-[120px]"></div>
-      <div class="relative max-w-5xl mx-auto px-5 lg:px-8 text-center">
-        <span class="inline-flex items-center gap-2 text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">{{ m.trending("w-4 h-4") }} Pronostici &amp; team</span>
-        <h2 class="font-anton text-white text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Vivi UnoXdue</h2>
-        <p class="text-white/60 text-base sm:text-lg mt-4 max-w-2xl mx-auto">Tre tipster e un host, le giocate per ogni giornata di Serie A e tutte le interviste esclusive.</p>
-        <div class="flex flex-col sm:flex-row gap-4 mt-8 justify-center">
-          <a href="{{ site_url }}/pronostici/" class="inline-flex items-center justify-center gap-2 bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all hover:scale-[1.03]">Vai ai pronostici {{ m.chevron("w-4 h-4") }}</a>
-          <a href="{{ site_url }}/team/" class="inline-flex items-center justify-center gap-2 border border-white/25 hover:border-white/60 text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-all">Scopri il team</a>
+    {# ===== IL TEAM ===== #}
+    {% if host or tipsters %}
+    <section class="bg-[#fbf7f2] py-20 lg:py-28">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto">
+          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Il nostro team</span>
+          <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Il team</h2>
+          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Un host e tre tipster: voci diverse, un'unica passione per il calcio.</p>
+        </div>
+        {% if host %}<div class="mt-14">{{ m.host_card(host, site_url) }}</div>{% endif %}
+        {% if tipsters %}
+        <div class="mt-12 flex items-center gap-4">
+          <span class="font-archivo font-extrabold uppercase tracking-[0.2em] text-sm text-[#1a1411]">I tipster</span>
+          <span class="h-px flex-1 bg-[#e6d8c6]"></span>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-3 gap-7 mt-7">
+          {% for t in tipsters %}{{ m.tipster_card(t, site_url) }}{% endfor %}
+        </div>
+        {% endif %}
+        <div class="text-center mt-12">
+          <a href="{{ site_url }}/team/" class="inline-flex items-center gap-2 bg-[#1a1411] hover:bg-[#EA4E1B] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">Scopri tutto il team {{ m.chevron("w-4 h-4") }}</a>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== PARLANO DI NOI (anteprima) ===== #}
+    {% if press %}
+    <section class="bg-[#f4ebe1] py-20 lg:py-28">
+      <div class="max-w-5xl mx-auto px-5 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto">
+          <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Rassegna stampa</span>
+          <h2 class="font-anton text-[#1a1411] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Parlano di noi</h2>
+          <p class="text-[#6b5d52] text-base sm:text-lg mt-4">Le testate che hanno parlato di UnoXdue e dei suoi protagonisti.</p>
+        </div>
+        <div class="grid md:grid-cols-2 gap-5 mt-12">
+          {% for a in press %}{{ m.press_card(a) }}{% endfor %}
+        </div>
+        <div class="text-center mt-10">
+          <a href="{{ site_url }}/parlano-di-noi/" class="inline-flex items-center gap-2 bg-[#1a1411] hover:bg-[#EA4E1B] text-white font-bold uppercase tracking-wide px-7 py-3.5 rounded-full transition-colors">Vedi la rassegna {{ m.chevron("w-4 h-4") }}</a>
+        </div>
+      </div>
+    </section>
+    {% endif %}
+
+    {# ===== SOCIAL ===== #}
+    <section class="bg-[#EA4E1B] py-20 lg:py-28">
+      <div class="max-w-7xl mx-auto px-5 lg:px-8">
+        <div class="text-center max-w-2xl mx-auto">
+          <span class="text-[#14100e] font-bold uppercase tracking-[0.25em] text-xs">Resta connesso</span>
+          <h2 class="font-anton text-[#14100e] text-4xl sm:text-5xl lg:text-6xl mt-3 leading-none">Seguici ovunque</h2>
+          <p class="text-[#3a1e10] text-base sm:text-lg mt-4 font-medium">Non perderti nessun contenuto: dirette, episodi, clip e interviste su tutte le nostre piattaforme.</p>
+        </div>
+        <div class="grid sm:grid-cols-2 lg:grid-cols-4 gap-5 mt-14">
+          {% for s in socials %}{{ m.social_card(s) }}{% endfor %}
         </div>
       </div>
     </section>

@@ -200,7 +200,7 @@ def render_archive(page_title, page_desc, canonical_path, items, show_play=False
     )
 
 
-def render_prediction(p: dict) -> str:
+def render_prediction(p: dict, noindex: bool = False) -> str:
     p = dict(p); p.pop("_id", None)
     season = p.get("season"); rnd = p.get("round")
     p["h1"] = p.get("h1") or f'Pronostici {p.get("competition", "Serie A")} {season} \u2014 {rnd}a giornata'
@@ -223,7 +223,7 @@ def render_prediction(p: dict) -> str:
     return env.get_template("prediction.html").render(
         p=p, canonical=canonical, site_url=SITE_URL, jsonld=jsonld,
         breadcrumb_jsonld=bc, year=_year(),
-        results_attribution=_results_attribution(),
+        results_attribution=_results_attribution(), noindex=noindex,
     )
 
 
@@ -269,13 +269,71 @@ def render_press_archive(items) -> str:
     )
 
 
-def render_home(episodes, interviews) -> str:
-    socials = ["https://www.twitch.tv/unoxdue_", "https://www.instagram.com/unoxdue_",
-               "https://www.youtube.com/@unoXdue", "https://www.tiktok.com/@unoxdue_"]
+def _abs_url(u: str) -> str:
+    if not u:
+        return f"{SITE_URL}/logo.jpg"
+    return u if u.startswith("http") else f"{SITE_URL}{u}"
+
+
+# Ordine fisso del team in homepage (host in evidenza + tipster). Modificabile da qui.
+HOME_TIPSTER_ORDER = ["il-marziano", "sono-micuccio", "il-ninja"]
+
+HOME_ABOUT = [
+    "UnoXdue è il podcast sulla Serie A con tre tipster e un host: analisi tattica, pronostici e "
+    "dibattito appassionato si incontrano per offrirti uno sguardo unico sul calcio italiano.",
+    "Ogni settimana Sono Micuccio, il Ninja e il Marziano si ritrovano in diretta insieme all'host "
+    "Antonello Santopaolo per discutere della Serie A, analizzare le partite più importanti e "
+    "confrontarsi sui temi caldi del calcio italiano ed europeo.",
+    "Dalle giornate di campionato ai palinsesti, dalle giocate alle interviste ai protagonisti, "
+    "UnoXdue è il punto di ritrovo per gli appassionati che cercano contenuti autentici e approfonditi.",
+]
+HOME_FEATURES = [
+    {"icon": "radio", "title": "Dirette settimanali", "text": "Live su Twitch con analisi e dibattito in tempo reale."},
+    {"icon": "target", "title": "Focus Serie A", "text": "Approfondimenti su tutte le partite del campionato italiano."},
+    {"icon": "users", "title": "Tre tipster e un host", "text": "Quattro punti di vista diversi per un'analisi completa."},
+    {"icon": "clapperboard", "title": "Contenuti multipli", "text": "Clip, highlights ed esclusive su tutti i social."},
+]
+HOME_SOCIALS = [
+    {"key": "twitch", "label": "Twitch", "handle": "@unoxdue_", "desc": "Dirette live ogni settimana", "url": "https://www.twitch.tv/unoxdue_", "color": "#9146FF"},
+    {"key": "youtube", "label": "YouTube", "handle": "@unoXdue", "desc": "Episodi completi e interviste", "url": "https://www.youtube.com/@unoXdue", "color": "#FF0000"},
+    {"key": "instagram", "label": "Instagram", "handle": "@unoxdue_", "desc": "Clip, news e dietro le quinte", "url": "https://www.instagram.com/unoxdue_", "color": "#E1306C"},
+    {"key": "tiktok", "label": "TikTok", "handle": "@unoxdue_", "desc": "I momenti migliori in breve", "url": "https://www.tiktok.com/@unoxdue_", "color": "#111111"},
+]
+
+
+def render_home(episodes, interviews, team=None, prediction=None, press=None) -> str:
+    team = team or []
+    photo_by_name = {t.get("name"): t.get("photo") for t in team}
+
+    host = None
+    tipsters_by_slug = {}
+    for t in team:
+        t = dict(t); t.pop("_id", None)
+        t["photo_abs"] = _abs_url(t.get("photo"))
+        if t.get("is_host"):
+            host = t
+        else:
+            tipsters_by_slug[t.get("slug")] = t
+    tipsters = [tipsters_by_slug[s] for s in HOME_TIPSTER_ORDER if s in tipsters_by_slug]
+    for s, t in tipsters_by_slug.items():
+        if t not in tipsters:
+            tipsters.append(t)
+
+    pred = None
+    if prediction:
+        pred = dict(prediction); pred.pop("_id", None)
+        picks = []
+        for p in (pred.get("picks") or []):
+            p = dict(p)
+            p["photo_abs"] = _abs_url(photo_by_name.get(p.get("tipster")))
+            picks.append(p)
+        pred["picks"] = picks
+
+    socials_same_as = [s["url"] for s in HOME_SOCIALS]
     org = {
         "@type": "Organization", "@id": f"{SITE_URL}/#organization", "name": "UnoXdue",
         "url": f"{SITE_URL}/", "logo": {"@type": "ImageObject", "url": f"{SITE_URL}/logo.jpg"},
-        "sameAs": socials,
+        "sameAs": socials_same_as,
     }
     website = {
         "@type": "WebSite", "@id": f"{SITE_URL}/#website", "name": "UnoXdue",
@@ -284,13 +342,15 @@ def render_home(episodes, interviews) -> str:
     series = {
         "@type": "PodcastSeries", "@id": f"{SITE_URL}/#podcast", "name": "UnoXdue",
         "url": f"{SITE_URL}/", "image": f"{SITE_URL}/logo.jpg", "inLanguage": "it",
-        "genre": "Sport", "publisher": {"@id": f"{SITE_URL}/#organization"}, "sameAs": socials,
+        "genre": "Sport", "publisher": {"@id": f"{SITE_URL}/#organization"}, "sameAs": socials_same_as,
     }
     jsonld = json.dumps({"@context": "https://schema.org", "@graph": [org, website, series]},
                         ensure_ascii=False, indent=2)
     return env.get_template("home.html").render(
         episodes=episodes, interviews=interviews, site_url=SITE_URL,
         jsonld=jsonld, year=_year(),
+        about_text=HOME_ABOUT, features=HOME_FEATURES, socials=HOME_SOCIALS,
+        host=host, tipsters=tipsters, prediction=pred, press=press or [],
     )
 
 
