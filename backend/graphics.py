@@ -14,6 +14,7 @@ import hashlib
 import io
 import os
 import re
+import uuid
 from pathlib import Path
 
 # In ambiente Emergent i browser Playwright sono in /pw-browsers; in Docker si usa il default.
@@ -25,6 +26,7 @@ from qrcode.constants import ERROR_CORRECT_H
 from PIL import Image
 
 from config_db import db, SITE_URL, ROOT_DIR, UPLOAD_DIR
+import storage
 
 STATIC = ROOT_DIR / "static"
 PUBLIC = STATIC / "public"          # asset brand committati (logo, foto)
@@ -352,8 +354,7 @@ async def generate_pick(season: str, round_: int, pick_index: int) -> dict:
     photo_uri = await _resolve_photo(pick.get("tipster", ""))
 
     tslug = _slugify(pick.get("tipster", ""))
-    out_dir = GRAPHICS_DIR / season / str(round_) / tslug
-    out_dir.mkdir(parents=True, exist_ok=True)
+    token = uuid.uuid4().hex[:8]
 
     formats_out = {}
     errors = {}
@@ -364,10 +365,11 @@ async def generate_pick(season: str, round_: int, pick_index: int) -> dict:
                 html = await build_html(pred, pick, fmt, photo_uri, logo_uri, qr_uri, qr_label)
                 png = await asyncio.wait_for(_render_png(html, w, h), timeout=30)
                 webp = _png_to_webp(png)
-                (out_dir / f"{fmt}.png").write_bytes(png)
-                (out_dir / f"{fmt}.webp").write_bytes(webp)
-                rel = f"/api/uploads/graphics/{season}/{round_}/{tslug}/{fmt}"
-                formats_out[fmt] = {"png": f"{SITE_URL}{rel}.png", "webp": f"{SITE_URL}{rel}.webp",
+                base = f"{storage.APP_PREFIX}/graphics/{season}/{round_}/{tslug}/{token}/{fmt}"
+                await asyncio.to_thread(storage.put_object, f"{base}.png", png, "image/png")
+                await asyncio.to_thread(storage.put_object, f"{base}.webp", webp, "image/webp")
+                formats_out[fmt] = {"png": storage.public_url(f"{base}.png"),
+                                    "webp": storage.public_url(f"{base}.webp"),
                                     "w": w, "h": h}
                 last_err = None
                 break
@@ -496,9 +498,10 @@ def _cover_content_hash(pred: dict) -> str:
     return hashlib.sha1("||".join(parts).encode("utf-8")).hexdigest()[:16]
 
 
-def _cover_files_exist(season: str, round_: int) -> bool:
-    out_dir = COVERS_DIR / season / str(round_)
-    return all((out_dir / f"{fmt}.webp").exists() for fmt in COVER_FORMATS)
+def _cover_meta_complete(existing: dict) -> bool:
+    """Idempotenza basata sul DB (sorgente di verità): tutti i formati presenti con URL."""
+    fo = (existing or {}).get("formats") or {}
+    return all(f in fo and fo[f].get("url") for f in COVER_FORMATS)
 
 
 async def generate_cover(season: str, round_: int, force: bool = False, source: str = "automatic") -> dict:
@@ -518,12 +521,10 @@ async def generate_cover(season: str, round_: int, force: bool = False, source: 
             and existing.get("source") == "automatic"
             and existing.get("content_hash") == new_hash
             and existing.get("template_version") == COVER_TEMPLATE_VERSION
-            and _cover_files_exist(season, round_)):
+            and _cover_meta_complete(existing)):
         return {"ok": True, "cover": existing, "skipped": "unchanged"}
 
     logo_uri = await _embed_image("/logo.jpg")
-    out_dir = COVERS_DIR / season / str(round_)
-    out_dir.mkdir(parents=True, exist_ok=True)
 
     from datetime import datetime, timezone
     formats_out, errors = {}, {}
@@ -534,12 +535,13 @@ async def generate_cover(season: str, round_: int, force: bool = False, source: 
                 html = await build_cover_html(pred, w, h, logo_uri)
                 png = await asyncio.wait_for(_render_png(html, w, h), timeout=30)
                 webp = _png_to_webp(png)
-                # path deterministico -> sovrascrittura in place, URL stabile (mai casuale)
-                (out_dir / f"{fmt}.webp").write_bytes(webp)
-                rel = f"/api/uploads/covers/{season}/{round_}/{fmt}.webp"
+                # path con content-hash -> URL stabile, niente 409, niente cancellazioni
+                key = f"{storage.APP_PREFIX}/covers/{season}/{round_}/{new_hash}/{fmt}.webp"
+                await asyncio.to_thread(storage.put_object, key, webp, "image/webp")
                 formats_out[fmt] = {
-                    "url": f"{SITE_URL}{rel}", "w": w, "h": h, "format": "webp",
+                    "url": storage.public_url(key), "w": w, "h": h, "format": "webp",
                     "bytes": len(webp), "hash": hashlib.sha1(webp).hexdigest()[:16],
+                    "storage_path": key,
                 }
                 last_err = None
                 break

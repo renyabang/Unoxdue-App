@@ -25,6 +25,7 @@ import press
 import press_logos as plogo
 import predictions_ai as pai
 import ai_transcript as ait
+import storage
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -227,10 +228,10 @@ async def predictions_ocr(image: UploadFile = File(...), admin: str = Depends(ge
     Persiste immagine sorgente + testo OCR + dati normalizzati + versione mapping."""
     content = await image.read()
     mime = image.content_type or "image/jpeg"
-    ext = ".png" if "png" in mime else ".jpg"
-    fname = f"slip-{uuid.uuid4().hex[:10]}{ext}"
-    (UPLOAD_DIR / fname).write_bytes(content)
-    image_url = f"/api/uploads/{fname}"
+    ext = "png" if "png" in mime else "jpg"
+    key = f"{storage.APP_PREFIX}/slips/{uuid.uuid4().hex}.{ext}"
+    await asyncio.to_thread(storage.put_object, key, content, mime)
+    image_url = storage.public_url(key)
     result = await auto.ocr_slip(content, mime)
     upload_id = str(uuid.uuid4())
     upload_doc = {
@@ -457,11 +458,10 @@ async def admin_covers_manual(season: str = Form(...), round: int = Form(...),
     """Carica una copertina manuale (cover_source=manual): non verrà sovrascritta automaticamente."""
     content = await image.read()
     mime = image.content_type or "image/jpeg"
-    ext = ".png" if "png" in mime else (".webp" if "webp" in mime else ".jpg")
-    (UPLOAD_DIR / "covers").mkdir(parents=True, exist_ok=True)
-    fname = f"manual-{season}-{round}-{uuid.uuid4().hex[:8]}{ext}"
-    (UPLOAD_DIR / "covers" / fname).write_bytes(content)
-    image_url = f"{SITE_URL}/api/uploads/covers/{fname}"
+    ext = "png" if "png" in mime else ("webp" if "webp" in mime else "jpg")
+    key = f"{storage.APP_PREFIX}/covers/manual/{season}/{round}/{uuid.uuid4().hex[:8]}.{ext}"
+    await asyncio.to_thread(storage.put_object, key, content, mime)
+    image_url = storage.public_url(key)
     return await gfx.set_manual_cover(season, round, image_url, bytes_=len(content))
 
 
@@ -732,8 +732,8 @@ async def admin_press_logo_manual(id: str = Form(...), image: UploadFile = File(
     opt = plogo._validate_and_optimize(content)
     if not opt:
         raise HTTPException(status_code=400, detail="Immagine logo non valida (troppo piccola, vuota o formato non supportato)")
-    fname, h = plogo._save_webp(id, opt["bytes"])
-    image_url = f"{SITE_URL}/api/static/press_logos/{fname}"
+    key, h = await asyncio.to_thread(plogo._save_webp, id, opt["bytes"])
+    image_url = storage.public_url(key)
     return await plogo.set_manual(id, image_url, opt["w"], opt["h"], "image/webp")
 
 
@@ -1211,6 +1211,17 @@ async def robots():
 
 
 # ============================ wiring ============================
+@api_router.get("/media/{path:path}")
+async def media_passthrough(path: str):
+    """Passthrough pubblico verso l'Object Store (asset pubblici: copertine, loghi, grafiche)."""
+    try:
+        data, ctype = await asyncio.to_thread(storage.cached_get, path)
+    except Exception:
+        raise HTTPException(status_code=404, detail="Media non trovato")
+    return Response(content=data, media_type=ctype,
+                    headers={"Cache-Control": "public, max-age=31536000, immutable"})
+
+
 app.include_router(api_router)
 app.include_router(auth_router)
 app.mount("/api/uploads", StaticFiles(directory=str(UPLOAD_DIR)), name="uploads")
@@ -1232,6 +1243,11 @@ app.add_middleware(
 async def seed_all():
     try:
         await ensure_admin()
+        try:
+            await asyncio.to_thread(storage.init_storage)
+            logger.info("Object Store inizializzato")
+        except Exception as e:
+            logger.error("Object Store init fallito: %s", e)
         if await db.episodes.count_documents({}) == 0:
             for ep in SEED_EPISODES:
                 d = dict(ep); d["status"] = "pubblicato"

@@ -423,3 +423,30 @@ Testing `iteration_18.json`: **backend 104/104 pytest (100%)**, frontend 8/8 flu
 - ⚠️ **NON collaudato su server Docker esterno** (assente nel pod: niente Docker host/DNS pubblico). Passi 5-7 (avvio Docker+Caddy, test HTTPS reale) da eseguire sul server di destinazione. Il deploy NON è dichiarato concluso finché lo stack non gira realmente su Docker.
 - Comando produzione: `docker compose -f docker-compose.tls.yml up -d --build` (staging con `CADDY_ACME_CA=...acme-staging...`). Poi collegare `unoxdue.net`.
 
+
+---
+
+## ✅ DEPLOY EMERGENT HOSTING — Object Store + rimozione badge (26 giugno 2026)
+
+Sblocco del deploy in produzione su **Emergent Hosting** (scelta utente: niente VPS/costi extra). Risposta supporto Emergent: **NON serve migrare a farmnext/Next.js** — il routing pubblico→SSR viene applicato dal supporto **lato server**. Restano 2 lavori di codice (fatti) + 1 coordinamento.
+
+### P0 — Persistenza media su Emergent Object Store (FATTO + testato)
+- Il filesystem di produzione è EFFIMERO. Nuovo modulo `backend/storage.py` (S3-compatible Emergent Object Store via `EMERGENT_LLM_KEY`): `init_storage` (key di sessione, refresh su 403), `put_object` (409=già presente=ok), `get_object`, `cached_get` (cache in-memory 256), `public_url`. Path con **content-hash/uuid** (stabili, niente 409, niente delete).
+- Nessun URL pubblico diretto → endpoint **passthrough pubblico** `GET /api/media/{path}` (no auth, `Cache-Control: immutable`, 404 reale se assente). Servito sotto `/api/*` → arriva sempre a FastAPI sia in preview sia in prod.
+- Migrate TUTTE le scritture su disco effimero: copertine WebP (`graphics.generate_cover`, idempotenza ora basata sul DB con `_cover_meta_complete`), grafiche schedine (`graphics.generate_pick`), loghi rassegna stampa (`press_logos._save_webp`), upload OCR schedina (`/admin/predictions/ocr`), copertina manuale (`/admin/covers/manual`), logo manuale (`/admin/press/logo/manual`).
+- Asset brand committati (logo, font, CSS in `static/`) restano locali (versionati nell'immagine), invariati.
+- **Testato e2e**: roundtrip put/get; copertina g38 2025-2026 (auto) → 3 formati su `/api/media` (60KB/74KB/29KB); upload copertina manuale → `/api/media`; revert→rigenerazione; upload logo stampa manuale → `/api/media` (servito 200 image/webp); re-extract logo → `/api/media`; passthrough 200/404; og:image+twitter:image+thumbnail archivio puntano a `/api/media`. (Nota: Chromium Playwright reinstallato in questo pod, build 1223.)
+
+### P2 — Rimozione badge "Made with Emergent" (FATTO + testato)
+- Rimosso il tag `<a id="emergent-badge">…Made with Emergent…</a>` da `frontend/public/index.html`. Nessun componente React lo rende. Verificato: 0 occorrenze nell'HTML servito, `#emergent-badge` assente nel DOM, homepage integra.
+
+### P0 — Routing pubblico→SSR (coordinamento con supporto, NON codice)
+- Il supporto applica lato server: `/api/*`→FastAPI; `/admin`,`/admin/*`→React; `/`,`/sitemap.xml`,`/robots.txt` e tutto il resto→FastAPI SSR (404 reale da FastAPI).
+- ⚠️ Le route SSR FastAPI vivono sotto `/api/seo/*` (e `/api/sitemap.xml`,`/api/robots.txt`). Il supporto deve **riscrivere** gli URL puliti su quei path. La mappa esatta è già in `deploy/nginx.conf` (fallback pubblico → `/api/seo$request_uri`). Da confermare col supporto la regola di rewrite prima del go-live.
+
+### Da fare / aperti
+- Confermare col supporto Emergent la regola di rewrite URL puliti → `/api/seo/*` (usare `deploy/nginx.conf` come riferimento).
+- Dopo il primo deploy: rigenerare le copertine dei pronostici pubblicati (gli URL in DB ora sono già `/api/media`, ma i record generati prima del fix puntano al vecchio `/api/uploads`). Ri-estrarre i loghi stampa se necessario.
+- Backlog invariato: foto reale "Sono Gianmarco"; revisione/pubblicazione manuale 5 loghi+menzioni; pannello revisione bozze AI pronostici (già presente: `/admin/pronostici-ai`).
+
+

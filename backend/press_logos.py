@@ -25,6 +25,7 @@ import requests
 from PIL import Image
 
 from config_db import db, SITE_URL, ROOT_DIR
+import storage
 
 LOGO_DIR = ROOT_DIR / "static" / "press_logos"
 LOGO_DIR.mkdir(parents=True, exist_ok=True)
@@ -228,11 +229,11 @@ def _validate_and_optimize(content: bytes):
             "orig_w": orig_w, "orig_h": orig_h, "src_format": fmt}
 
 
-def _save_webp(item_id: str, data: bytes) -> str:
+def _save_webp(item_id: str, data: bytes):
     h = hashlib.sha1(data).hexdigest()[:16]
-    fname = f"{item_id}-{h}.webp"
-    (LOGO_DIR / fname).write_bytes(data)
-    return fname, h
+    key = f"{storage.APP_PREFIX}/press_logos/{item_id}-{h}.webp"
+    storage.put_object(key, data, "image/webp")
+    return key, h
 
 
 # ----------------------- estrazione (sync core) -----------------------
@@ -265,10 +266,10 @@ def extract_sync(url: str, source: str, item_id: str) -> dict:
         opt = _validate_and_optimize(r.content)
         if not opt:
             continue
-        fname, h = _save_webp(item_id, opt["bytes"])
+        key, h = _save_webp(item_id, opt["bytes"])
         meta.update({
             "source_url": cand, "method": method,
-            "url": f"{SITE_URL}/api/static/press_logos/{fname}",
+            "url": storage.public_url(key),
             "mime": "image/webp", "orig_w": opt["orig_w"], "orig_h": opt["orig_h"],
             "w": opt["w"], "h": opt["h"], "sha1": h, "src_format": opt["src_format"],
             # favicon piccole/incerte -> da revisionare; altrimenti ok
