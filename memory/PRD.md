@@ -359,3 +359,44 @@ Ultimo blocco di parità visiva SSR. Testato: backend 11/11 (pytest `test_block3
 2. Revisione/approvazione manuale dei 5 loghi + eventuale pubblicazione menzioni in admin.
 3. Deploy esterno Docker/Nginx (solo dopo approvazione).
 4. Backlog SEO: testi originali, pipeline Perplexity (`ai_preview`), audit Schema.org + `VideoObject` con `hasPart`/`Clip` sui capitoli trascrizione.
+
+
+
+---
+
+## ✅ SPRINT FINALE — COMPLETATO e testato (26 giugno 2026) — Blocco 3 APPROVATO
+
+Testing E2E `iteration_17.json`: **backend 90/90 pytest (100%)**, frontend 5/5 flussi critici (100%), `retest_needed=false`, nessun problema critico/minore.
+
+### P0 — Sicurezza
+- Password admin **ruotata** (`scripts/rotate_admin.py`), JWT invalidati (`token_version` 7→8), nessun cambio-password forzato.
+- `/app/memory/test_credentials.md` **sanificato** ("No credentials stored"). Vecchia password rimossa dal test file (ora legge da `.env`) e da `iteration_16.json`. Scan segreti repo **pulito**.
+
+### Macro A — SEO editoriale
+- Intro editoriale unica + sezione FAQ (JSON-LD `FAQPage`) su `/episodi/` e `/interviste/`; intro su `/parlano-di-noi/`. Macro riutilizzabili `faq_section`/`editorial_intro`.
+- Pagine istituzionali: dati reali UnoXdue (niente Perplexity), FAQ su Contatti/Collaborazioni. Niente duplicazioni con la home.
+
+### Macro B — Pronostici + Perplexity (`predictions_ai.py`)
+- Pipeline: Perplexity (fonti verificabili + URL/editore) → LLM `gpt-5.4-mini` (bozza attorno alle GIOCATE REALI) → similarità (shingle Jaccard) → antiallucinazione (partite/quote solo dai dati reali, niente esiti) → stato **`ai_preview`**, **mai pubblicazione automatica**.
+- Endpoint: `/api/admin/predictions/ai/{generate,batch}`. Bozza g38 2025-2026 generata e verificata (6 fonti reali, 12/12 partite valide, similarity/antiallucinazione passate, ~2115 token, ~$0.0013). Batch per giornate future **predisposto**.
+- ⚠️ Backlog: manca il pannello admin di revisione della bozza `ai_draft` (oggi solo via API).
+
+### Macro C — Schema.org
+- `render_page` tipizzato → `WebPage`/`ContactPage` (Contatti)/`AboutPage` (Collaborazioni) + `FAQPage` + `BreadcrumbList`. Trascrizioni ora `WebPage` + `isPartOf` (niente `VideoObject` duplicato). `CollectionPage`+`ItemList` su Parlano di noi. Confermati `Organization`/`WebSite`/`PodcastSeries` (home), `ProfilePage`/`Person` (team), `VideoObject`/`Clip` con `hasPart` (episodi/interviste, solo dove il video è incorporato).
+
+### Macro D — E2E & checkpoint
+- pytest 90/90; testing agent 100%; **backup DB** (`backups/*.archive`, ~8MB); **checkpoint codice** (`backups/checkpoint_sprint_*.tar.gz`); scan segreti pulito.
+- Route verificate: home, il-podcast, episodi, interviste, pronostici (archivio+singola), team (archivio+singola), parlano-di-noi, collaborazioni, contatti, privacy, cookie, trascrizione, sitemap.xml (39), video-sitemap.xml (13), robots.txt, 404.
+
+### Macro E — Deploy esterno (HTTPS automatico)
+- `docker-compose.tls.yml` (mongo+backend+web+**Caddy**), `deploy/Caddyfile` (Let's Encrypt auto, redirect `www→apex`, header HSTS/nosniff/SAMEORIGIN/Referrer/Permissions + CSP YouTube), `deploy/DEPLOY.md` (staging+prod+backup/restore+health). **CORS env-driven** (`CORS_ORIGINS`, default `*` in preview, `https://unoxdue.net` in prod). `.env.example`/`ENV_MATRIX.md` aggiornati.
+- ⚠️ NON collaudato su server Docker esterno (assente nel pod): file pronti, da avviare e verificare sul server di destinazione.
+
+### Contenuti ancora in bozza (per scelta)
+- "Sono Gianmarco": foto placeholder, profilo bozza, non pubblicato, solo `/team/`.
+- 5 record "Parlano di noi": in revisione, non pubblicati (3 loghi + 2 fallback iniziali).
+- Pronostici g38 `ai_draft`: stato `ai_preview`, non pubblicato.
+
+### Note operative
+- `/live` risponde 404 in preview (ingress instrada solo `/api/*`); in prod Nginx/Caddy lo proxa.
+- Backlog: pannello admin revisione bozze pronostici AI; sostituzione foto Gianmarco; approvazione/pubblicazione manuale loghi+menzioni.
