@@ -1,0 +1,1 @@
+{"indexes":[{"v":{"$numberInt":"2"},"key":{"_id":{"$numberInt":"1"}},"name":"_id_"},{"v":{"$numberInt":"2"},"key":{"competition":{"$numberInt":"1"},"season":{"$numberInt":"1"},"round":{"$numberInt":"1"}},"name":"competition_1_season_1_round_1","unique":true}],"uuid":"2d44641f7a544761a26da59aee96f8e7","collectionName":"predictions","type":"collection"}
