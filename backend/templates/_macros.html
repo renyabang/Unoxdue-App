@@ -189,6 +189,11 @@
 </article>
 {% endmacro %}
 
+{# ===== Logo testata "Parlano di noi" (immagine se approvata, altrimenti iniziali) ===== #}
+{% macro press_logo(a, cls="w-12 h-12") %}
+{% if a.logo %}<img src="{{ a.logo }}" alt="{{ a.source }}" loading="lazy" class="{{ cls }} rounded-xl object-contain bg-white border border-[#ecdfce] p-1 shrink-0" />{% else %}<span class="{{ cls }} rounded-xl bg-[#EA4E1B]/10 text-[#EA4E1B] font-archivo font-extrabold flex items-center justify-center text-sm shrink-0" aria-hidden="true">{{ a.initials }}</span>{% endif %}
+{% endmacro %}
+
 {# ===== Card "Parlano di noi" (anteprima home) ===== #}
 {% macro press_card(a) %}
 <article class="bg-white border border-[#ecdfce] rounded-2xl p-6 flex flex-col" data-testid="press-card">

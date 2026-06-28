@@ -450,3 +450,39 @@ Sblocco del deploy in produzione su **Emergent Hosting** (scelta utente: niente 
 - Backlog invariato: foto reale "Sono Gianmarco"; revisione/pubblicazione manuale 5 loghi+menzioni; pannello revisione bozze AI pronostici (già presente: `/admin/pronostici-ai`).
 
 
+
+
+
+---
+
+## ✅ GO-LIVE su VPS DigitalOcean (unoxdue.net) + fix post-deploy (28 giugno 2026)
+
+Sito LIVE su VPS DigitalOcean (`157.230.108.112`) con Docker Compose `docker-compose.tls.yml` + Caddy (HTTPS auto, HSTS, CSP). Operazioni admin di produzione eseguite via API (`https://unoxdue.net/api/admin/*`).
+
+### Credenziali produzione (VPS)
+- Admin: `admin@unoxdue.net` / password fornita dall'utente e impostata in `/root/unoxdue/.env` (`ADMIN_PASSWORD`). NOTA: la vecchia password del deploy (`f8b437786588c99023eb6e01`) NON è più valida.
+- L'Object Store Emergent è **condiviso** tra preview e produzione (stesso `EMERGENT_LLM_KEY`): un file caricato dallo store in preview è leggibile su `unoxdue.net/api/media/{path}` e viceversa.
+
+### DNS (risolto)
+- Trovati DUE record A per l'apex `unoxdue.net`: VPS `157.230.108.112` (sito) + SiteGround `35.214.216.128` (email/hosting). Il secondo causava captcha SiteGround (`sg-captcha`, HTTP 202, pagine vuote) su ~metà del traffico.
+- **Fix utente**: eliminato SOLO il record A `unoxdue.net → 35.214.216.128`. Mantenuti tutti i record email (MX, SPF, DKIM, DMARC) e i sottodomini `mail/ftp/ssh/autodiscover/autoconfig → 35.214.216.128`. Ora `unoxdue.net` e `www` risolvono solo al VPS; sito stabile 200 via Caddy.
+
+### Task completati e LIVE
+- ✅ **Copertine pronostici rigenerate** sul dominio finale: cover g38 2025-2026 rigenerata con `force=true` (prod SITE_URL=`https://unoxdue.net`); og:image + twitter:image + ImageObject ora puntano a `https://unoxdue.net/api/media/unoxdue/covers/...` (3 formati horizontal/square/thumb).
+- ✅ **Foto reale "Sono Gianmarco"**: ritratto (camicia bianca, sfondo arancio/bianco) caricato nell'Object Store → `unoxdue/team/gianmarco-170ed8dbda35.jpg`; campo `team.photo` del membro `sono-gianmarco` aggiornato all'URL assoluto `https://unoxdue.net/api/media/...`. Visibile su `/team/` (resta `status=bozza` → card collab "Scheda in arrivo" finché mancano bio/ruolo definitivi).
+
+### BUG TEMPLATE risolto (latente, emerso pubblicando le menzioni)
+- Pubblicando per la prima volta delle menzioni "Parlano di noi", home + `/parlano-di-noi/` andavano in **HTTP 500**. Root cause: la macro `press_logo` è richiamata in `templates/press.html` (riga 44) e dentro `press_card` (`_macros.html`) ma **non era mai stata definita** → `UndefinedError`. Mai emerso prima perché c'erano 0 menzioni pubblicate.
+- **Fix**: aggiunta macro `press_logo(a, cls)` in `backend/templates/_macros.html` (img con `object-contain` anti-crop se logo approvato, altrimenti badge iniziali arancione). CSS SSR ricompilato (`scripts/build_ssr_css.sh`, 67KB). Verificato localmente con dati reali di prod via `scripts/repro_press.py`: `render_press_archive` + `render_home` OK.
+- **Mitigazione immediata** applicata in prod: le 4 menzioni riportate a `status=found` (home ripristinata a 200) IN ATTESA del redeploy.
+
+### Stato "Parlano di noi" (5 record, da completare dopo redeploy)
+- 4 record validi pronti per pubblicazione: Forzaparma (`bc836885`, logo jsonld), Parmalive (`f74e3ead`, logo re-extract fallito → iniziali "PC"), Calabria7 (`1ef8fdbc`, logo jsonld 500px), Cosenzachannel/Baclet (`5372d850`, logo metadata 144px). Loghi approvati. Garritano/Cosenzachannel (`80b44256`) resta `status=review` (borderline, Baclet solo nel teaser).
+- ⏳ **DA FARE dopo il redeploy del VPS** (la fix template è nel repo, non ancora nell'immagine Docker in produzione):
+  1. Utente: push del codice (Save to Github) → sul VPS `cd /root/unoxdue && git pull && docker compose -f docker-compose.tls.yml up -d --build backend`.
+  2. Agente: ripubblicare le 4 menzioni (`set-status published`) e verificare home + `/parlano-di-noi/` 200 con loghi/iniziali.
+
+### Backlog residuo
+- Completare pubblicazione "Parlano di noi" (post-redeploy, vedi sopra).
+- "Sono Gianmarco": definire bio/ruolo e passare la scheda da `bozza` a pubblicata (foto già reale).
+- Pannello revisione bozze AI pronostici già presente (`/admin/pronostici-ai`).
