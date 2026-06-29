@@ -11,12 +11,15 @@
     {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}" />{% endif %}
     {% if bing_site_verification %}<meta name="msvalidate.01" content="{{ bing_site_verification }}" />{% endif %}
     {% if ga_measurement_id %}<script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
-    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ ga_measurement_id }}');</script>{% endif %}
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}
+    gtag('consent','default',{ad_storage:'denied',ad_user_data:'denied',ad_personalization:'denied',analytics_storage:'denied'});
+    try{if(localStorage.getItem('uxd_consent')==='granted'){gtag('consent','update',{analytics_storage:'granted'});}}catch(e){}
+    gtag('js',new Date());gtag('config','{{ ga_measurement_id }}');</script>{% endif %}
     {% block head %}{% endblock %}
     <link rel="icon" href="{{ site_url }}/logo.jpg" />
     <link rel="preload" as="style" href="{{ asset('css/unoxdue.css') }}" />
     <link rel="stylesheet" href="{{ asset('css/unoxdue.css') }}" />
-    <style>html{background:#14100e}body{margin:0;background:#fbf7f2;color:#1a1411;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.gesture-img{object-position:var(--op-m,50% 52%);transform:scale(var(--sc,1));transition:transform .5s ease}@media(min-width:768px){.gesture-img{object-position:var(--op,50% 50%)}}.lift:hover .gesture-img,.group:hover .gesture-img{transform:scale(calc(var(--sc,1) + .04))}</style>
+    <style>html{background:#14100e}body{margin:0;background:#fbf7f2;color:#1a1411;font-family:Inter,-apple-system,BlinkMacSystemFont,"Segoe UI",sans-serif}.gesture-img{object-position:var(--op-m,50% 52%);transform:scale(var(--sc,1));transition:transform .5s ease}@media(min-width:768px){.gesture-img{object-position:var(--op,50% 50%)}}.lift:hover .gesture-img,.group:hover .gesture-img{transform:scale(calc(var(--sc,1) + .04))}.uxd-cookie{position:fixed;left:1rem;right:1rem;bottom:1rem;z-index:60;pointer-events:none;animation:uxdup .45s cubic-bezier(.16,1,.3,1)}@media(min-width:640px){.uxd-cookie{right:auto;max-width:23rem}}@keyframes uxdup{from{opacity:0;transform:translateY(16px)}to{opacity:1;transform:translateY(0)}}.uxd-cookie-card{pointer-events:auto;background:#14100e;border:1px solid rgba(255,255,255,.12);border-radius:1rem;padding:1.05rem 1.2rem;box-shadow:0 18px 50px -12px rgba(0,0,0,.6)}.uxd-cookie-card p{margin:0;font-size:.83rem;line-height:1.5;color:rgba(255,255,255,.82)}.uxd-cookie-card a{color:#EA4E1B;font-weight:600;text-decoration:none}.uxd-cookie-card a:hover{text-decoration:underline}.uxd-cookie-actions{display:flex;gap:.6rem;margin-top:.85rem}.uxd-cookie-actions button{flex:1;font-size:.8rem;font-weight:700;border-radius:9999px;padding:.5rem .9rem;cursor:pointer;border:0;transition:background-color .2s,color .2s,border-color .2s}#uxd-cookie-accept{background:#EA4E1B;color:#fff}#uxd-cookie-accept:hover{background:#d3430f}#uxd-cookie-reject{background:transparent;color:rgba(255,255,255,.7);border:1px solid rgba(255,255,255,.18)}#uxd-cookie-reject:hover{color:#fff;border-color:rgba(255,255,255,.4)}</style>
   </head>
   <body class="antialiased bg-[#fbf7f2] text-[#1a1411]">
     <header class="sticky top-0 z-50 bg-[#14100e]/95 backdrop-blur-md border-b border-white/10">
@@ -94,5 +97,17 @@
         </div>
       </div>
     </footer>
+    {% if ga_measurement_id %}
+    <div id="uxd-cookie" class="uxd-cookie" hidden role="dialog" aria-label="Preferenze cookie" data-testid="cookie-banner">
+      <div class="uxd-cookie-card">
+        <p>Usiamo cookie tecnici e, solo con il tuo consenso, cookie di analisi anonimi per migliorare il sito. <a href="{{ site_url }}/cookie/">Maggiori info</a>.</p>
+        <div class="uxd-cookie-actions">
+          <button type="button" id="uxd-cookie-reject" data-testid="cookie-reject">Rifiuta</button>
+          <button type="button" id="uxd-cookie-accept" data-testid="cookie-accept">Accetta</button>
+        </div>
+      </div>
+    </div>
+    <script>(function(){var K='uxd_consent',el=document.getElementById('uxd-cookie');function g(){try{return localStorage.getItem(K)}catch(e){return null}}function s(v){try{localStorage.setItem(K,v)}catch(e){}}if(!g()){el.hidden=false}function c(){el.hidden=true}document.getElementById('uxd-cookie-accept').addEventListener('click',function(){s('granted');if(window.gtag){gtag('consent','update',{analytics_storage:'granted'})}c()});document.getElementById('uxd-cookie-reject').addEventListener('click',function(){s('denied');c()})})();</script>
+    {% endif %}
   </body>
 </html>

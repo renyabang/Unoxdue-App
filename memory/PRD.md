@@ -486,3 +486,37 @@ Sito LIVE su VPS DigitalOcean (`157.230.108.112`) con Docker Compose `docker-com
 - Completare pubblicazione "Parlano di noi" (post-redeploy, vedi sopra).
 - "Sono Gianmarco": definire bio/ruolo e passare la scheda da `bozza` a pubblicata (foto già reale).
 - Pannello revisione bozze AI pronostici già presente (`/admin/pronostici-ai`).
+
+
+
+---
+
+## 🔧 SEO Tools (GA4 + Search Console + Bing) + Cookie banner GDPR — CODICE PRONTO (28 giugno 2026)
+
+Implementato e verificato in preview; **si attiva con il prossimo redeploy del VPS** (stesso del fix "Parlano di noi").
+
+### Iniezione SSR env-driven (tutte le pagine pubbliche, via `base.html` <head>)
+- `backend/seo.py`: `env.globals` per `ga_measurement_id`, `google_site_verification`, `bing_site_verification` (da `os.environ`).
+- `backend/templates/base.html`: 
+  - `<meta name="google-site-verification">` se `GOOGLE_SITE_VERIFICATION` valorizzata.
+  - `<meta name="msvalidate.01">` (Bing) se `BING_SITE_VERIFICATION` valorizzata.
+  - GA4 gtag.js + **Google Consent Mode v2** (default `analytics_storage:'denied'`; update a `granted` solo dopo accettazione, letta da `localStorage.uxd_consent`).
+- Tutto gated: se le env sono vuote (preview), NESSUNA iniezione. Verificato.
+
+### Cookie banner GDPR (carino + non invasivo, richiesta utente)
+- Card piccola fixed in basso a sinistra (max-w 23rem), stile brand dark `#14100e` + accento arancio `#EA4E1B`, animazione slide-up, bottoni "Rifiuta"/"Accetta", link a `/cookie/`. `position:fixed` → non sposta il layout. CSS inline in `base.html` (no dipendenza da purge Tailwind). `data-testid`: cookie-banner / cookie-accept / cookie-reject.
+- Mostrato solo se `GA_MEASUREMENT_ID` è configurato. "Accetta" → consenso analytics granted + persistito in localStorage (non riappare). Screenshot verificato (preview, GA di test).
+
+### CSP aggiornato (`deploy/Caddyfile`)
+- `script-src` + `https://www.googletagmanager.com`; `connect-src` + `https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com`. `img-src` già `https:` (pixel GA ok).
+- Caddyfile è montato come volume (`./deploy/Caddyfile:ro`) → si applica con `docker compose -f docker-compose.tls.yml restart caddy` (no rebuild).
+
+### Nuove env (in `.env.example`, da impostare in `/root/unoxdue/.env` su VPS)
+- `GA_MEASUREMENT_ID` (G-XXXXXXXXXX), `GOOGLE_SITE_VERIFICATION` (valore content del meta "Tag HTML"), `BING_SITE_VERIFICATION` (valore content del meta, oppure importare GSC in Bing).
+
+### Redeploy combinato (sistema ANCHE "Parlano di noi")
+1. "Save to Github" → 2. su VPS: aggiungere le 3 env in `.env`; `cd /root/unoxdue && git pull` (gate: `grep -c "macro press_logo" backend/templates/_macros.html` deve dare 1); `docker compose -f docker-compose.tls.yml up -d --build backend`; `docker compose -f docker-compose.tls.yml restart caddy`.
+3. Agente: ripubblicare 4 menzioni press + verificare home/parlano-di-noi 200, GA + meta verifica presenti.
+4. Utente: "Verifica" su GSC e Bing + invio sitemap `https://unoxdue.net/sitemap.xml`.
+
+### Backlog: foto Gianmarco LIVE (resta bozza finché mancano bio/ruolo). Press 4 record pronti (loghi approvati) + 1 review (Garritano).
