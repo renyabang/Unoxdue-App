@@ -31,7 +31,7 @@ www.{$DOMAIN} {
 	# Content-Security-Policy: consente embed YouTube e risorse same-origin.
 	# Gli stili/JSON-LD/script inline del SSR richiedono 'unsafe-inline'.
 	# Attiva/affina dopo i test: in caso di problemi commenta questo blocco.
-	header Content-Security-Policy "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.twitch.tv; connect-src 'self'; base-uri 'self'; form-action 'self'"
+	header Content-Security-Policy "default-src 'self'; img-src 'self' https: data:; script-src 'self' 'unsafe-inline' https://www.youtube.com https://s.ytimg.com https://www.googletagmanager.com; style-src 'self' 'unsafe-inline'; font-src 'self' data:; frame-src https://www.youtube.com https://www.youtube-nocookie.com https://player.twitch.tv; connect-src 'self' https://www.google-analytics.com https://*.google-analytics.com https://*.analytics.google.com https://www.googletagmanager.com; base-uri 'self'; form-action 'self'"
 
 	# ---- Reverse proxy al tier web (Nginx applica il routing SSR/SPA) ----
 	reverse_proxy web:80

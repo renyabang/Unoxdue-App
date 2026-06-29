@@ -1,5 +1,6 @@
 """Rendering SSR (HTML completo) per le pagine pubbliche. URL pulite nei canonical."""
 import json
+import os
 import re
 import unicodedata
 from datetime import datetime
@@ -24,6 +25,9 @@ def asset(path: str) -> str:
 
 
 env.globals["asset"] = asset
+env.globals["ga_measurement_id"] = os.environ.get("GA_MEASUREMENT_ID", "").strip()
+env.globals["google_site_verification"] = os.environ.get("GOOGLE_SITE_VERIFICATION", "").strip()
+env.globals["bing_site_verification"] = os.environ.get("BING_SITE_VERIFICATION", "").strip()
 
 MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
         "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]

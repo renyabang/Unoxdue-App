@@ -8,6 +8,10 @@
     <meta property="og:locale" content="it_IT" />
     <meta property="og:type" content="{% block og_type %}website{% endblock %}" />
     <meta name="twitter:card" content="summary_large_image" />
+    {% if google_site_verification %}<meta name="google-site-verification" content="{{ google_site_verification }}" />{% endif %}
+    {% if bing_site_verification %}<meta name="msvalidate.01" content="{{ bing_site_verification }}" />{% endif %}
+    {% if ga_measurement_id %}<script async src="https://www.googletagmanager.com/gtag/js?id={{ ga_measurement_id }}"></script>
+    <script>window.dataLayer=window.dataLayer||[];function gtag(){dataLayer.push(arguments);}gtag('js',new Date());gtag('config','{{ ga_measurement_id }}');</script>{% endif %}
     {% block head %}{% endblock %}
     <link rel="icon" href="{{ site_url }}/logo.jpg" />
     <link rel="preload" as="style" href="{{ asset('css/unoxdue.css') }}" />
