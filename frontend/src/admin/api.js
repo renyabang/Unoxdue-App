@@ -35,6 +35,8 @@ export const api = {
   syncYoutube: () => req("/admin/sync/youtube", { method: "POST" }),
   logs: (limit = 100) => req(`/admin/logs?limit=${limit}`),
   settings: () => req("/admin/settings"),
+  seoTools: () => req("/admin/seo-tools"),
+  updateSeoTools: (body) => req("/admin/seo-tools", { method: "PUT", body }),
   predictions: () => req("/predictions"),
   pressSearch: (q) => req(`/admin/press/search?q=${encodeURIComponent(q)}`),
   ocr: (file) => {

@@ -29,6 +29,16 @@ env.globals["ga_measurement_id"] = os.environ.get("GA_MEASUREMENT_ID", "").strip
 env.globals["google_site_verification"] = os.environ.get("GOOGLE_SITE_VERIFICATION", "").strip()
 env.globals["bing_site_verification"] = os.environ.get("BING_SITE_VERIFICATION", "").strip()
 
+
+def apply_seo_config(cfg):
+    """Aggiorna a runtime i codici SEO (GA4 + verifiche) iniettati nell'<head> SSR.
+    I valori salvati da admin (DB) sovrascrivono i default da variabili ambiente."""
+    if not isinstance(cfg, dict):
+        return
+    for k in ("ga_measurement_id", "google_site_verification", "bing_site_verification"):
+        if k in cfg:
+            env.globals[k] = (cfg.get(k) or "").strip()
+
 MESI = ["gennaio", "febbraio", "marzo", "aprile", "maggio", "giugno",
         "luglio", "agosto", "settembre", "ottobre", "novembre", "dicembre"]
 

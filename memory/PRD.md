@@ -519,4 +519,13 @@ Implementato e verificato in preview; **si attiva con il prossimo redeploy del V
 3. Agente: ripubblicare 4 menzioni press + verificare home/parlano-di-noi 200, GA + meta verifica presenti.
 4. Utente: "Verifica" su GSC e Bing + invio sitemap `https://unoxdue.net/sitemap.xml`.
 
+
+## ➕ Box admin "Strumenti SEO" (29 giugno 2026) — gestione codici SEO senza redeploy
+Su richiesta utente (evitare modifica `.env` + SSH a ogni cambio), aggiunto pannello in **Admin → Integrazioni**:
+- Frontend `frontend/src/admin/Integrations.jsx`: card "Strumenti SEO — Analytics e verifiche" con 3 input (GA4 ID, GSC token, Bing token) + Salva + badge stato + reminder sitemap. `api.js`: `seoTools()` / `updateSeoTools()`.
+- Backend `server.py`: `GET/PUT /api/admin/seo-tools` (salva in `db.settings.seo_tools`); `seo.apply_seo_config()` aggiorna `env.globals` **a runtime** → l'iniezione nell'<head> SSR cambia SUBITO senza riavvio (app single-worker by design). Caricato anche allo startup (`seed_all`).
+- Le env `GA_MEASUREMENT_ID`/`GOOGLE_SITE_VERIFICATION`/`BING_SITE_VERIFICATION` restano come fallback iniziale; il box admin (DB) ha priorità.
+- Verificato end-to-end in preview: salva → SSR home mostra GA/meta live senza restart → reset → pulito.
+- DOPO il redeploy: l'utente NON deve più toccare il `.env` per i codici SEO; basta incollarli in Admin → Integrazioni → Salva. Redeploy combinato: `git pull` + `up -d --build backend` + `restart caddy`, poi agente ripubblica le 4 menzioni press.
+
 ### Backlog: foto Gianmarco LIVE (resta bozza finché mancano bio/ruolo). Press 4 record pronti (loghi approvati) + 1 review (Garritano).

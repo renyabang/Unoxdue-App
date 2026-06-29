@@ -308,13 +308,33 @@ async def put_settings(data: dict, admin: str = Depends(get_current_admin)):
     return {"ok": True}
 
 
+@api_router.get("/admin/seo-tools")
+async def get_seo_tools(admin: str = Depends(get_current_admin)):
+    s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "seo_tools": 1}) or {}
+    cfg = s.get("seo_tools") or {}
+    return {
+        "ga_measurement_id": cfg.get("ga_measurement_id") or seo.env.globals.get("ga_measurement_id", ""),
+        "google_site_verification": cfg.get("google_site_verification") or seo.env.globals.get("google_site_verification", ""),
+        "bing_site_verification": cfg.get("bing_site_verification") or seo.env.globals.get("bing_site_verification", ""),
+    }
+
+
+@api_router.put("/admin/seo-tools")
+async def put_seo_tools(data: dict, admin: str = Depends(get_current_admin)):
+    cfg = {
+        "ga_measurement_id": (data.get("ga_measurement_id") or "").strip(),
+        "google_site_verification": (data.get("google_site_verification") or "").strip(),
+        "bing_site_verification": (data.get("bing_site_verification") or "").strip(),
+    }
+    await db.settings.update_one({"_id": "global"}, {"$set": {"seo_tools": cfg}}, upsert=True)
+    seo.apply_seo_config(cfg)
+    return {"ok": True, **cfg}
+
+
 @api_router.get("/admin/site-content/il-podcast")
 async def get_il_podcast_content(admin: str = Depends(get_current_admin)):
     s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "il_podcast": 1}) or {}
     return {"content": s.get("il_podcast") or {}, "defaults": seo.il_podcast_defaults()}
-
-
-@api_router.put("/admin/site-content/il-podcast")
 async def put_il_podcast_content(data: dict, admin: str = Depends(get_current_admin)):
     content = data.get("content", data)
     await db.settings.update_one({"_id": "global"}, {"$set": {"il_podcast": content}}, upsert=True)
@@ -1243,6 +1263,12 @@ app.add_middleware(
 async def seed_all():
     try:
         await ensure_admin()
+        try:
+            s_seo = await db.settings.find_one({"_id": "global"}, {"_id": 0, "seo_tools": 1}) or {}
+            if s_seo.get("seo_tools"):
+                seo.apply_seo_config(s_seo["seo_tools"])
+        except Exception as e:
+            logger.error("SEO config load fallito: %s", e)
         try:
             await asyncio.to_thread(storage.init_storage)
             logger.info("Object Store inizializzato")
