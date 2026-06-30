@@ -1067,7 +1067,7 @@ async def ssr_press():
 
 @api_router.get("/seo/episodi", response_class=HTMLResponse)
 async def ssr_episodi():
-    items = await db.episodes.find({"type": "episodio", "status": {"$ne": "bozza"}}, {"_id": 0}).sort("published_at", -1).to_list(500)
+    items = await db.episodes.find({"type": "episodio", "status": "pubblicato"}, {"_id": 0}).sort("published_at", -1).to_list(500)
     return HTMLResponse(seo.render_episodi_archive(items))
 
 
@@ -1117,6 +1117,8 @@ async def ssr_episode(slug: str):
         if red:
             return red
         return _render_ssr_404()
+    if ep.get("status", "pubblicato") != "pubblicato":
+        return _render_ssr_404()
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
 
@@ -1128,6 +1130,8 @@ async def ssr_interview(slug: str):
         red = await _slug_redirect(slug)
         if red:
             return red
+        return _render_ssr_404()
+    if ep.get("status", "pubblicato") != "pubblicato":
         return _render_ssr_404()
     press_box = await press.published_for(slug)
     return HTMLResponse(seo.render_episode(ep, press_box))
@@ -1165,6 +1169,8 @@ async def _render_transcript_page(slug: str, section: str):
         if red:
             return red
         return _render_ssr_404()
+    if ep.get("status", "pubblicato") != "pubblicato":
+        return _render_ssr_404()
     if not ep.get("has_transcript_page"):
         return _render_ssr_404()
     b = await ait.get_transcript_clean(slug)
@@ -1177,7 +1183,7 @@ async def _render_transcript_page(slug: str, section: str):
 @api_router.get("/sitemap.xml")
 async def sitemap():
     from xml.sax.saxutils import escape
-    eps = await db.episodes.find({}, {"_id": 0}).to_list(2000)
+    eps = await db.episodes.find({"status": "pubblicato"}, {"_id": 0}).to_list(2000)
     preds = await db.predictions.find({"status": {"$ne": "bozza"}}, {"_id": 0}).to_list(2000)
     team = await db.team.find({}, {"_id": 0}).to_list(200)
     urls = [f"{SITE_URL}/", f"{SITE_URL}/il-podcast/", f"{SITE_URL}/episodi/",
@@ -1203,7 +1209,7 @@ async def sitemap():
 @api_router.get("/video-sitemap.xml")
 async def video_sitemap():
     from xml.sax.saxutils import escape
-    items = await db.episodes.find({}, {"_id": 0}).to_list(2000)
+    items = await db.episodes.find({"status": "pubblicato"}, {"_id": 0}).to_list(2000)
     body = ['<?xml version="1.0" encoding="UTF-8"?>',
             '<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9" '
             'xmlns:video="http://www.google.com/schemas/sitemap-video/1.1">']
