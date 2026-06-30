@@ -115,4 +115,18 @@ export const api = {
   transcriptSeoSaveSections: (slug, sections) => req(`/admin/transcripts/seo/preview/${slug}/sections`, { method: "PUT", body: { sections } }),
   transcriptSeoPublish: (slug) => req(`/admin/transcripts/seo/publish/${slug}`, { method: "POST" }),
   transcriptSeoBatch: (body) => req("/admin/transcripts/seo/generate-batch", { method: "POST", body }),
+  // Telegram
+  tgConfig: () => req("/admin/telegram/config"),
+  tgSaveConfig: (body) => req("/admin/telegram/config", { method: "PUT", body }),
+  tgTest: () => req("/admin/telegram/test", { method: "POST" }),
+  tgSendTest: () => req("/admin/telegram/send-test", { method: "POST" }),
+  tgPreview: (params) => {
+    const q = new URLSearchParams(Object.entries(params).filter(([, v]) => v !== undefined && v !== "")).toString();
+    return req(`/admin/telegram/preview?${q}`);
+  },
+  tgPublishEpisode: (slug) => req("/admin/telegram/publish/episode", { method: "POST", body: { slug } }),
+  tgPublishPrediction: (season, round, pick_index = 0) => req("/admin/telegram/publish/prediction", { method: "POST", body: { season, round, pick_index } }),
+  tgPublishLive: (text) => req("/admin/telegram/publish/live", { method: "POST", body: { text } }),
+  tgPublishPoll: (question, options) => req("/admin/telegram/publish/poll", { method: "POST", body: { question, options } }),
+  tgMessages: (limit = 20) => req(`/admin/telegram/messages?limit=${limit}`),
 };

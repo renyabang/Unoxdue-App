@@ -1,0 +1,260 @@
+<!DOCTYPE html>
+<html lang="it">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>UnoXdue — Diventa Sponsor (MOCKUP)</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Anton&family=Archivo:wght@600;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  :root{--ink:#14100e;--orange:#EA4E1B;--cream:#fbf7f2;--cream2:#f4ebe1;--line:#ecdfce;--muted:#8a7a6c}
+  *{box-sizing:border-box;margin:0;padding:0}
+  body{font-family:'Inter',sans-serif;color:var(--ink);background:var(--cream);line-height:1.6}
+  h1,h2,h3,.anton{font-family:'Anton',sans-serif;font-weight:400;letter-spacing:.5px;line-height:1.05}
+  .archivo{font-family:'Archivo',sans-serif}
+  .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+  .orange{color:var(--orange)}
+  a{color:inherit;text-decoration:none}
+  .btn{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-family:'Archivo';text-transform:uppercase;letter-spacing:.5px;font-size:14px;padding:14px 26px;border-radius:999px;transition:transform .15s,background .2s}
+  .btn-orange{background:var(--orange);color:#fff}
+  .btn-orange:hover{background:#d3430f;transform:translateY(-2px)}
+  .btn-ghost{border:1.5px solid rgba(255,255,255,.3);color:#fff}
+  .btn-ghost:hover{border-color:var(--orange);color:var(--orange)}
+  .btn-dark{background:var(--ink);color:#fff}
+  .btn-dark:hover{background:var(--orange);transform:translateY(-2px)}
+
+  /* mockup banner */
+  .mock{position:sticky;top:0;z-index:50;background:repeating-linear-gradient(45deg,#1d1714,#1d1714 12px,#241d19 12px,#241d19 24px);color:#f7d9cc;text-align:center;font-size:12.5px;font-weight:700;letter-spacing:1px;padding:7px;text-transform:uppercase}
+
+  /* nav */
+  nav.bar{background:var(--ink);color:#fff}
+  nav.bar .wrap{display:flex;align-items:center;justify-content:space-between;height:72px}
+  .logo{display:flex;align-items:center;gap:12px}
+  .logo .mark{width:42px;height:42px;border-radius:50%;background:var(--orange);display:flex;align-items:center;justify-content:center;font-family:'Anton';font-size:20px;color:#fff;box-shadow:0 0 0 2px rgba(234,78,27,.4)}
+  .logo .name{font-family:'Anton';font-size:24px}
+  .navlinks{display:flex;gap:26px;font-size:14px;color:rgba(255,255,255,.7);font-weight:600}
+  .navlinks a:hover{color:#fff}
+
+  /* hero */
+  header.hero{background:var(--ink);color:#fff;position:relative;overflow:hidden}
+  header.hero::before{content:"";position:absolute;top:-120px;right:-80px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(234,78,27,.45),transparent 62%);filter:blur(20px)}
+  .hero .wrap{position:relative;padding:90px 24px 100px;max-width:900px}
+  .kick{display:inline-block;font-family:'Archivo';font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:12px;color:var(--orange);background:rgba(234,78,27,.12);border:1px solid rgba(234,78,27,.3);padding:6px 14px;border-radius:999px;margin-bottom:22px}
+  .hero h1{font-size:64px}
+  .hero p.lead{font-size:20px;color:rgba(255,255,255,.78);margin-top:22px;max-width:680px}
+  .hero .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:36px}
+  .marquee{margin-top:54px;border-top:1px solid rgba(255,255,255,.1);border-bottom:1px solid rgba(255,255,255,.1);padding:14px 0;display:flex;gap:40px;color:rgba(255,255,255,.4);font-family:'Anton';font-size:18px;text-transform:uppercase;overflow:hidden;white-space:nowrap}
+
+  /* stats */
+  section{padding:78px 0}
+  .eyebrow{font-family:'Archivo';font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:12px;color:var(--orange);margin-bottom:12px}
+  .h2{font-size:42px;max-width:720px}
+  .sub{color:#6b5d52;font-size:17px;max-width:640px;margin-top:14px}
+  .stats{display:grid;grid-template-columns:repeat(5,1fr);gap:18px;margin-top:40px}
+  .stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px 20px;text-align:center}
+  .stat .num{font-family:'Anton';font-size:40px;color:var(--ink)}
+  .stat .lbl{font-size:13px;color:var(--muted);margin-top:6px;font-weight:600}
+  .note{display:inline-block;margin-top:18px;font-size:13px;color:var(--muted);background:#fff;border:1px dashed #d9cdbe;border-radius:10px;padding:8px 14px}
+
+  /* audience */
+  .dark{background:var(--ink);color:#fff}
+  .dark .sub{color:rgba(255,255,255,.7)}
+  .aud{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:40px}
+  .aud .c{background:rgba(255,255,255,.04);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px}
+  .aud .c h3{font-size:22px;margin-bottom:6px}
+  .aud .c p{color:rgba(255,255,255,.65);font-size:15px}
+  .bar{height:8px;border-radius:99px;background:rgba(255,255,255,.12);margin-top:14px;overflow:hidden}
+  .bar i{display:block;height:100%;background:var(--orange)}
+
+  /* packages */
+  .pk{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px}
+  .card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px 28px;display:flex;flex-direction:column;transition:transform .2s,box-shadow .2s}
+  .card:hover{transform:translateY(-6px);box-shadow:0 24px 50px -28px rgba(20,16,14,.4)}
+  .card.feat{background:var(--ink);color:#fff;border-color:var(--ink);position:relative}
+  .card.feat .tag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-family:'Archivo';font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:99px}
+  .card .pname{font-family:'Anton';font-size:26px}
+  .card .price{font-family:'Anton';font-size:34px;margin:10px 0 4px}
+  .card .per{font-size:13px;color:var(--muted)}
+  .card.feat .per{color:rgba(255,255,255,.6)}
+  .card ul{list-style:none;margin:22px 0;display:flex;flex-direction:column;gap:12px;font-size:15px}
+  .card li{display:flex;gap:10px;align-items:flex-start}
+  .check{color:var(--orange);font-weight:900}
+  .card .btn{justify-content:center;margin-top:auto}
+
+  /* formats grid */
+  .grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+  .fmt{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px}
+  .fmt .ic{width:46px;height:46px;border-radius:12px;background:rgba(234,78,27,.1);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+  .fmt h3{font-size:19px;margin-bottom:6px;font-family:'Archivo';font-weight:800}
+  .fmt p{font-size:14.5px;color:#6b5d52}
+
+  /* steps */
+  .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:40px}
+  .step{padding:24px}
+  .step .n{font-family:'Anton';font-size:54px;color:var(--orange);line-height:1}
+  .step h3{font-size:20px;margin:8px 0 6px;font-family:'Archivo';font-weight:800}
+  .step p{color:#6b5d52;font-size:15px}
+
+  /* contact */
+  .contact{background:var(--cream2)}
+  .form{background:#fff;border:1px solid var(--line);border-radius:22px;padding:34px;margin-top:34px;display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:760px}
+  .form .full{grid-column:1/-1}
+  label.fl{display:block;font-size:13px;font-weight:700;margin-bottom:6px}
+  .inp{width:100%;border:1px solid var(--line);background:var(--cream);border-radius:10px;padding:12px 14px;font-size:14px;font-family:'Inter'}
+  textarea.inp{min-height:110px;resize:vertical}
+
+  footer{background:var(--ink);color:rgba(255,255,255,.6);padding:46px 0;font-size:14px}
+  footer .wrap{display:flex;justify-content:space-between;align-items:center;flex-wrap:wrap;gap:16px}
+
+  @media(max-width:900px){
+    .stats{grid-template-columns:repeat(2,1fr)}
+    .aud,.pk,.grid6,.steps{grid-template-columns:1fr}
+    .hero h1{font-size:42px}.h2{font-size:32px}.form{grid-template-columns:1fr}
+    .navlinks{display:none}
+  }
+</style>
+</head>
+<body>
+<div class="mock">⚠️ Anteprima / Mockup — i numeri sono di esempio, da sostituire con i dati reali</div>
+
+<nav class="bar"><div class="wrap">
+  <div class="logo"><div class="mark">UX</div><div class="name">Uno<span class="orange">X</span>due</div></div>
+  <div class="navlinks"><a>Pubblico</a><a>Pacchetti</a><a>Formati</a><a>Come funziona</a></div>
+  <a class="btn btn-orange" href="#contatti">Diventa sponsor →</a>
+</div></nav>
+
+<header class="hero"><div class="wrap">
+  <span class="kick">Sponsorizzazioni · Serie A · Podcast</span>
+  <h1>Porta il tuo brand dentro la community <span class="orange">Serie A</span> più calda d'Italia.</h1>
+  <p class="lead">UnoXdue è il podcast e la community che vive di calcio, pronostici e seconde categorie. Un pubblico fedele, riconoscibile e altamente coinvolto: il posto giusto per far parlare il tuo marchio.</p>
+  <div class="cta">
+    <a class="btn btn-orange" href="#contatti">Richiedi il media kit</a>
+    <a class="btn btn-ghost" href="#pacchetti">Vedi i pacchetti</a>
+  </div>
+  <div class="marquee">EPISODI · INTERVISTE · PRONOSTICI · LIVE TWITCH · TELEGRAM · NEWSLETTER · SERIE A · EPISODI · INTERVISTE · PRONOSTICI</div>
+</div></header>
+
+<!-- STATS -->
+<section><div class="wrap">
+  <div class="eyebrow">I numeri</div>
+  <h2 class="h2">Una community che ascolta, guarda e interagisce ogni settimana.</h2>
+  <div class="stats">
+    <div class="stat"><div class="num">+250K</div><div class="lbl">Views YouTube / mese</div></div>
+    <div class="stat"><div class="num">+18K</div><div class="lbl">Ascolti podcast</div></div>
+    <div class="stat"><div class="num">+30K</div><div class="lbl">Follower social</div></div>
+    <div class="stat"><div class="num">+5K</div><div class="lbl">Iscritti Telegram</div></div>
+    <div class="stat"><div class="num">+2K</div><div class="lbl">Newsletter</div></div>
+  </div>
+  <span class="note">📊 Dati di esempio — verranno collegati ai tuoi numeri reali (YouTube Studio, Twitch, Telegram, newsletter).</span>
+</div></section>
+
+<!-- AUDIENCE -->
+<section class="dark"><div class="wrap">
+  <div class="eyebrow">Il pubblico</div>
+  <h2 class="h2">Chi ti ascolta quando sponsorizzi UnoXdue.</h2>
+  <p class="sub">Tifosi e appassionati di calcio e scommesse informate, con una forte presenza al Sud e una community che torna ogni settimana.</p>
+  <div class="aud">
+    <div class="c"><h3>Età 25–44</h3><p>Il cuore del pubblico: adulti con capacità di spesa.</p><div class="bar"><i style="width:72%"></i></div></div>
+    <div class="c"><h3>78% uomini</h3><p>Pubblico prevalentemente maschile, appassionato di sport.</p><div class="bar"><i style="width:78%"></i></div></div>
+    <div class="c"><h3>Italia · Calabria & Sud</h3><p>Forte radicamento territoriale + community nazionale.</p><div class="bar"><i style="width:64%"></i></div></div>
+  </div>
+</div></section>
+
+<!-- PACKAGES -->
+<section id="pacchetti"><div class="wrap">
+  <div class="eyebrow">Pacchetti</div>
+  <h2 class="h2">Scegli il livello di visibilità giusto per te.</h2>
+  <p class="sub">Pacchetti mensili indicativi. Personalizzabili in base a obiettivi e durata della campagna.</p>
+  <div class="pk">
+    <div class="card">
+      <div class="pname">Starter</div>
+      <div class="price">su richiesta</div>
+      <div class="per">ideale per provare</div>
+      <ul>
+        <li><span class="check">✓</span> 1 menzione letta in puntata</li>
+        <li><span class="check">✓</span> 1 post sul canale Telegram</li>
+        <li><span class="check">✓</span> Link nelle show notes</li>
+        <li><span class="check">✓</span> Report a fine campagna</li>
+      </ul>
+      <a class="btn btn-dark" href="#contatti">Richiedi info</a>
+    </div>
+    <div class="card feat">
+      <span class="tag">Più scelto</span>
+      <div class="pname">Pro</div>
+      <div class="price">su richiesta</div>
+      <div class="per">visibilità continua</div>
+      <ul>
+        <li><span class="check">✓</span> Menzione in <b>ogni</b> puntata del mese</li>
+        <li><span class="check">✓</span> Banner fisso sul sito unoxdue.net</li>
+        <li><span class="check">✓</span> Post Telegram + storia social</li>
+        <li><span class="check">✓</span> 1 spazio in newsletter</li>
+        <li><span class="check">✓</span> Logo in copertina episodi</li>
+      </ul>
+      <a class="btn btn-orange" href="#contatti">Richiedi info</a>
+    </div>
+    <div class="card">
+      <div class="pname">Premium</div>
+      <div class="price">su richiesta</div>
+      <div class="per">partnership esclusiva</div>
+      <ul>
+        <li><span class="check">✓</span> Tutto del pacchetto Pro</li>
+        <li><span class="check">✓</span> 1 episodio/segmento branded dedicato</li>
+        <li><span class="check">✓</span> Presenza nei live Twitch</li>
+        <li><span class="check">✓</span> Contenuto social co-prodotto</li>
+        <li><span class="check">✓</span> Esclusiva di categoria</li>
+      </ul>
+      <a class="btn btn-dark" href="#contatti">Richiedi info</a>
+    </div>
+  </div>
+</div></section>
+
+<!-- FORMATS -->
+<section style="background:var(--cream2)"><div class="wrap">
+  <div class="eyebrow">Formati</div>
+  <h2 class="h2">Tanti modi per essere presente.</h2>
+  <div class="grid6">
+    <div class="fmt"><div class="ic">🎙️</div><h3>Menzione in puntata</h3><p>Lettura del messaggio sponsor dentro l'episodio, con la voce dei conduttori.</p></div>
+    <div class="fmt"><div class="ic">🎬</div><h3>Episodio branded</h3><p>Un segmento o una puntata dedicata costruita attorno al tuo prodotto.</p></div>
+    <div class="fmt"><div class="ic">🖼️</div><h3>Banner sul sito</h3><p>Spazio fisso su unoxdue.net, visibile su tutte le pagine.</p></div>
+    <div class="fmt"><div class="ic">📣</div><h3>Post Telegram</h3><p>Annuncio diretto alla community più attiva, con link tracciabile.</p></div>
+    <div class="fmt"><div class="ic">✉️</div><h3>Newsletter</h3><p>Spazio dedicato nell'email che raggiunge gli iscritti.</p></div>
+    <div class="fmt"><div class="ic">🔴</div><h3>Live Twitch</h3><p>Presenza durante le dirette: overlay, menzioni e interazione in tempo reale.</p></div>
+  </div>
+</div></section>
+
+<!-- HOW IT WORKS -->
+<section><div class="wrap">
+  <div class="eyebrow">Come funziona</div>
+  <h2 class="h2">Dalla richiesta alla campagna in 3 passi.</h2>
+  <div class="steps">
+    <div class="step"><div class="n">01</div><h3>Ci scrivi</h3><p>Compili il form con obiettivi e budget. Ti inviamo il media kit completo con i dati reali.</p></div>
+    <div class="step"><div class="n">02</div><h3>Costruiamo la proposta</h3><p>Scegliamo insieme formati e pacchetto, su misura per il tuo brand.</p></div>
+    <div class="step"><div class="n">03</div><h3>Si va in onda</h3><p>Pianifichiamo gli inserimenti e a fine campagna ti diamo un report con i risultati.</p></div>
+  </div>
+</div></section>
+
+<!-- CONTACT -->
+<section class="contact" id="contatti"><div class="wrap">
+  <div class="eyebrow">Contatti</div>
+  <h2 class="h2">Parliamo del tuo brand.</h2>
+  <p class="sub">Lascia i tuoi dati: ti ricontattiamo con il media kit e una proposta personalizzata.</p>
+  <div class="form">
+    <div><label class="fl">Nome e cognome</label><input class="inp" placeholder="Mario Rossi" /></div>
+    <div><label class="fl">Azienda / Brand</label><input class="inp" placeholder="La tua azienda" /></div>
+    <div><label class="fl">Email</label><input class="inp" placeholder="nome@azienda.it" /></div>
+    <div><label class="fl">Budget indicativo</label>
+      <select class="inp"><option>Da definire</option><option>&lt; 500€</option><option>500–1.500€</option><option>1.500–5.000€</option><option>&gt; 5.000€</option></select>
+    </div>
+    <div class="full"><label class="fl">Messaggio</label><textarea class="inp" placeholder="Raccontaci il tuo obiettivo…"></textarea></div>
+    <div class="full"><a class="btn btn-orange" style="width:100%;justify-content:center">Invia richiesta · Scarica media kit</a></div>
+  </div>
+</div></section>
+
+<footer><div class="wrap">
+  <div class="logo"><div class="mark" style="width:34px;height:34px;font-size:16px">UX</div><div class="name" style="font-size:20px;color:#fff">Uno<span class="orange">X</span>due</div></div>
+  <div>© 2026 UnoXdue · Sponsorizzazioni · Comunicazione informativa · Gioco responsabile +18</div>
+</div></footer>
+
+</body>
+</html>

@@ -1,0 +1,31 @@
+{
+  "summary": "Frontend-only E2E testing of nuova pagina admin Telegram (/admin/telegram). Tutti i flussi richiesti verificati con successo: caricamento pagina con stato 'non configurato', salvataggio config con persistenza canale/twitch/toggle/modelli, ripristino default, preview puntata e pronostico, gestione errori puliti per publish/test senza Bot Token, gestione sondaggio, e regressione altre pagine admin (Contenuti, Schedine, Integrazioni) senza errori JS. Nessun crash, nessun 500. Nessun Bot Token reale configurato (come richiesto).",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": [
+      {"screen": "/admin/telegram (e tutte le pagine admin con <select>)", "issues": ["Console warning di hydration React: 'In HTML, <span> cannot be a child of <option>'. Causato dall'instrumentation x-ve-dynamic (emergent) che inietta uno <span data-ve-dynamic> dentro le <option> nelle select tg-episode-select e tg-prediction-select. Non blocca la funzionalita ma genera warning rumoroso in console. Probabilmente un effetto dell'ambiente preview, non del codice sorgente."]}
+    ]
+  },
+  "test_report_links": [],
+  "action_items": [
+    "Nessun action item bloccante. Tutta la feature Telegram admin funziona come specificato.",
+    "Opzionale: investigare il warning di hydration su <option><span> (probabilmente legato all'instrumentation dell'ambiente preview, non al codice sorgente di Telegram.jsx)."
+  ],
+  "critical_code_review_comments": [
+    "Telegram.jsx (~306 righe): file ragionevole, ben strutturato, tutti gli elementi interattivi hanno data-testid.",
+    "Lo stesso handler `save` viene riusato sia per il pulsante 'Salva' della config sia per 'Salva modelli' nella card Templates: corretto, ma il pulsante in basso (Salva modelli) non ha data-testid dedicato. Non bloccante perche il save handler e identico.",
+    "Token field: type=password, value sempre vuoto dopo reload (non viene mai esposto in chiaro). Conforme alla nota 'salvato lato server e mai piu mostrato'.",
+    "Gestione errori publish/test senza token: backend ritorna {ok:false, error:'...'} e il frontend mostra alert pulito tramite il pattern `run()` e `test()`. Nessun crash.",
+    "Sondaggio: la validazione 'domanda vuota o <2 opzioni' nel test attuale viene intercettata prima dal check token mancante (backend ritorna 'non configurato'). Una volta configurato il bot, andra ri-testata la validazione specifica della domanda - non bloccante ora."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "n/a (skipped)", "frontend": "100%"},
+  "test_credentials": "admin@unoxdue.net + ADMIN_PASSWORD da /app/backend/.env (login via UI ok)",
+  "seed_data_creation": "Nessuna seed creata. Modificati i valori tg config (channel=@unoxdue_test, twitch=https://www.twitch.tv/unoxdue_test, enabled=true, auto_episode=true) e ripristinato template episode al default. Token non impostato.",
+  "retest_needed": false,
+  "should_main_agent_self_test": true,
+  "context_for_next_testing_agent": "Stato finale config Telegram in DB: channel_id=@unoxdue_test, twitch_url=https://www.twitch.tv/unoxdue_test, enabled=true, auto_episode=true, auto_prediction=false, templates=default. Token non impostato (token_set=false). Se serve testare invio reale a Telegram, occorre prima configurare un Bot Token via UI. Tutti i data-testid del playbook funzionano. Predictions select mostra 2 giornate disponibili (2026-2027 g.38 e una bozza), Episodes select mostra 15 contenuti.",
+  "rca of the issue": "Nessun bug riscontrato. Tutti i comportamenti previsti dalla review request verificati: persistenza salvataggi (canale/twitch/toggle/modelli), token mascherato, preview puntata/pronostico, alert puliti su publish/test senza token, sondaggio funzionante, regressione altre pagine ok."
+}

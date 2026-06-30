@@ -26,6 +26,7 @@ import press_logos as plogo
 import predictions_ai as pai
 import ai_transcript as ait
 import storage
+import telegram_bot as tg
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -131,6 +132,7 @@ async def upsert_episode(payload: EpisodeIn, admin: str = Depends(get_current_ad
     doc["updated_at"] = datetime.now(timezone.utc).isoformat()
     await db.episodes.update_one({"slug": doc["slug"]}, {"$set": doc}, upsert=True)
     section = "interviste" if doc["type"] == "intervista" else "episodi"
+    await tg.maybe_autopost_episode(doc["slug"])
     return {"ok": True, "slug": doc["slug"], "public_url": f'{SITE_URL}/{section}/{doc["slug"]}/'}
 
 
@@ -219,6 +221,7 @@ async def add_pick(payload: PickIn, admin: str = Depends(get_current_admin)):
     await gfx.auto_generate_cover(payload.season, payload.round)
     url = f'{SITE_URL}/pronostici/serie-a/{payload.season}/giornata-{payload.round}/'
     await auto.log_automation("prediction", "ok", f"Giocata di {payload.tipster} salvata (giornata {payload.round})")
+    await tg.maybe_autopost_prediction(payload.season, payload.round, payload.tipster)
     return {"ok": True, "public_url": url, "published": pub}
 
 
@@ -407,7 +410,9 @@ async def admin_transcripts_seo_save_sections(slug: str, payload: SectionsIn, ad
 
 @api_router.post("/admin/transcripts/seo/publish/{slug}")
 async def admin_transcripts_seo_publish(slug: str, admin: str = Depends(get_current_admin)):
-    return await ait.publish_preview(slug)
+    res = await ait.publish_preview(slug)
+    await tg.maybe_autopost_episode(slug)
+    return res
 
 
 class TranscriptBatchIn(BaseModel):
@@ -591,7 +596,9 @@ class PredAIPublishIn(BaseModel):
 
 @api_router.post("/admin/predictions/ai/publish")
 async def admin_predictions_ai_publish(payload: PredAIPublishIn, admin: str = Depends(get_current_admin)):
-    return await pai.promote(payload.season, payload.round, confirm=payload.confirm)
+    res = await pai.promote(payload.season, payload.round, confirm=payload.confirm)
+    await tg.maybe_autopost_prediction(payload.season, payload.round)
+    return res
 
 
 
@@ -628,6 +635,61 @@ async def admin_put_live(data: dict, admin: str = Depends(get_current_admin)):
     live = {"target": data.get("target", "twitch"), "url": data.get("url", "")}
     await db.settings.update_one({"_id": "global"}, {"$set": {"live": live}}, upsert=True)
     return {"ok": True, "live": live, "resolved": await _resolve_live()}
+
+
+# ============================ Admin: Telegram ============================
+@api_router.get("/admin/telegram/config")
+async def admin_telegram_config(admin: str = Depends(get_current_admin)):
+    return await tg.admin_config_view()
+
+
+@api_router.put("/admin/telegram/config")
+async def admin_telegram_save(data: dict, admin: str = Depends(get_current_admin)):
+    return await tg.save_config(data)
+
+
+@api_router.post("/admin/telegram/test")
+async def admin_telegram_test(admin: str = Depends(get_current_admin)):
+    return await tg.test_connection()
+
+
+@api_router.post("/admin/telegram/send-test")
+async def admin_telegram_send_test(admin: str = Depends(get_current_admin)):
+    return await tg.send_test()
+
+
+@api_router.get("/admin/telegram/preview")
+async def admin_telegram_preview(kind: str, slug: str = None, season: str = None,
+                                 round: int = None, pick_index: int = 0, text: str = None,
+                                 admin: str = Depends(get_current_admin)):
+    return await tg.preview(kind, slug=slug, season=season, round_=round,
+                            pick_index=pick_index, text=text)
+
+
+@api_router.post("/admin/telegram/publish/episode")
+async def admin_telegram_publish_episode(data: dict, admin: str = Depends(get_current_admin)):
+    return await tg.publish_episode(data.get("slug"))
+
+
+@api_router.post("/admin/telegram/publish/prediction")
+async def admin_telegram_publish_prediction(data: dict, admin: str = Depends(get_current_admin)):
+    return await tg.publish_prediction(data.get("season"), data.get("round"),
+                                       int(data.get("pick_index", 0)))
+
+
+@api_router.post("/admin/telegram/publish/live")
+async def admin_telegram_publish_live(data: dict, admin: str = Depends(get_current_admin)):
+    return await tg.publish_live(data.get("text"))
+
+
+@api_router.post("/admin/telegram/publish/poll")
+async def admin_telegram_publish_poll(data: dict, admin: str = Depends(get_current_admin)):
+    return await tg.publish_poll(data.get("question"), data.get("options") or [])
+
+
+@api_router.get("/admin/telegram/messages")
+async def admin_telegram_messages(limit: int = 20, admin: str = Depends(get_current_admin)):
+    return await tg.recent_messages(limit)
 
 
 @api_router.get("/live")
