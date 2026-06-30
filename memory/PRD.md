@@ -529,3 +529,12 @@ Su richiesta utente (evitare modifica `.env` + SSH a ogni cambio), aggiunto pann
 - DOPO il redeploy: l'utente NON deve più toccare il `.env` per i codici SEO; basta incollarli in Admin → Integrazioni → Salva. Redeploy combinato: `git pull` + `up -d --build backend` + `restart caddy`, poi agente ripubblica le 4 menzioni press.
 
 ### Backlog: foto Gianmarco LIVE (resta bozza finché mancano bio/ruolo). Press 4 record pronti (loghi approvati) + 1 review (Garritano).
+
+## 🟢 DEPLOY COMPLETATO E LIVE (30 giugno 2026)
+Redeploy VPS riuscito (git pull fast-forward 33b3a1b; risolto blocco `git checkout -- backend/requirements.txt`; ricostruiti `backend` E `web`; `restart caddy`).
+- ✅ "Parlano di noi" LIVE: 4 menzioni pubblicate con logo (Forzaparma, Calabria7, Parmalive, Cosenzachannel/Baclet) su /parlano-di-noi/ + anteprima home. Macro `press_logo` deployata → niente più 500.
+- ✅ Box admin "Strumenti SEO" visibile in produzione (unoxdue.net/admin/integrazioni); endpoint /api/admin/seo-tools attivi.
+- ✅ Verifica Google Search Console: codice inserito dall'utente nel box, meta `google-site-verification` LIVE su tutte le pagine SSR.
+- ✅ Banner cookie + GA injection pronti (GA4 e Bing ancora da inserire dall'utente nel box).
+- Sitemap: https://unoxdue.net/sitemap.xml (HTTP 200, 40 URL); robots.txt la referenzia.
+- NOTA per future modifiche frontend (admin React): ricostruire SEMPRE anche il container `web` (`up -d --build web`), non solo `backend`.
