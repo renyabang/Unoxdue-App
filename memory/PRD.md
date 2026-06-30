@@ -538,3 +538,12 @@ Redeploy VPS riuscito (git pull fast-forward 33b3a1b; risolto blocco `git checko
 - ✅ Banner cookie + GA injection pronti (GA4 e Bing ancora da inserire dall'utente nel box).
 - Sitemap: https://unoxdue.net/sitemap.xml (HTTP 200, 40 URL); robots.txt la referenzia.
 - NOTA per future modifiche frontend (admin React): ricostruire SEMPRE anche il container `web` (`up -d --build web`), non solo `backend`.
+
+## 🛠️ Fix Short + Gianmarco + audit Schema (30 giugno 2026)
+- **Short eliminato** (un-solo-bomber, yt VYVPEfWig6g, 57s): DELETE via admin → 404.
+- **Bug SSR stato** (server.py): rotte dettaglio episodi/interviste/trascrizioni ora 404 se status != "pubblicato"; liste e sitemap/video-sitemap filtrano "pubblicato". (Prima mostravano anche "da_verificare".)
+- **Short-skip nel sync** (youtube.py + automations.py): aggiunto `fetch_video_meta()` (Data API: durata+descrizione). `websub_notify` e `youtube_sync` ora recuperano la DURATA reale prima di `classify_content` → gli Short (≤180s o #shorts) vengono esclusi e non importati. Validato: VYVPEfWig6g=57s → excluded. RICHIEDE REDEPLOY backend.
+- **Gianmarco PUBBLICATO** (via admin API): role="Specialista Tennis", bio approvata, status=pubblicato, is_host=false → scheda collaboratore completa su /team/.
+- **Schema.org**: GIÀ implementato e live (audit): Organization+WebSite+PodcastSeries (home), PodcastEpisode+VideoObject (episodi), Article (interviste/pronostici), BreadcrumbList, CollectionPage+ItemList (liste), FAQPage (home/podcast/pronostici), Person+ProfilePage (team). Tutti JSON validi. Nessun lavoro necessario.
+- **GA4** (G-G173Z28BTW) + verifica GSC + Bing + banner cookie: live e confermati.
+- PENDING: ruolo Micuccio (cambiare "Fondatore & analista"); menzione Garritano in review (utente decide); API bookmaker (utente cerca, in pending).

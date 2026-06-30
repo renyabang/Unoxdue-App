@@ -143,6 +143,14 @@ async def youtube_sync(channel_id: str = None, auto_publish: bool = True) -> dic
     entries = root.findall("atom:entry", YT_NS)
     found, created, updated, skipped = 0, 0, 0, 0
     affected = []
+    # durate reali (Data API) per distinguere gli Short: il feed RSS non le fornisce
+    try:
+        from youtube import fetch_video_meta
+        _ids = [v.text for e in entries
+                if (v := e.find("yt:videoId", YT_NS)) is not None and v.text]
+        _meta = await fetch_video_meta(_ids)
+    except Exception:
+        _meta = {}
     for entry in entries:
         found += 1
         vid = entry.find("yt:videoId", YT_NS)
@@ -162,9 +170,12 @@ async def youtube_sync(channel_id: str = None, auto_publish: bool = True) -> dic
         if await is_excluded_video(youtube_id):
             skipped += 1
             continue
-        info = classify_content(title, desc, 0)
+        seconds = _meta.get(youtube_id, {}).get("seconds", 0)
+        if not desc:
+            desc = _meta.get(youtube_id, {}).get("description", "")
+        info = classify_content(title, desc, seconds)
         if info["excluded"]:
-            await record_exclusion(youtube_id, title, info, 0, published, source="youtube_feed")
+            await record_exclusion(youtube_id, title, info, seconds, published, source="youtube_feed")
             await db.episodes.delete_one({"youtube_id": youtube_id})
             skipped += 1
             continue

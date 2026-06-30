@@ -85,6 +85,33 @@ def _video_details_sync(ids):
     return yt.videos().list(part="contentDetails,status", id=",".join(ids)).execute()
 
 
+def _video_meta_sync(ids):
+    yt = _service()
+    return yt.videos().list(part="snippet,contentDetails,status", id=",".join(ids)).execute()
+
+
+async def fetch_video_meta(ids):
+    """{youtube_id: {'seconds': int, 'description': str}} via Data API (batch da 50).
+    Serve a distinguere gli Short: il feed RSS/WebSub NON fornisce la durata.
+    Senza YOUTUBE_API_KEY ritorna {} (fallback: nessun arricchimento)."""
+    ids = [i for i in (ids or []) if i]
+    if not YOUTUBE_API_KEY or not ids:
+        return {}
+    out, loop = {}, asyncio.get_event_loop()
+    for i in range(0, len(ids), 50):
+        try:
+            resp = await loop.run_in_executor(None, _video_meta_sync, ids[i:i + 50])
+        except Exception as e:
+            await log_automation("youtube_meta", "warning", f"videos.list fallita: {e}")
+            continue
+        for d in resp.get("items", []):
+            out[d["id"]] = {
+                "seconds": parse_iso_duration((d.get("contentDetails") or {}).get("duration", "")),
+                "description": (d.get("snippet") or {}).get("description", "") or "",
+            }
+    return out
+
+
 # ----------------------- channel stats -----------------------
 async def channel_stats() -> dict:
     imported = await db.episodes.count_documents({})
@@ -377,16 +404,23 @@ async def websub_notify(body: bytes, signature_header: str = None) -> dict:
     except Exception as e:
         await log_automation("websub", "error", f"Notifica non interpretabile: {e}")
         return {"ok": False, "error": str(e)}
+    parsed = []
     for entry in root.findall("atom:entry", ATOM_NS):
         vid_el = entry.find("yt:videoId", ATOM_NS)
         title_el = entry.find("atom:title", ATOM_NS)
         pub_el = entry.find("atom:published", ATOM_NS)
         if vid_el is None or not vid_el.text:
             continue
-        youtube_id = vid_el.text
-        title = (title_el.text or "").strip() if title_el is not None else ""
-        published = pub_el.text[:10] if pub_el is not None and pub_el.text else None
-        r = await _upsert_video(youtube_id, title, "", published, 0, auto_publish=True, source="youtube_websub")
+        parsed.append((
+            vid_el.text,
+            (title_el.text or "").strip() if title_el is not None else "",
+            pub_el.text[:10] if pub_el is not None and pub_el.text else None,
+        ))
+    meta = await fetch_video_meta([p[0] for p in parsed])
+    for youtube_id, title, published in parsed:
+        m = meta.get(youtube_id, {})
+        r = await _upsert_video(youtube_id, title, m.get("description", ""), published,
+                                m.get("seconds", 0), auto_publish=True, source="youtube_websub")
         videos.append({"youtube_id": youtube_id, "action": r.get("action")})
         created += r.get("action") == "created"
         updated += r.get("action") == "updated"
