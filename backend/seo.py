@@ -768,6 +768,187 @@ def render_il_podcast(team=None, content=None) -> str:
     )
 
 
+# ============================ Collabora con noi (Sponsor B2B) ============================
+SPONSOR_PACKAGES = [
+    {"name": "Starter — Presenza digitale", "tagline": "Ideale per una prima campagna sulla community.",
+     "highlight": False, "badge": None, "features": [
+        {"text": "Banner a rotazione su unoxdue.net per 30 giorni"},
+        {"text": "1 post sul canale Telegram"},
+        {"text": "1 spazio nella newsletter"},
+        {"text": "Link e citazione nelle show notes"},
+        {"text": "Report finale della campagna"},
+        {"text": "Nessuna integrazione durante la puntata", "no": True},
+     ]},
+    {"name": "Pro — Community Partner", "tagline": "Visibilità continuativa sui canali proprietari.",
+     "highlight": True, "badge": "Più scelto", "features": [
+        {"text": "Tutto il pacchetto Starter"},
+        {"text": "Banner fisso su unoxdue.net per 30 giorni"},
+        {"text": "1 contenuto social dedicato"},
+        {"text": "1 storia Instagram"},
+        {"text": "1 breve menzione verbale in una puntata al mese"},
+        {"text": "Report con impression, visualizzazioni e interazioni"},
+     ]},
+    {"name": "Premium — Integrated Partner", "tagline": "Partnership multicanale personalizzata.",
+     "highlight": False, "badge": None, "features": [
+        {"text": "Tutto il pacchetto Pro"},
+        {"text": "1 breve rubrica o attivazione sponsorizzata al mese"},
+        {"text": "Presenza in un live o contenuto speciale"},
+        {"text": "Contenuto social co-prodotto"},
+        {"text": "Posizionamento premium sul sito"},
+        {"text": "Esclusiva merceologica nella categoria concordata"},
+        {"text": "Report personalizzato di fine campagna"},
+     ]},
+]
+SPONSOR_FORMATS = [
+    {"icon": "🖼️", "title": "Banner sul sito", "text": "Spazio su unoxdue.net, visibile sulle pagine del sito."},
+    {"icon": "📣", "title": "Post Telegram", "text": "Annuncio diretto alla community più attiva, con link tracciabile."},
+    {"icon": "✉️", "title": "Newsletter", "text": "Spazio dedicato nell'email che raggiunge gli iscritti."},
+    {"icon": "📱", "title": "Contenuto social + storia IG", "text": "Post e storia Instagram costruiti attorno al tuo brand."},
+    {"icon": "🎙️", "title": "Breve menzione verbale", "text": "Una citazione leggera (10-15s) durante la puntata, senza stravolgere il format."},
+    {"icon": "🔴", "title": "Rubrica / live", "text": "Attivazione leggera o presenza in una diretta o contenuto speciale."},
+]
+SPONSOR_STEPS = [
+    {"n": "01", "title": "Ci scrivi", "text": "Compili il form con obiettivi e budget. Ti inviamo il media kit completo."},
+    {"n": "02", "title": "Costruiamo la proposta", "text": "Scegliamo insieme formati e pacchetto, su misura per il tuo brand."},
+    {"n": "03", "title": "Si va in onda", "text": "Pianifichiamo gli inserimenti e a fine campagna ti diamo un report con i risultati."},
+]
+SPONSOR_PODCAST_NOTE = ("La menzione o attivazione nel podcast non comporta modifiche permanenti alla "
+                        "scenografia o alla copertina degli episodi.")
+SPONSOR_PACKAGE_NOTE = ("I pacchetti sono disponibili esclusivamente per brand e servizi non appartenenti al "
+                        "settore betting, casinò o gioco con vincita in denaro. Tutte le integrazioni sono "
+                        "subordinate alla compatibilità editoriale, merceologica e con le partnership già attive.")
+SPONSOR_FAQS = [
+    {"q": "Quali brand possono sponsorizzare UnoXdue?",
+     "a": "Brand e servizi non appartenenti al settore betting, casinò o gioco con vincita in denaro. Le integrazioni sono soggette a compatibilità editoriale e con le partnership già attive."},
+    {"q": "Come funziona una collaborazione?",
+     "a": "Compili il form con obiettivi e budget, ti inviamo il media kit, costruiamo insieme la proposta e pianifichiamo gli inserimenti; a fine campagna ricevi un report."},
+    {"q": "Fate contenuti dedicati dentro il podcast?",
+     "a": "Sì, ma solo integrazioni leggere e compatibili con il format: nessuna modifica permanente alla scenografia o alla copertina degli episodi."},
+]
+
+
+def sponsor_defaults() -> dict:
+    import copy
+    return {
+        "hero_kicker": "Sponsorizzazioni · Serie A · Podcast",
+        "hero_title_a": "Porta il tuo brand dentro la community ",
+        "hero_title_hl": "Serie A",
+        "hero_title_b": " più appassionata.",
+        "hero_lead": ("UnoXdue è il podcast e la community che vive di calcio, pronostici e Serie A. "
+                      "Un pubblico fedele e coinvolto: il posto giusto per far parlare il tuo marchio."),
+        "intro": [
+            "Ogni settimana raccontiamo la Serie A con episodi su YouTube, dirette su Twitch, interviste ai protagonisti e pronostici di giornata.",
+            "Chi ci segue non si limita a guardare: commenta, torna e partecipa. Per uno sponsor significa attenzione reale, non solo numeri.",
+        ],
+        "stats": [
+            {"num": "Serie A", "label": "Focus 100% calcio italiano"},
+            {"num": "Multicanale", "label": "YouTube · Twitch · Social · Podcast"},
+            {"num": "Settimanale", "label": "Nuovi contenuti ogni settimana"},
+            {"num": "Community", "label": "Pubblico fedele e in crescita"},
+        ],
+        "audience": [
+            {"title": "Pubblico adulto e attivo", "text": "Appassionati di calcio con reale interesse e capacità di spesa."},
+            {"title": "Community affezionata", "text": "Chi ci segue torna ogni settimana: interazione alta e costante."},
+            {"title": "Territorio + Italia", "text": "Forte legame con il territorio, con una community estesa a livello nazionale."},
+        ],
+        "contact_email": "partner@unoxdue.net",
+    }
+
+
+def _sponsor_content(content=None):
+    c = sponsor_defaults()
+    if content:
+        for k in c:
+            if content.get(k):
+                c[k] = content[k]
+    return c
+
+
+def render_sponsor(content=None) -> str:
+    c = _sponsor_content(content)
+    canonical = f"{SITE_URL}/collaborazioni/"
+    page_title = "Collabora con noi"
+    page_desc = ("Sponsorizza UnoXdue: podcast e community sulla Serie A. Pacchetti, formati e media kit "
+                 "per brand (esclusi operatori di gioco). Richiedi una proposta personalizzata.")
+    webpage = {
+        "@type": "AboutPage", "@id": f"{canonical}#webpage", "url": canonical,
+        "name": f"{page_title} | UnoXdue", "description": page_desc, "inLanguage": "it",
+        "isPartOf": {"@type": "WebSite", "@id": f"{SITE_URL}/#website"},
+        "publisher": {"@type": "Organization", "name": "UnoXdue", "logo": f"{SITE_URL}/logo.jpg"},
+    }
+    jsonld = json.dumps({"@context": "https://schema.org", "@graph": [webpage]},
+                        ensure_ascii=False, indent=2)
+    faq_jsonld = json.dumps({
+        "@context": "https://schema.org", "@type": "FAQPage",
+        "mainEntity": [{"@type": "Question", "name": f["q"],
+                        "acceptedAnswer": {"@type": "Answer", "text": f["a"]}} for f in SPONSOR_FAQS],
+    }, ensure_ascii=False, indent=2)
+    bc = breadcrumb_jsonld([("Home", f"{SITE_URL}/"), (page_title, canonical)])
+    return env.get_template("sponsor.html").render(
+        page_title=page_title, page_desc=page_desc, canonical=canonical, site_url=SITE_URL,
+        hero_kicker=c["hero_kicker"], hero_title_a=c["hero_title_a"], hero_title_hl=c["hero_title_hl"],
+        hero_title_b=c["hero_title_b"], hero_lead=c["hero_lead"], intro=c["intro"],
+        stats=c["stats"], audience=c["audience"], contact_email=c["contact_email"],
+        packages=SPONSOR_PACKAGES, formats=SPONSOR_FORMATS, steps=SPONSOR_STEPS,
+        podcast_note=SPONSOR_PODCAST_NOTE, package_note=SPONSOR_PACKAGE_NOTE,
+        jsonld=jsonld, faq_jsonld=faq_jsonld, breadcrumb_jsonld=bc, year=_year(),
+    )
+
+
+def render_media_kit(content=None) -> str:
+    c = _sponsor_content(content)
+    rows = ""
+    for pk in SPONSOR_PACKAGES:
+        feats = "".join(f"<li>{'—' if f.get('no') else '✓'} {f['text']}</li>" for f in pk["features"])
+        rows += (f"<div class='pk'><h3>{pk['name']}</h3><p class='tag'>{pk['tagline']}</p>"
+                 f"<p class='price'>Su richiesta</p><ul>{feats}</ul></div>")
+    stat_html = "".join(f"<div class='st'><b>{s['num']}</b><span>{s['label']}</span></div>" for s in c["stats"])
+    aud_html = "".join(f"<li><b>{a['title']}</b> — {a['text']}</li>" for a in c["audience"])
+    intro_html = "".join(f"<p>{p}</p>" for p in c["intro"])
+    fmt_html = "".join(f"<li><b>{f['title']}</b>: {f['text']}</li>" for f in SPONSOR_FORMATS)
+    return f"""<!doctype html><html lang="it"><head><meta charset="utf-8"/>
+<title>UnoXdue — Media Kit</title>
+<style>
+@page{{size:A4;margin:16mm}}
+*{{box-sizing:border-box;margin:0;padding:0}}
+body{{font-family:'Helvetica Neue',Arial,sans-serif;color:#14100e;line-height:1.5;font-size:12px}}
+.cover{{background:#14100e;color:#fff;padding:34px;border-radius:14px;margin-bottom:22px}}
+.cover .kick{{color:#EA4E1B;font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:11px}}
+.cover h1{{font-size:32px;margin:10px 0 6px;line-height:1.1}}
+.cover h1 span{{color:#EA4E1B}}
+.cover p{{color:rgba(255,255,255,.8);max-width:520px}}
+h2{{color:#EA4E1B;font-size:15px;text-transform:uppercase;letter-spacing:1px;margin:20px 0 8px;border-bottom:2px solid #f0e7da;padding-bottom:5px}}
+.stats{{display:flex;gap:10px;margin:10px 0}}
+.st{{flex:1;border:1px solid #ecdfce;border-radius:10px;padding:12px;text-align:center}}
+.st b{{display:block;font-size:16px;color:#14100e}}
+.st span{{font-size:10px;color:#8a7a6c}}
+ul{{margin:6px 0 6px 18px}}
+li{{margin:3px 0}}
+.pks{{display:flex;gap:12px;margin-top:10px}}
+.pk{{flex:1;border:1px solid #ecdfce;border-radius:12px;padding:14px}}
+.pk h3{{font-size:13px}}
+.pk .tag{{color:#8a7a6c;font-size:10px;margin:2px 0 6px}}
+.pk .price{{color:#EA4E1B;font-weight:800;margin-bottom:6px}}
+.pk ul{{list-style:none;margin:0;font-size:10.5px}}
+.pk li{{margin:4px 0}}
+.note{{background:#fdf1ec;border:1px solid #e6b8a3;border-radius:8px;padding:10px;font-size:10.5px;margin-top:10px}}
+.contact{{margin-top:20px;background:#14100e;color:#fff;border-radius:12px;padding:18px}}
+.contact a{{color:#EA4E1B;text-decoration:none}}
+</style></head><body>
+<div class="cover"><div class="kick">Media Kit · Sponsorizzazioni</div>
+<h1>Uno<span>X</span>due</h1>
+<p>{c['hero_lead']}</p></div>
+<h2>Chi siamo</h2>{intro_html}
+<div class="stats">{stat_html}</div>
+<h2>Il pubblico</h2><ul>{aud_html}</ul>
+<h2>Formati disponibili</h2><ul>{fmt_html}</ul>
+<h2>Pacchetti</h2><div class="pks">{rows}</div>
+<div class="note">{SPONSOR_PACKAGE_NOTE}<br/>{SPONSOR_PODCAST_NOTE}</div>
+<div class="contact"><b style="font-size:14px">Parliamo del tuo brand</b><br/>
+Scrivici a <a href="mailto:{c['contact_email']}">{c['contact_email']}</a> · unoxdue.net/collaborazioni/</div>
+</body></html>"""
+
+
 # ============================ Archivi Episodi / Interviste ============================
 def _archive_date(published_at):
     if not published_at:

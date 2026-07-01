@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from "react";
 import { Routes, Route, NavLink, Navigate, useNavigate } from "react-router-dom";
 import {
-  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper, FileText, LayoutTemplate, Send,
+  LayoutDashboard, FileVideo, Ticket, ScrollText, Plug, LogOut, Lock, KeyRound, Sparkles, Image as ImageIcon, Youtube, Trophy, Newspaper, FileText, LayoutTemplate, Send, Handshake,
 } from "lucide-react";
 import { api, getToken, setToken, clearToken } from "./api";
 import Dashboard from "./Dashboard";
@@ -18,6 +18,7 @@ import PredictionsAI from "./PredictionsAI";
 import TranscriptSEO from "./TranscriptSEO";
 import SitePages from "./SitePages";
 import Telegram from "./Telegram";
+import SponsorAdmin from "./SponsorAdmin";
 
 function Login({ onLogged }) {
   const [email, setEmail] = useState("admin@unoxdue.net");
@@ -112,6 +113,7 @@ const nav = [
   { to: "/admin/pagine", label: "Pagine", icon: LayoutTemplate },
   { to: "/admin/risultati", label: "Risultati", icon: Trophy },
   { to: "/admin/rassegna", label: "Rassegna stampa", icon: Newspaper },
+  { to: "/admin/collabora", label: "Collabora / Sponsor", icon: Handshake },
   { to: "/admin/telegram", label: "Telegram", icon: Send },
   { to: "/admin/log", label: "Log automazioni", icon: ScrollText },
   { to: "/admin/integrazioni", label: "Integrazioni", icon: Plug },
@@ -170,6 +172,7 @@ export default function AdminApp() {
           <Route path="pagine" element={<SitePages />} />
           <Route path="risultati" element={<Results />} />
           <Route path="rassegna" element={<Press />} />
+          <Route path="collabora" element={<SponsorAdmin />} />
           <Route path="telegram" element={<Telegram />} />
           <Route path="log" element={<Logs />} />
           <Route path="integrazioni" element={<Integrations />} />

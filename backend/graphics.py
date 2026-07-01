@@ -320,6 +320,21 @@ async def _render_png(html: str, w: int, h: int) -> bytes:
         await ctx.close()
 
 
+async def html_to_pdf(html: str) -> bytes:
+    browser = await _get_browser()
+    ctx = await browser.new_context()
+    try:
+        page = await ctx.new_page()
+        await page.set_content(html, wait_until="networkidle")
+        try:
+            await page.evaluate("document.fonts.ready")
+        except Exception:
+            pass
+        return await page.pdf(format="A4", print_background=True)
+    finally:
+        await ctx.close()
+
+
 def _png_to_webp(png: bytes) -> bytes:
     img = Image.open(io.BytesIO(png)).convert("RGB")
     buf = io.BytesIO()

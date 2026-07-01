@@ -1,0 +1,204 @@
+{% extends "base.html" %}
+{% block title %}{{ page_title }} | UnoXdue{% endblock %}
+{% block og_type %}website{% endblock %}
+{% block head %}
+<meta name="description" content="{{ page_desc }}" />
+<link rel="canonical" href="{{ canonical }}" />
+<meta property="og:title" content="{{ page_title }} | UnoXdue" />
+<meta property="og:description" content="{{ page_desc }}" />
+<meta property="og:url" content="{{ canonical }}" />
+<meta property="og:image" content="{{ site_url }}/logo.jpg" />
+<script type="application/ld+json">{{ jsonld|safe }}</script>
+{% if faq_jsonld %}<script type="application/ld+json">{{ faq_jsonld|safe }}</script>{% endif %}
+<script type="application/ld+json">{{ breadcrumb_jsonld|safe }}</script>
+<style>
+  .spn{--ink:#14100e;--orange:#EA4E1B;--cream:#fbf7f2;--cream2:#f4ebe1;--line:#ecdfce;--muted:#8a7a6c}
+  .spn a{text-decoration:none}
+  .spn .wrap{max-width:1140px;margin:0 auto;padding:0 24px}
+  .spn .orange{color:var(--orange)}
+  .spn .btn{display:inline-flex;align-items:center;gap:8px;font-weight:800;font-family:'Archivo',sans-serif;text-transform:uppercase;letter-spacing:.5px;font-size:14px;padding:14px 26px;border-radius:999px;transition:transform .15s ease,background-color .2s ease;cursor:pointer;border:0}
+  .spn .btn-orange{background:var(--orange);color:#fff}
+  .spn .btn-orange:hover{background:#d3430f;transform:translateY(-2px)}
+  .spn .btn-ghost{border:1.5px solid rgba(255,255,255,.3);color:#fff;background:transparent}
+  .spn .btn-ghost:hover{border-color:var(--orange);color:var(--orange)}
+  .spn .btn-dark{background:var(--ink);color:#fff}
+  .spn .btn-dark:hover{background:var(--orange);transform:translateY(-2px)}
+  .spn .hero{background:var(--ink);color:#fff;position:relative;overflow:hidden}
+  .spn .hero::before{content:"";position:absolute;top:-120px;right:-80px;width:520px;height:520px;border-radius:50%;background:radial-gradient(circle,rgba(234,78,27,.4),transparent 62%);filter:blur(20px)}
+  .spn .hero .wrap{position:relative;padding:82px 24px 92px;max-width:900px}
+  .spn .kick{display:inline-block;font-family:'Archivo',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:12px;color:var(--orange);background:rgba(234,78,27,.12);border:1px solid rgba(234,78,27,.3);padding:6px 14px;border-radius:999px;margin-bottom:22px}
+  .spn h1.hh{font-family:'Anton',sans-serif;font-weight:400;font-size:60px;line-height:1.04}
+  .spn .lead{font-size:20px;color:rgba(255,255,255,.78);margin-top:22px;max-width:680px}
+  .spn .cta{display:flex;gap:14px;flex-wrap:wrap;margin-top:34px}
+  .spn section.sec{padding:74px 0}
+  .spn .eyebrow{font-family:'Archivo',sans-serif;font-weight:800;text-transform:uppercase;letter-spacing:2px;font-size:12px;color:var(--orange);margin-bottom:12px}
+  .spn .h2{font-family:'Anton',sans-serif;font-weight:400;font-size:40px;line-height:1.08;max-width:760px;color:var(--ink)}
+  .spn .sub{color:#6b5d52;font-size:17px;max-width:660px;margin-top:14px}
+  .spn .dark .h2{color:#fff}.spn .dark .sub{color:rgba(255,255,255,.72)}
+  .spn .dark{background:var(--ink)}
+  .spn .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:18px;margin-top:40px}
+  .spn .stat{background:#fff;border:1px solid var(--line);border-radius:18px;padding:26px 20px;text-align:center}
+  .spn .stat .num{font-family:'Anton',sans-serif;font-size:30px;color:var(--ink);line-height:1.1}
+  .spn .stat .lbl{font-size:13px;color:var(--muted);margin-top:8px;font-weight:600}
+  .spn .aud{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:40px}
+  .spn .aud .c{background:rgba(255,255,255,.05);border:1px solid rgba(255,255,255,.1);border-radius:18px;padding:26px;color:#fff}
+  .spn .aud .c h3{font-family:'Archivo',sans-serif;font-weight:800;font-size:20px;margin:0 0 6px}
+  .spn .aud .c p{color:rgba(255,255,255,.65);font-size:15px;margin:0}
+  .spn .aud .c .accent{height:6px;width:56px;border-radius:99px;background:var(--orange);margin-top:16px}
+  .spn .pk{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:44px;align-items:stretch}
+  .spn .card{background:#fff;border:1px solid var(--line);border-radius:22px;padding:30px 26px;display:flex;flex-direction:column;transition:transform .2s ease,box-shadow .2s ease}
+  .spn .card:hover{transform:translateY(-6px);box-shadow:0 24px 50px -28px rgba(20,16,14,.4)}
+  .spn .card.feat{background:var(--ink);color:#fff;border-color:var(--ink);position:relative}
+  .spn .card.feat .tag{position:absolute;top:-13px;left:50%;transform:translateX(-50%);background:var(--orange);color:#fff;font-family:'Archivo',sans-serif;font-weight:800;font-size:11px;letter-spacing:1px;text-transform:uppercase;padding:6px 14px;border-radius:99px;white-space:nowrap}
+  .spn .card .pname{font-family:'Anton',sans-serif;font-size:24px;line-height:1.1}
+  .spn .card .ptag{font-size:13px;color:var(--muted);margin-top:4px}
+  .spn .card.feat .ptag{color:rgba(255,255,255,.6)}
+  .spn .card .price{font-family:'Anton',sans-serif;font-size:26px;margin:14px 0 2px}
+  .spn .card ul{list-style:none;margin:20px 0;padding:0;display:flex;flex-direction:column;gap:11px;font-size:14.5px}
+  .spn .card li{display:flex;gap:9px;align-items:flex-start}
+  .spn .card li.no{opacity:.6}
+  .spn .check{color:var(--orange);font-weight:900;line-height:1.4}
+  .spn .card .btn{justify-content:center;margin-top:auto}
+  .spn .note{margin-top:30px;background:#fff;border:1px dashed #d9cdbe;border-radius:14px;padding:18px 20px;font-size:14px;color:#4a3d34;max-width:900px}
+  .spn .note.warn{border-color:#e6b8a3;background:#fdf1ec}
+  .spn .grid6{display:grid;grid-template-columns:repeat(3,1fr);gap:20px;margin-top:40px}
+  .spn .fmt{background:#fff;border:1px solid var(--line);border-radius:18px;padding:24px}
+  .spn .fmt .ic{width:46px;height:46px;border-radius:12px;background:rgba(234,78,27,.1);display:flex;align-items:center;justify-content:center;font-size:22px;margin-bottom:14px}
+  .spn .fmt h3{font-family:'Archivo',sans-serif;font-weight:800;font-size:18px;margin:0 0 6px}
+  .spn .fmt p{font-size:14.5px;color:#6b5d52;margin:0}
+  .spn .steps{display:grid;grid-template-columns:repeat(3,1fr);gap:22px;margin-top:40px}
+  .spn .step .n{font-family:'Anton',sans-serif;font-size:52px;color:var(--orange);line-height:1}
+  .spn .step h3{font-family:'Archivo',sans-serif;font-weight:800;font-size:20px;margin:8px 0 6px}
+  .spn .step p{color:#6b5d52;font-size:15px;margin:0}
+  .spn .contact{background:var(--cream2)}
+  .spn .form{background:#fff;border:1px solid var(--line);border-radius:22px;padding:32px;margin-top:32px;display:grid;grid-template-columns:1fr 1fr;gap:18px;max-width:780px}
+  .spn .form .full{grid-column:1/-1}
+  .spn label.fl{display:block;font-size:13px;font-weight:700;margin-bottom:6px;color:var(--ink)}
+  .spn .inp{width:100%;border:1px solid var(--line);background:var(--cream);border-radius:10px;padding:12px 14px;font-size:14px;font-family:'Inter',sans-serif;color:var(--ink)}
+  .spn .inp:focus{outline:none;border-color:var(--orange)}
+  .spn textarea.inp{min-height:110px;resize:vertical}
+  .spn .hp{position:absolute;left:-9999px;width:1px;height:1px;overflow:hidden}
+  .spn .consent{display:flex;gap:10px;align-items:flex-start;font-size:13px;color:#4a3d34}
+  .spn .consent a{color:var(--orange);font-weight:600}
+  .spn .formmsg{font-size:14px;font-weight:600;margin-top:4px}
+  .spn .kitrow{margin-top:22px;display:flex;gap:14px;flex-wrap:wrap;align-items:center}
+  @media(max-width:900px){
+    .spn .stats{grid-template-columns:repeat(2,1fr)}
+    .spn .aud,.spn .pk,.spn .grid6,.spn .steps{grid-template-columns:1fr}
+    .spn h1.hh{font-size:40px}.spn .h2{font-size:30px}.spn .form{grid-template-columns:1fr}
+  }
+</style>
+{% endblock %}
+{% block main %}
+<div class="spn">
+
+  <header class="hero"><div class="wrap">
+    <span class="kick">{{ hero_kicker }}</span>
+    <h1 class="hh">{{ hero_title_a }}<span class="orange">{{ hero_title_hl }}</span>{{ hero_title_b }}</h1>
+    <p class="lead">{{ hero_lead }}</p>
+    <div class="cta">
+      <a class="btn btn-orange" href="#contatti" data-testid="sponsor-hero-cta">Richiedi il media kit</a>
+      <a class="btn btn-ghost" href="#pacchetti">Vedi i pacchetti</a>
+    </div>
+  </div></header>
+
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow">Chi siamo</div>
+    <h2 class="h2">Un podcast di calcio con una community che partecipa.</h2>
+    {% for p in intro %}<p class="sub">{{ p }}</p>{% endfor %}
+    <div class="stats">
+      {% for s in stats %}<div class="stat"><div class="num">{{ s.num }}</div><div class="lbl">{{ s.label }}</div></div>{% endfor %}
+    </div>
+  </div></section>
+
+  <section class="sec dark"><div class="wrap">
+    <div class="eyebrow">Il pubblico</div>
+    <h2 class="h2">Chi ti ascolta quando sei con UnoXdue.</h2>
+    <div class="aud">
+      {% for a in audience %}<div class="c"><h3>{{ a.title }}</h3><p>{{ a.text }}</p><div class="accent"></div></div>{% endfor %}
+    </div>
+  </div></section>
+
+  <section class="sec" id="pacchetti"><div class="wrap">
+    <div class="eyebrow">Pacchetti</div>
+    <h2 class="h2">Scegli il livello di visibilità giusto per te.</h2>
+    <p class="sub">Prezzi su richiesta, personalizzabili in base a obiettivi e durata della campagna.</p>
+    <div class="pk">
+      {% for pk in packages %}
+      <div class="card {% if pk.highlight %}feat{% endif %}" data-testid="sponsor-package-{{ loop.index }}">
+        {% if pk.badge %}<span class="tag">{{ pk.badge }}</span>{% endif %}
+        <div class="pname">{{ pk.name }}</div>
+        <div class="ptag">{{ pk.tagline }}</div>
+        <div class="price">Su richiesta</div>
+        <ul>
+          {% for f in pk.features %}<li class="{% if f.no %}no{% endif %}"><span class="check">{{ "—" if f.no else "✓" }}</span> {{ f.text }}</li>{% endfor %}
+        </ul>
+        <a class="btn {% if pk.highlight %}btn-orange{% else %}btn-dark{% endif %}" href="#contatti">Richiedi info</a>
+      </div>
+      {% endfor %}
+    </div>
+    <div class="note">{{ podcast_note }}</div>
+    <div class="note warn" data-testid="sponsor-legal-note">{{ package_note }}</div>
+  </div></section>
+
+  <section class="sec" style="background:var(--cream2)"><div class="wrap">
+    <div class="eyebrow">Formati</div>
+    <h2 class="h2">Tanti modi per essere presente.</h2>
+    <div class="grid6">
+      {% for f in formats %}<div class="fmt"><div class="ic">{{ f.icon }}</div><h3>{{ f.title }}</h3><p>{{ f.text }}</p></div>{% endfor %}
+    </div>
+  </div></section>
+
+  <section class="sec"><div class="wrap">
+    <div class="eyebrow">Come funziona</div>
+    <h2 class="h2">Dalla richiesta alla campagna in 3 passi.</h2>
+    <div class="steps">
+      {% for s in steps %}<div class="step"><div class="n">{{ s.n }}</div><h3>{{ s.title }}</h3><p>{{ s.text }}</p></div>{% endfor %}
+    </div>
+  </div></section>
+
+  <section class="sec contact" id="contatti"><div class="wrap">
+    <div class="eyebrow">Contatti</div>
+    <h2 class="h2">Parliamo del tuo brand.</h2>
+    <p class="sub">Lascia i tuoi dati: ti ricontattiamo con il media kit e una proposta personalizzata. Puoi anche scriverci a <a class="orange" href="mailto:{{ contact_email }}" style="font-weight:700">{{ contact_email }}</a>.</p>
+    <div class="kitrow">
+      <a class="btn btn-dark" href="{{ site_url }}/api/sponsor/media-kit.pdf" target="_blank" rel="noopener" data-testid="sponsor-mediakit-btn">Scarica il media kit (PDF)</a>
+    </div>
+    <form class="form" id="sponsorForm" data-testid="sponsor-form" style="position:relative">
+      <div><label class="fl">Nome e cognome *</label><input class="inp" name="name" required placeholder="Mario Rossi" data-testid="sponsor-name" /></div>
+      <div><label class="fl">Azienda / Brand *</label><input class="inp" name="company" required placeholder="La tua azienda" data-testid="sponsor-company" /></div>
+      <div><label class="fl">Email *</label><input class="inp" type="email" name="email" required placeholder="nome@azienda.it" data-testid="sponsor-email" /></div>
+      <div><label class="fl">Telefono (facoltativo)</label><input class="inp" name="phone" placeholder="+39 ..." data-testid="sponsor-phone" /></div>
+      <div><label class="fl">Budget indicativo</label>
+        <select class="inp" name="budget" data-testid="sponsor-budget"><option>Da definire</option><option>Fino a 500€</option><option>500–1.500€</option><option>1.500–5.000€</option><option>Oltre 5.000€</option></select>
+      </div>
+      <div><label class="fl">Categoria brand</label><input class="inp" name="category" placeholder="Es. abbigliamento, food, tech…" data-testid="sponsor-category" /></div>
+      <div class="full"><label class="fl">Messaggio</label><textarea class="inp" name="message" placeholder="Raccontaci il tuo obiettivo…" data-testid="sponsor-message"></textarea></div>
+      <div class="hp"><label>Non compilare<input name="website" tabindex="-1" autocomplete="off" /></label></div>
+      <div class="full consent"><input type="checkbox" name="consent" id="spnConsent" data-testid="sponsor-consent" style="margin-top:3px" /><label for="spnConsent">Ho letto e accetto l'<a href="{{ site_url }}/privacy/" target="_blank" rel="noopener">informativa privacy</a> e acconsento al trattamento dei dati per essere ricontattato. *</label></div>
+      <div class="full"><button type="submit" class="btn btn-orange" style="width:100%;justify-content:center" data-testid="sponsor-submit">Invia richiesta</button>
+        <p class="formmsg" id="spnMsg" style="display:none"></p>
+      </div>
+    </form>
+    <p class="sub" style="font-size:13px;margin-top:22px">UnoXdue NON accetta come sponsor operatori di scommesse, casinò o gioco con vincita in denaro. Gli operatori di gioco possono comparire esclusivamente nell'eventuale comparatore quote, come servizio informativo neutrale e senza inviti al gioco.</p>
+  </div></section>
+
+  <script>
+  (function(){
+    var f=document.getElementById('sponsorForm'),msg=document.getElementById('spnMsg');
+    if(!f)return;
+    f.addEventListener('submit',function(e){
+      e.preventDefault();
+      msg.style.display='block';msg.style.color='#4a3d34';msg.textContent='Invio in corso…';
+      if(!f.consent.checked){msg.style.color='#c2410c';msg.textContent='Devi accettare l\u2019informativa privacy.';return;}
+      var data={name:f.name.value,company:f.company.value,email:f.email.value,phone:f.phone.value,budget:f.budget.value,category:f.category.value,message:f.message.value,consent:f.consent.checked,website:f.website.value};
+      fetch('{{ site_url }}/api/sponsor/lead',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify(data)})
+        .then(function(r){return r.json().then(function(j){return{ok:r.ok,j:j}})})
+        .then(function(res){if(res.ok&&res.j.ok){msg.style.color='#15803d';msg.textContent='Grazie! Richiesta inviata. Ti ricontatteremo al più presto.';f.reset();}else{msg.style.color='#c2410c';msg.textContent=(res.j&&res.j.detail)||'Si è verificato un errore. Riprova o scrivici via email.';}})
+        .catch(function(){msg.style.color='#c2410c';msg.textContent='Errore di rete. Riprova o scrivici via email.';});
+    });
+  })();
+  </script>
+
+</div>
+{% endblock %}

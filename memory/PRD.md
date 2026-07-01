@@ -561,3 +561,17 @@ Redeploy VPS riuscito (git pull fast-forward 33b3a1b; risolto blocco `git checko
 - **Sponsor B2B mockup**: `backend/static/sponsor_mockup.html` (autonomo, brand UnoXdue) servito su `/api/static/sponsor_mockup.html`. Sezioni: hero, numeri (esempio), pubblico, 3 pacchetti (Starter/Pro/Premium), formati, come funziona, form contatti+media kit, footer. Banner "MOCKUP / dati esempio". Screenshot OK. In attesa feedback utente per costruirla come pagina reale.
 - **DEPLOY**: frontend cambiato → in produzione ricostruire ANCHE `web`: `cd /root/unoxdue && git pull && docker compose -f docker-compose.tls.yml up -d --build backend web` (dopo "Save to Github").
 - **PROSSIMO**: Newsletter con Resend (dopo Telegram, richiesta utente). Show notes in pending.
+
+## 🤝 Pagina COLLABORA / SPONSOR B2B (1 luglio 2026) — COMPLETATO e testato
+- **Confermato dall'utente**: /collaborazioni trasformata nella pagina B2B completa (URL invariato per SEO), footer rinominato "Collabora con noi". Numeri qualitativi + editabili da admin. Email contatto: partner@unoxdue.net (editabile).
+- **Backend**:
+  - `seo.py`: `sponsor_defaults()`, `render_sponsor(content)`, `render_media_kit(content)`. Costanti SPONSOR_PACKAGES/FORMATS/STEPS/NOTE/FAQS con i contenuti legali dettati dall'utente (Starter/Pro/Premium "Su richiesta"; RIMOSSI logo copertina, episodio branded, menzione ogni puntata; note esclusione betting/casino + integrazioni soggette a compatibilità).
+  - `templates/sponsor.html`: estende base.html (navbar/footer del sito), CSS scoped `.spn`, form con honeypot + consenso GDPR + link privacy, submit via fetch a `/api/sponsor/lead`.
+  - Endpoint: SSR `/seo/collaborazioni` (render_sponsor da db.settings.sponsor), `POST /api/sponsor/lead` (honeypot, consenso obbligatorio, salva in `db.sponsor_leads`), `GET /api/sponsor/media-kit.pdf` (genera PDF via Playwright, cache in `db.media_kit` by hash, **fallback HTML** se Chromium assente), admin `GET/PUT /admin/site-content/sponsor`, `GET /admin/sponsor/leads`, `POST /admin/sponsor/leads/{id}/status`, `DELETE /admin/sponsor/leads/{id}`.
+  - `graphics.py`: aggiunta `html_to_pdf(html)` (riusa il browser Chromium condiviso).
+- **Admin**: nuova pagina `SponsorAdmin.jsx` (menu "Collabora / Sponsor", route `/admin/collabora`) con 2 tab: Contenuti (email, hero_lead, intro, stats num+label, audience title+text — tutto editabile) e Richieste (lista lead con stato nuovo/gestito/archiviato + elimina). Link "Vedi pagina" e "Media kit". Metodi in `api.js`.
+- **Notifiche form**: lead salvato in DB + visibile in admin (email via Resend verrà attivata con la newsletter; l'utente ha confermato "email sempre presente come contatto"). Telegram-alert opzionale (spiegato, non implementato: serve chat privata id).
+- **Verificato**: SSR render OK, form (no-consenso 400 + submit ok con reset), media-kit PDF 56KB (Chromium installato anche in preview), admin content+leads screenshot OK, footer aggiornato. Lead di test ripuliti.
+- **DEPLOY**: `cd /root/unoxdue && git pull && docker compose -f docker-compose.tls.yml up -d --build backend web` (frontend+backend cambiati; Chromium già nel Docker di prod).
+- **PROSSIMO REALE**: Newsletter con Resend. Media kit: PDF generato dai dati (chi siamo, pubblico, pacchetti, formati, contatti) — l'utente potrà arricchirlo con numeri reali dall'admin.
+

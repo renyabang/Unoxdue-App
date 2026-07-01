@@ -7,6 +7,8 @@ from fastapi.exception_handlers import http_exception_handler
 import os
 import uuid
 import asyncio
+import hashlib
+import base64
 import logging
 from datetime import datetime, timezone
 from typing import List, Optional
@@ -124,6 +126,18 @@ class EpisodeIn(BaseModel):
     related: List[dict] = []
     guest_name: Optional[str] = None
     status: str = "pubblicato"
+
+
+class SponsorLeadIn(BaseModel):
+    name: str
+    company: str = ""
+    email: str
+    phone: str = ""
+    budget: str = ""
+    category: str = ""
+    message: str = ""
+    consent: bool = False
+    website: str = ""  # honeypot anti-spam
 
 
 @api_router.post("/admin/episodes")
@@ -341,6 +355,37 @@ async def get_il_podcast_content(admin: str = Depends(get_current_admin)):
 async def put_il_podcast_content(data: dict, admin: str = Depends(get_current_admin)):
     content = data.get("content", data)
     await db.settings.update_one({"_id": "global"}, {"$set": {"il_podcast": content}}, upsert=True)
+    return {"ok": True}
+
+
+@api_router.get("/admin/site-content/sponsor")
+async def get_sponsor_content(admin: str = Depends(get_current_admin)):
+    s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "sponsor": 1}) or {}
+    return {"content": s.get("sponsor") or {}, "defaults": seo.sponsor_defaults()}
+
+
+@api_router.put("/admin/site-content/sponsor")
+async def put_sponsor_content(data: dict, admin: str = Depends(get_current_admin)):
+    content = data.get("content", data)
+    await db.settings.update_one({"_id": "global"}, {"$set": {"sponsor": content}}, upsert=True)
+    await db.media_kit.delete_one({"_id": "sponsor"})  # invalida il PDF in cache
+    return {"ok": True}
+
+
+@api_router.get("/admin/sponsor/leads")
+async def admin_sponsor_leads(admin: str = Depends(get_current_admin)):
+    return await db.sponsor_leads.find({}, {"_id": 0}).sort("created_at", -1).to_list(500)
+
+
+@api_router.post("/admin/sponsor/leads/{lead_id}/status")
+async def admin_sponsor_lead_status(lead_id: str, data: dict, admin: str = Depends(get_current_admin)):
+    await db.sponsor_leads.update_one({"id": lead_id}, {"$set": {"status": data.get("status", "nuovo")}})
+    return {"ok": True}
+
+
+@api_router.delete("/admin/sponsor/leads/{lead_id}")
+async def admin_sponsor_lead_delete(lead_id: str, admin: str = Depends(get_current_admin)):
+    await db.sponsor_leads.delete_one({"id": lead_id})
     return {"ok": True}
 
 
@@ -1043,26 +1088,47 @@ async def ssr_il_podcast():
 
 @api_router.get("/seo/collaborazioni", response_class=HTMLResponse)
 async def ssr_collaborazioni():
-    body = (
-        "<p class='lead'>Vuoi collaborare con UnoXdue? Siamo aperti a partnership, sponsorizzazioni e progetti editoriali nel mondo del calcio.</p>"
-        "<p>UnoXdue è un podcast settimanale dedicato alla Serie A, con dirette su Twitch, episodi su YouTube, "
-        "interviste ai protagonisti e pronostici per ogni giornata. Collaboriamo con brand, testate e realtà sportive "
-        "che condividono la nostra passione per il calcio italiano.</p>"
-        "<h2>Tipi di collaborazione</h2><ul>"
-        "<li>Sponsorizzazioni di episodi e dirette</li>"
-        "<li>Contenuti editoriali e branded content</li>"
-        "<li>Interviste e ospitate</li>"
-        "<li>Partnership con media e creator</li></ul>"
-        "<h2>Come proporre una collaborazione</h2>"
-        "<p>Scrivici tramite la pagina <a href=\"" + SITE_URL + "/contatti/\">Contatti</a> o contattaci sui nostri canali social. "
-        "Ti risponderemo con i dettagli su formati, pubblico e modalità.</p>"
-    )
-    return HTMLResponse(seo.render_page("Collaborazioni",
-        "Collabora con UnoXdue: sponsorizzazioni, partnership e progetti editoriali sul calcio e la Serie A.",
-        "/collaborazioni/", body, page_type="AboutPage", faqs=[
-            {"q": "Che tipo di partnership accettate?", "a": "Sponsorizzazioni di episodi e dirette, branded content, interviste e ospitate, oltre a partnership con media e creator del mondo calcio."},
-            {"q": "Come funziona una collaborazione?", "a": "Ci scrivi dalla pagina Contatti descrivendo l'obiettivo; ti rispondiamo con formati disponibili, pubblico di riferimento e modalità di realizzazione."},
-        ]))
+    s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "sponsor": 1}) or {}
+    return HTMLResponse(seo.render_sponsor(s.get("sponsor")))
+
+
+@api_router.post("/sponsor/lead")
+async def sponsor_lead(payload: SponsorLeadIn):
+    if payload.website:  # honeypot compilato -> bot, accetta in silenzio
+        return {"ok": True}
+    if not payload.consent:
+        raise HTTPException(status_code=400, detail="Devi accettare l'informativa privacy.")
+    if not payload.name.strip() or "@" not in payload.email:
+        raise HTTPException(status_code=400, detail="Nome ed email validi sono obbligatori.")
+    doc = {
+        "id": str(uuid.uuid4()), "name": payload.name.strip(), "company": payload.company.strip(),
+        "email": payload.email.strip(), "phone": payload.phone.strip(), "budget": payload.budget.strip(),
+        "category": payload.category.strip(), "message": payload.message.strip(),
+        "status": "nuovo", "created_at": datetime.now(timezone.utc).isoformat(),
+    }
+    await db.sponsor_leads.insert_one(doc)
+    await auto.log_automation("sponsor", "ok", f"Nuova richiesta sponsor da {doc['company'] or doc['name']}")
+    return {"ok": True}
+
+
+@api_router.get("/sponsor/media-kit.pdf")
+async def sponsor_media_kit():
+    s = await db.settings.find_one({"_id": "global"}, {"_id": 0, "sponsor": 1}) or {}
+    html = seo.render_media_kit(s.get("sponsor"))
+    h = hashlib.md5(html.encode("utf-8")).hexdigest()
+    doc = await db.media_kit.find_one({"_id": "sponsor"})
+    if doc and doc.get("hash") == h and doc.get("b64"):
+        pdf = base64.b64decode(doc["b64"])
+    else:
+        try:
+            pdf = await gfx.html_to_pdf(html)
+        except Exception as e:
+            logger.warning("media-kit PDF non generabile (%s), fallback HTML", e)
+            return HTMLResponse(html)
+        await db.media_kit.update_one({"_id": "sponsor"},
+            {"$set": {"hash": h, "b64": base64.b64encode(pdf).decode()}}, upsert=True)
+    return Response(content=pdf, media_type="application/pdf",
+                    headers={"Content-Disposition": 'inline; filename="unoxdue-media-kit.pdf"'})
 
 
 @api_router.get("/seo/contatti", response_class=HTMLResponse)
