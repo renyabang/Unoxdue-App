@@ -586,3 +586,30 @@ Redeploy VPS riuscito (git pull fast-forward 33b3a1b; risolto blocco `git checko
 - **DEPLOY**: `cd /root/unoxdue && git pull && docker compose -f docker-compose.tls.yml up -d --build backend web` + aggiungere RESEND_API_KEY all'env di produzione.
 
 
+## ✅ FORK (1 luglio 2026) — Newsletter Opzione A (fuori dal footer), Gianmarco pubblicato, email test, lead Telegram
+Testing frontend `iteration_20.json`: **7/7 flussi PASS (100%)**, nessun problema, `retest_needed=false`.
+
+### Newsletter — Opzione A (banda scura full-width) SOLO in homepage, RIMOSSA dal footer
+- Scelta utente: mockup **Opzione A** (banda scura prima del footer), visibile **solo in homepage**.
+- Nuova macro `_macros.html` `newsletter_band(site_url)` (dark #14100e + glow arancio, kicker "Newsletter UnoXdue", h1 "Non perderti la prossima puntata.", form email+ISCRIVITI, nota privacy). Inserita in `home.html` dopo la sezione Social. `data-testid`: newsletter-band / -form / -email / -submit / -msg.
+- **Form newsletter RIMOSSO dal footer** (`base.html`): il footer torna a 3 colonne (brand / Naviga / Seguici-social). Nessun form su nessuna pagina tranne homepage.
+- **React**: nuovo componente `frontend/src/components/NewsletterBand.jsx` (stessa grafica, POST a `${REACT_APP_BACKEND_URL}/api/newsletter/subscribe`, stati idle/sending/ok/already/error), aggiunto in `PublicSite.jsx` dopo `SocialSection` e prima di `Footer`. Parità React↔SSR verificata via screenshot.
+- CSS SSR ricompilato (`scripts/build_ssr_css.sh`, 69.7KB).
+
+### Email di test — inviate TUTTE a admin@unoxdue.net (su richiesta utente "così le controllo")
+- Inviate 6/6 via Resend (id ricevuti): 4 preset (Benvenuto, Riepilogo settimanale, Andiamo LIVE, Nuovo pronostico) + template automatico "Nuova puntata" (su episodio reale) + template automatico "Siamo LIVE". Sender = newsletter@unoxdue.net (dominio verificato).
+
+### Sono Gianmarco — PUBBLICATO con foto reale
+- Foto reale (ritratto camicia bianca, asset `g98im794_2026-06-25 23.14.08.jpg`, 640×640) salvata in `backend/static/public/team/gianmarco.jpg` E `frontend/public/team/gianmarco.jpg` (path invariato `/team/gianmarco.jpg`).
+- DB preview: `status='attivo'` (non più `bozza`). Logica `render_team` semplificata: `draft = (status=='bozza')` → niente più badge "Scheda in arrivo" per i pubblicati. Card renderizza foto + nome + Instagram; bio/role restano VUOTI (non inventati) → mostra "Profilo in aggiornamento".
+- ⚠️ **Manca bio + ruolo di Gianmarco** (da fornire dall'utente per completare la scheda; non li invento).
+
+### Notifiche Telegram lead sponsor → @unoxdue_lead
+- Codice verificato corretto: `/api/sponsor/lead` → `tg.notify_lead(text)` invia a `settings.telegram.notify_chat_id`. Flusso lead testato in preview (lead salvato, endpoint `{ok:true}`, Telegram fallisce in silenzio senza token = nessun 500). Utente ha confermato che il bot è admin in `@unoxdue_lead`.
+- ⚠️ **Config da impostare in PRODUZIONE**: nel pannello admin Telegram (o via API) impostare `notify_chat_id = @unoxdue_lead`. In preview il Bot Token non è impostato quindi l'invio reale si verifica solo su VPS.
+
+### DA FARE / DEPLOY (VPS DigitalOcean, non ancora deployato)
+1. **Save to Github** poi sul VPS: `cd /root/unoxdue && git pull && docker compose -f docker-compose.tls.yml up -d --build backend web` (cambiati template SSR, CSS, React, seo.py, foto gianmarco).
+2. **Su produzione** applicare le modifiche DB (non sono in git): pubblicare Gianmarco (`status=attivo` + `photo=/team/gianmarco.jpg`) via `POST /api/admin/team`; impostare `notify_chat_id=@unoxdue_lead` nella config Telegram.
+3. Fornire **bio + ruolo** di Gianmarco per completare la scheda.
+
