@@ -31,6 +31,30 @@ DEFAULT_TEMPLATES = {
     },
 }
 
+# Modelli "pronti da usare" per l'email libera (l'admin li seleziona e li modifica)
+PRESETS = [
+    {"id": "benvenuto", "label": "Email di benvenuto",
+     "subject": "Benvenuto nella community di UnoXdue! ⚽",
+     "html": "<p>Ciao e benvenuto! 👋</p><p>Grazie per esserti iscritto alla newsletter di <b>UnoXdue</b>. "
+             "Ti scriveremo quando esce una nuova puntata, quando andiamo in diretta e per i contenuti che contano — niente spam.</p>"
+             "<p>Nel frattempo, dai un'occhiata alle ultime puntate su <a href='https://unoxdue.net/episodi/'>unoxdue.net</a>.</p>"
+             "<p>A presto,<br/>Il team UnoXdue</p>"},
+    {"id": "riepilogo", "label": "Riepilogo settimanale",
+     "subject": "📅 La settimana di UnoXdue",
+     "html": "<p>Ciao!</p><p>Ecco cosa è successo questa settimana su UnoXdue:</p>"
+             "<ul><li>🎙️ Puntata: <a href='#'>titolo</a></li><li>🎯 Pronostici di giornata</li><li>🔴 Prossima diretta su Twitch</li></ul>"
+             "<p>Ci vediamo alla prossima!</p>"},
+    {"id": "live", "label": "Andiamo LIVE stasera",
+     "subject": "🔴 Stasera siamo in diretta!",
+     "html": "<p>Stasera commentiamo in diretta la giornata di Serie A. 🎮</p>"
+             "<p>Ti aspettiamo su <a href='https://www.twitch.tv/unoxdue_'>Twitch</a> — pronostici, analisi e tanta chiacchiera.</p>"},
+    {"id": "pronostico", "label": "Nuovo pronostico di giornata",
+     "subject": "🎯 I pronostici della giornata",
+     "html": "<p>Sono online i pronostici di giornata dei nostri tipster.</p>"
+             "<p>Analisi, quote e schedine qui: <a href='https://unoxdue.net/pronostici/'>unoxdue.net/pronostici</a>.</p>"
+             "<p><small>Contenuto informativo. Gioco responsabile. Solo +18.</small></p>"},
+]
+
 
 # ----------------------------- Config -----------------------------
 async def get_config() -> dict:
@@ -52,6 +76,7 @@ async def admin_config_view() -> dict:
         "auto_episode": bool(cfg.get("auto_episode", False)),
         "templates": templates,
         "default_templates": DEFAULT_TEMPLATES,
+        "presets": PRESETS,
         "subscribers_active": active,
         "subscribers_total": total,
         "status": cfg.get("status") or {},

@@ -88,6 +88,7 @@ async def admin_config_view() -> dict:
         "token_masked": _mask(token),
         "channel_id": cfg.get("channel_id", ""),
         "twitch_url": cfg.get("twitch_url", "") or DEFAULT_TWITCH,
+        "notify_chat_id": cfg.get("notify_chat_id", ""),
         "enabled": bool(cfg.get("enabled", False)),
         "auto_episode": bool(cfg.get("auto_episode", False)),
         "auto_prediction": bool(cfg.get("auto_prediction", False)),
@@ -107,6 +108,8 @@ async def save_config(data: dict) -> dict:
         patch["telegram.channel_id"] = (data.get("channel_id") or "").strip()
     if "twitch_url" in data:
         patch["telegram.twitch_url"] = (data.get("twitch_url") or "").strip()
+    if "notify_chat_id" in data:
+        patch["telegram.notify_chat_id"] = (data.get("notify_chat_id") or "").strip()
     if "enabled" in data:
         patch["telegram.enabled"] = bool(data.get("enabled"))
     if "auto_episode" in data:
@@ -385,6 +388,45 @@ async def send_test() -> dict:
 
 async def recent_messages(limit: int = 20) -> list:
     return await db.telegram_messages.find({}, {"_id": 0}).sort("created_at", -1).to_list(limit)
+
+
+async def get_updates() -> dict:
+    """Legge gli ultimi update del bot per ricavare i chat_id (utile per configurare le notifiche)."""
+    cfg = await get_config()
+    token = cfg.get("bot_token")
+    if not token:
+        return {"ok": False, "error": "Token Telegram non configurato", "chats": []}
+    try:
+        updates = await _call("getUpdates", {"limit": 50, "timeout": 0}, token)
+    except Exception as e:
+        return {"ok": False, "error": str(e), "chats": []}
+    seen, chats = set(), []
+    for u in updates:
+        for key in ("message", "channel_post", "my_chat_member", "edited_message"):
+            obj = u.get(key)
+            chat = (obj or {}).get("chat")
+            if chat and chat.get("id") not in seen:
+                seen.add(chat.get("id"))
+                title = chat.get("title") or " ".join(filter(None, [chat.get("first_name"), chat.get("last_name")])) or chat.get("username") or ""
+                chats.append({"id": chat.get("id"), "title": title, "type": chat.get("type")})
+    return {"ok": True, "chats": chats}
+
+
+async def notify_lead(text: str) -> dict:
+    """Invia una notifica (es. nuovo lead sponsor) alla chat privata/gruppo configurata."""
+    cfg = await get_config()
+    token = cfg.get("bot_token")
+    chat = cfg.get("notify_chat_id")
+    if not (token and chat):
+        return {"ok": False, "error": "Chat notifiche non configurata"}
+    try:
+        res = await _call("sendMessage", {"chat_id": chat, "text": text, "parse_mode": "HTML",
+                                          "disable_web_page_preview": True}, token)
+        await _log("notify", text, True, result=res)
+        return {"ok": True, "message_id": res.get("message_id")}
+    except Exception as e:
+        await _log("notify", text, False, error=str(e))
+        return {"ok": False, "error": str(e)}
 
 
 # ----------------------------- Auto hooks (non bloccanti) -----------------------------

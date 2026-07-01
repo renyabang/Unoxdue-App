@@ -129,6 +129,7 @@ export const api = {
   tgPublishLive: (text) => req("/admin/telegram/publish/live", { method: "POST", body: { text } }),
   tgPublishPoll: (question, options) => req("/admin/telegram/publish/poll", { method: "POST", body: { question, options } }),
   tgMessages: (limit = 20) => req(`/admin/telegram/messages?limit=${limit}`),
+  tgUpdates: () => req("/admin/telegram/updates"),
   // Sponsor / Collabora
   sponsorContent: () => req("/admin/site-content/sponsor"),
   sponsorSaveContent: (content) => req("/admin/site-content/sponsor", { method: "PUT", body: { content } }),

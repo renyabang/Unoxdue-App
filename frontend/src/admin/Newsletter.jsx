@@ -165,8 +165,12 @@ export default function Newsletter() {
         {kind === "live" && <textarea value={liveText} onChange={(e) => setLiveText(e.target.value)} rows={2} placeholder="Testo (lascia vuoto per il default)" data-testid="nl-live-text" className={inputCls + " mb-3 max-w-xl"} />}
         {kind === "generic" && (
           <div className="max-w-xl mb-3 space-y-2">
+            <select data-testid="nl-preset-select" onChange={(e) => { const p = (cfg.presets || []).find((x) => x.id === e.target.value); if (p) { setGSubject(p.subject); setGHtml(p.html); } }} className={inputCls}>
+              <option value="">— Parti da un modello pronto (opzionale) —</option>
+              {(cfg.presets || []).map((p) => <option key={p.id} value={p.id}>{p.label}</option>)}
+            </select>
             <input value={gSubject} onChange={(e) => setGSubject(e.target.value)} placeholder="Oggetto" data-testid="nl-generic-subject" className={inputCls} />
-            <textarea value={gHtml} onChange={(e) => setGHtml(e.target.value)} rows={5} placeholder="Contenuto HTML (es. <p>Ciao...</p>)" data-testid="nl-generic-html" className={inputCls} />
+            <textarea value={gHtml} onChange={(e) => setGHtml(e.target.value)} rows={6} placeholder="Contenuto HTML (es. <p>Ciao...</p>)" data-testid="nl-generic-html" className={inputCls} />
           </div>
         )}
         <div className="flex flex-wrap items-center gap-2">

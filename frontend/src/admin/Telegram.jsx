@@ -57,6 +57,7 @@ export default function Telegram() {
   const [testing, setTesting] = useState(false);
   const [tokenInput, setTokenInput] = useState("");
   const [busy, setBusy] = useState("");
+  const [chats, setChats] = useState([]);
 
   const [episodes, setEpisodes] = useState([]);
   const [predictions, setPredictions] = useState([]);
@@ -89,7 +90,7 @@ export default function Telegram() {
     setSaving(true); setSaved(false);
     try {
       const body = {
-        channel_id: cfg.channel_id, twitch_url: cfg.twitch_url, enabled: cfg.enabled,
+        channel_id: cfg.channel_id, twitch_url: cfg.twitch_url, notify_chat_id: cfg.notify_chat_id, enabled: cfg.enabled,
         auto_episode: cfg.auto_episode, auto_prediction: cfg.auto_prediction, templates: cfg.templates,
       };
       if (tokenInput.trim()) body.bot_token = tokenInput.trim();
@@ -97,6 +98,16 @@ export default function Telegram() {
       setCfg(c); setTokenInput(""); setSaved(true); setTimeout(() => setSaved(false), 2500);
     } catch (e) { alert(e.message); }
     setSaving(false);
+  };
+
+  const detectChats = async () => {
+    setBusy("updates");
+    try {
+      const r = await api.tgUpdates();
+      if (r.ok) { setChats(r.chats || []); if (!r.chats || !r.chats.length) alert("Nessuna chat trovata. Scrivi un messaggio nel gruppo/al bot e riprova."); }
+      else alert("Errore: " + (r.error || ""));
+    } catch (e) { alert(e.message); }
+    setBusy("");
   };
 
   const test = async () => {
@@ -150,6 +161,28 @@ export default function Telegram() {
             <input type="text" value={cfg.twitch_url || ""} onChange={(e) => set("twitch_url", e.target.value)} spellCheck={false}
               placeholder="https://www.twitch.tv/unoxdue_" data-testid="tg-twitch-input"
               className="mt-1.5 w-full rounded-lg border border-[#e5d8c7] bg-[#fbf7f2] px-3 py-2.5 text-sm text-[#1a1411] focus:outline-none focus:ring-2 focus:ring-[#EA4E1B]/40 focus:border-[#EA4E1B]" />
+          </div>
+          <div className="md:col-span-2">
+            <label className="block text-sm font-semibold text-[#1a1411]">Chat notifiche lead (privata o gruppo)</label>
+            <div className="flex gap-2 mt-1.5">
+              <input type="text" value={cfg.notify_chat_id || ""} onChange={(e) => set("notify_chat_id", e.target.value)} spellCheck={false}
+                placeholder="Es. -1001234567890 (gruppo) o il tuo user id" data-testid="tg-notify-input"
+                className="flex-1 rounded-lg border border-[#e5d8c7] bg-[#fbf7f2] px-3 py-2.5 text-sm text-[#1a1411] focus:outline-none focus:ring-2 focus:ring-[#EA4E1B]/40 focus:border-[#EA4E1B]" />
+              <button type="button" onClick={detectChats} disabled={busy === "updates"} data-testid="tg-detect-button" className="inline-flex items-center gap-1.5 border border-[#e5d8c7] hover:border-[#EA4E1B] text-sm font-semibold px-3 py-2 rounded-lg disabled:opacity-50 whitespace-nowrap">
+                {busy === "updates" ? <Loader2 className="w-4 h-4 animate-spin" /> : <RefreshCw className="w-4 h-4" />} Rileva chat ID
+              </button>
+            </div>
+            <p className="mt-1 text-xs text-[#8a7a6c]">Qui arrivano le notifiche dei nuovi lead sponsor. Crea un gruppo con te + Maurizio + il bot, scrivi un messaggio nel gruppo, poi premi "Rileva chat ID".</p>
+            {chats.length > 0 && (
+              <div className="mt-2 flex flex-wrap gap-2" data-testid="tg-chats-list">
+                {chats.map((ch) => (
+                  <button key={ch.id} type="button" onClick={() => set("notify_chat_id", String(ch.id))}
+                    className="text-xs border border-[#e5d8c7] hover:border-[#EA4E1B] rounded-lg px-2.5 py-1.5">
+                    {ch.title || ch.type} <span className="text-[#8a7a6c]">({ch.id})</span>
+                  </button>
+                ))}
+              </div>
+            )}
           </div>
         </div>
 

@@ -740,6 +740,11 @@ async def admin_telegram_messages(limit: int = 20, admin: str = Depends(get_curr
     return await tg.recent_messages(limit)
 
 
+@api_router.get("/admin/telegram/updates")
+async def admin_telegram_updates(admin: str = Depends(get_current_admin)):
+    return await tg.get_updates()
+
+
 # ============================ Newsletter (Resend) ============================
 @api_router.post("/newsletter/subscribe")
 async def newsletter_subscribe(data: dict):
@@ -1204,6 +1209,11 @@ async def sponsor_lead(payload: SponsorLeadIn):
                   f"<p style='margin:4px 0;'><b>Budget:</b> {doc['budget'] or '—'} · <b>Categoria:</b> {doc['category'] or '—'}</p>"
                   f"<p style='margin:10px 0 0 0;'><b>Messaggio:</b><br/>{doc['message'] or '—'}</p>")
     await nl.notify_owner(f"Nuova richiesta sponsor — {doc['company'] or doc['name']}", owner_html)
+    tg_text = (f"📨 <b>Nuova richiesta sponsor</b>\n\n"
+               f"🏢 {doc['company'] or '—'}\n👤 {doc['name']}\n✉️ {doc['email']}\n"
+               f"📞 {doc['phone'] or '—'}\n💶 {doc['budget'] or '—'} · 🏷️ {doc['category'] or '—'}\n\n"
+               f"{doc['message'] or ''}")
+    await tg.notify_lead(tg_text)
     return {"ok": True}
 
 
