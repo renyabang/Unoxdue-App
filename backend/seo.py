@@ -314,7 +314,7 @@ def render_team(team) -> str:
         elif t.get("slug") in HOME_TIPSTER_ORDER:
             tip_by_slug[t.get("slug")] = t
         else:
-            t["draft"] = (t.get("status") == "bozza") or not (t.get("bio") and t.get("role"))
+            t["draft"] = (t.get("status") == "bozza")
             collaborators.append(t)
     tipsters = [tip_by_slug[s] for s in HOME_TIPSTER_ORDER if s in tip_by_slug]
     collaborators.sort(key=lambda x: x.get("order", 999))

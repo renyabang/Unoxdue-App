@@ -1,0 +1,24 @@
+{
+  "summary": "Frontend-only regression on UnoXdue: (1) React homepage Newsletter Band 'Opzione A' (Opzione A dark full-width) rendered before footer with all data-testids (band, form, email, submit, msg); (2) Newsletter subscribe flow works end-to-end: valid email → 'Iscrizione confermata. Grazie!' + input cleared, repeat same email → 'Sei già iscritto, grazie!'; (3) Old footer newsletter form (data-testid='newsletter-form') NOT present on React homepage nor on SSR home; (4) SSR /api/seo/team shows 'Sono Gianmarco' collab card with real photo (naturalWidth=640, loaded OK), Instagram link (https://www.instagram.com/_.sonogianmarco_/), no 'Scheda in arrivo' badge; (5) SSR /api/seo/home has the newsletter band positioned before footer (Y 7273 < 7637). No JS console errors on React home.",
+  "backend_issues": {"critical": [], "minor": []},
+  "frontend_issues": {
+    "ui_bugs": [],
+    "integration_issues": [],
+    "design_issues": []
+  },
+  "test_report_links": [],
+  "action_items": [],
+  "critical_code_review_comments": [
+    "NewsletterBand.jsx uses process.env.REACT_APP_BACKEND_URL correctly and handles idle/sending/ok/already/error states with a11y-friendly color codes.",
+    "SSR macro newsletter_band uses inline <script> IIFE with document.getElementById('nlBand') — safe pattern; message displayed via #nlBandMsg with data-testid.",
+    "collab_card macro correctly hides 'Scheda in arrivo' badge when c.draft is falsy — Sono Gianmarco correctly published (status != 'bozza')."
+  ],
+  "updated_files": [],
+  "success_rate": {"backend": "N/A (skipped per request)", "frontend": "100%"},
+  "test_credentials": "Not needed (public flows)",
+  "seed_data_creation": "Subscribed one random test email test+cuj0wblb2d@example.com via public /api/newsletter/subscribe (minimal DB footprint as instructed).",
+  "retest_needed": false,
+  "should_main_agent_self_test": false,
+  "context_for_next_testing_agent": "All 7 review points passed. React homepage loads cleanly, no JS console errors. Newsletter API POST /api/newsletter/subscribe returns {ok:true, already:bool} and is correctly consumed both by React (NewsletterBand.jsx) and SSR inline script. Sono Gianmarco is now published (draft=false), photo at /team/gianmarco.jpg (640x640) loads with HTTP 200. React hydration warning on <option><span> was noted in prompt but NOT observed during this run.",
+  "rca of the issue": "N/A - no bug found; all requested behaviors are working."
+}

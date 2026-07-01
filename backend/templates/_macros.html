@@ -288,3 +288,29 @@
   </div>
 </article>
 {% endmacro %}
+
+
+{# ===== Newsletter — Opzione A: banda scura full-width prima del footer ===== #}
+{% macro newsletter_band(site_url) %}
+<section class="relative overflow-hidden bg-[#14100e]" data-testid="newsletter-band">
+  <div class="pointer-events-none absolute -top-24 -right-16 w-[26rem] h-[26rem] rounded-full bg-[#EA4E1B]/30 blur-[120px]"></div>
+  <div class="relative max-w-7xl mx-auto px-5 lg:px-8 py-16 lg:py-20 flex flex-col lg:flex-row lg:items-center lg:justify-between gap-10">
+    <div class="max-w-xl">
+      <span class="text-[#EA4E1B] font-bold uppercase tracking-[0.25em] text-xs">Newsletter UnoXdue</span>
+      <h2 class="font-anton text-white text-4xl sm:text-5xl mt-3 leading-[0.95]">Non perderti la prossima puntata.</h2>
+      <p class="text-white/60 text-base sm:text-lg mt-4">Nuove puntate, dirette su Twitch e pronostici &mdash; direttamente nella tua email. Niente spam.</p>
+    </div>
+    <div class="w-full lg:w-auto lg:min-w-[420px]">
+      <form id="nlBand" class="flex flex-col sm:flex-row gap-3" data-testid="newsletter-band-form">
+        <input type="email" id="nlBandEmail" required placeholder="La tua email" data-testid="newsletter-band-email"
+          class="flex-1 min-w-0 rounded-xl border border-white/20 bg-white/5 px-4 py-3.5 text-white placeholder-white/40 text-[15px] outline-none focus:border-[#EA4E1B] transition-colors" />
+        <button type="submit" data-testid="newsletter-band-submit"
+          class="rounded-xl bg-[#EA4E1B] hover:bg-[#d3430f] text-white font-archivo font-extrabold uppercase tracking-wide text-sm px-7 py-3.5 whitespace-nowrap transition-colors">Iscriviti</button>
+      </form>
+      <p id="nlBandMsg" class="hidden mt-3 text-sm font-semibold" data-testid="newsletter-band-msg"></p>
+      <p class="text-white/35 text-xs mt-3">Iscrivendoti accetti la <a href="{{ site_url }}/privacy/" class="underline hover:text-white/60">privacy policy</a>. Puoi disiscriverti quando vuoi.</p>
+    </div>
+  </div>
+  <script>(function(){var f=document.getElementById('nlBand');if(!f)return;var msg=document.getElementById('nlBandMsg'),em=document.getElementById('nlBandEmail');f.addEventListener('submit',function(e){e.preventDefault();msg.classList.remove('hidden');msg.style.color='rgba(255,255,255,.7)';msg.textContent='Invio…';fetch('{{ site_url }}/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em.value,source:'home'})}).then(function(r){return r.json()}).then(function(j){if(j.ok){msg.style.color='#7ee2a8';msg.textContent=j.already?'Sei già iscritto, grazie!':'Iscrizione confermata. Grazie!';f.reset();}else{msg.style.color='#ffb199';msg.textContent=j.error||'Errore, riprova.';}}).catch(function(){msg.style.color='#ffb199';msg.textContent='Errore di rete, riprova.';});});})();</script>
+</section>
+{% endmacro %}

@@ -8,6 +8,7 @@ import Predictions from "../components/Predictions";
 import Hosts from "../components/Hosts";
 import Press from "../components/Press";
 import SocialSection from "../components/SocialSection";
+import NewsletterBand from "../components/NewsletterBand";
 import Footer from "../components/Footer";
 import VideoModal from "../components/VideoModal";
 
