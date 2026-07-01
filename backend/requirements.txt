@@ -19,6 +19,7 @@ distro==1.9.0
 dnspython==2.8.0
 ecdsa==0.19.2
 email-validator==2.3.0
+emergentintegrations==0.2.0
 fastapi==0.110.1
 fastuuid==0.14.0
 filelock==3.29.4
@@ -102,6 +103,7 @@ referencing==0.37.0
 regex==2026.5.9
 requests==2.34.2
 requests-oauthlib==2.0.0
+resend==2.32.2
 rich==15.0.0
 rpds-py==2026.5.1
 rsa==4.9.1

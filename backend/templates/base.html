@@ -84,6 +84,18 @@
               <a href="https://www.instagram.com/unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="Instagram" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.instagram("w-5 h-5") }}</a>
               <a href="https://www.tiktok.com/@unoxdue_" target="_blank" rel="noopener noreferrer" aria-label="TikTok" class="w-11 h-11 rounded-full border border-white/15 flex items-center justify-center text-white/80 hover:text-white hover:border-[#EA4E1B] hover:bg-[#EA4E1B] transition-all">{{ m.tiktok("w-[18px] h-[18px]") }}</a>
             </div>
+            <form id="nlForm" class="mt-7" data-testid="newsletter-form">
+              <h4 class="font-archivo font-extrabold uppercase tracking-wide text-sm text-white/90">Newsletter</h4>
+              <p class="text-white/55 text-sm mt-2">Nuove puntate e dirette, niente spam.</p>
+              <div style="display:flex;gap:8px;margin-top:12px;max-width:340px">
+                <input type="email" id="nlEmail" required placeholder="La tua email" data-testid="newsletter-email"
+                  style="flex:1;border:1px solid rgba(255,255,255,.2);background:rgba(255,255,255,.06);border-radius:9px;padding:11px 13px;color:#fff;font-size:14px;outline:none" />
+                <button type="submit" data-testid="newsletter-submit"
+                  style="background:#EA4E1B;color:#fff;border:0;border-radius:9px;padding:11px 18px;font-weight:800;font-size:13px;text-transform:uppercase;letter-spacing:.5px;cursor:pointer">Iscriviti</button>
+              </div>
+              <p id="nlMsg" style="display:none;margin-top:9px;font-size:13px;font-weight:600"></p>
+            </form>
+            <script>(function(){var f=document.getElementById('nlForm');if(!f)return;var msg=document.getElementById('nlMsg'),em=document.getElementById('nlEmail');f.addEventListener('submit',function(e){e.preventDefault();msg.style.display='block';msg.style.color='rgba(255,255,255,.7)';msg.textContent='Invio…';fetch('{{ site_url }}/api/newsletter/subscribe',{method:'POST',headers:{'Content-Type':'application/json'},body:JSON.stringify({email:em.value,source:'footer'})}).then(function(r){return r.json()}).then(function(j){if(j.ok){msg.style.color='#7ee2a8';msg.textContent=j.already?'Sei già iscritto, grazie!':'Iscrizione confermata. Grazie!';f.reset();}else{msg.style.color='#ffb199';msg.textContent=j.error||'Errore, riprova.';}}).catch(function(){msg.style.color='#ffb199';msg.textContent='Errore di rete, riprova.';});});})();</script>
           </div>
         </div>
         <div class="border-t border-white/10 mt-12 pt-6 flex flex-col sm:flex-row items-center justify-between gap-3">

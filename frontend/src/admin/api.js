@@ -135,4 +135,12 @@ export const api = {
   sponsorLeads: () => req("/admin/sponsor/leads"),
   sponsorLeadStatus: (id, status) => req(`/admin/sponsor/leads/${id}/status`, { method: "POST", body: { status } }),
   sponsorLeadDelete: (id) => req(`/admin/sponsor/leads/${id}`, { method: "DELETE" }),
+  // Newsletter
+  nlConfig: () => req("/admin/newsletter/config"),
+  nlSaveConfig: (body) => req("/admin/newsletter/config", { method: "PUT", body }),
+  nlSubscribers: () => req("/admin/newsletter/subscribers"),
+  nlSubDelete: (id) => req(`/admin/newsletter/subscribers/${id}`, { method: "DELETE" }),
+  nlPreview: (body) => req("/admin/newsletter/preview", { method: "POST", body }),
+  nlTest: (body) => req("/admin/newsletter/test", { method: "POST", body }),
+  nlSend: (body) => req("/admin/newsletter/send", { method: "POST", body }),
 };

@@ -29,6 +29,7 @@ import predictions_ai as pai
 import ai_transcript as ait
 import storage
 import telegram_bot as tg
+import newsletter as nl
 from seo_content import SEED_EPISODES, SEED_TEAM, SEED_PREDICTIONS
 
 logging.basicConfig(level=logging.INFO, format="%(asctime)s - %(name)s - %(levelname)s - %(message)s")
@@ -147,6 +148,7 @@ async def upsert_episode(payload: EpisodeIn, admin: str = Depends(get_current_ad
     await db.episodes.update_one({"slug": doc["slug"]}, {"$set": doc}, upsert=True)
     section = "interviste" if doc["type"] == "intervista" else "episodi"
     await tg.maybe_autopost_episode(doc["slug"])
+    await nl.maybe_autosend_episode(doc["slug"])
     return {"ok": True, "slug": doc["slug"], "public_url": f'{SITE_URL}/{section}/{doc["slug"]}/'}
 
 
@@ -457,6 +459,7 @@ async def admin_transcripts_seo_save_sections(slug: str, payload: SectionsIn, ad
 async def admin_transcripts_seo_publish(slug: str, admin: str = Depends(get_current_admin)):
     res = await ait.publish_preview(slug)
     await tg.maybe_autopost_episode(slug)
+    await nl.maybe_autosend_episode(slug)
     return res
 
 
@@ -735,6 +738,91 @@ async def admin_telegram_publish_poll(data: dict, admin: str = Depends(get_curre
 @api_router.get("/admin/telegram/messages")
 async def admin_telegram_messages(limit: int = 20, admin: str = Depends(get_current_admin)):
     return await tg.recent_messages(limit)
+
+
+# ============================ Newsletter (Resend) ============================
+@api_router.post("/newsletter/subscribe")
+async def newsletter_subscribe(data: dict):
+    return await nl.subscribe(data.get("email", ""), data.get("source", "sito"))
+
+
+@api_router.get("/newsletter/unsubscribe", response_class=HTMLResponse)
+async def newsletter_unsubscribe(token: str = ""):
+    ok = await nl.unsubscribe(token)
+    msg = ("Iscrizione annullata. Non riceverai più le nostre email." if ok
+           else "Link non valido o già annullato.")
+    html = (f"<!doctype html><html lang='it'><head><meta charset='utf-8'><title>Newsletter UnoXdue</title>"
+            f"<meta name='robots' content='noindex'><meta name='viewport' content='width=device-width,initial-scale=1'>"
+            f"<style>body{{font-family:Arial,sans-serif;background:#f4ebe1;margin:0;padding:60px 20px;text-align:center;color:#14100e}}"
+            f".c{{max-width:460px;margin:0 auto;background:#fff;border-radius:16px;padding:36px 28px}}"
+            f"a{{color:#EA4E1B;font-weight:700;text-decoration:none}}</style></head><body><div class='c'>"
+            f"<div style='font-size:26px;font-weight:800'>Uno<span style='color:#EA4E1B'>X</span>due</div>"
+            f"<p style='margin:20px 0;font-size:16px'>{msg}</p>"
+            f"<a href='{SITE_URL}/'>Torna al sito</a></div></body></html>")
+    return HTMLResponse(html)
+
+
+@api_router.get("/admin/newsletter/config")
+async def admin_nl_config(admin: str = Depends(get_current_admin)):
+    return await nl.admin_config_view()
+
+
+@api_router.put("/admin/newsletter/config")
+async def admin_nl_save(data: dict, admin: str = Depends(get_current_admin)):
+    return await nl.save_config(data)
+
+
+@api_router.get("/admin/newsletter/subscribers")
+async def admin_nl_subscribers(admin: str = Depends(get_current_admin)):
+    return await nl.list_subscribers()
+
+
+@api_router.get("/admin/newsletter/subscribers/export")
+async def admin_nl_export(admin: str = Depends(get_current_admin)):
+    subs = await nl.list_subscribers(100000)
+    lines = ["email,status,source,created_at"]
+    for s in subs:
+        lines.append(f'{s.get("email","")},{s.get("status","")},{s.get("source","")},{s.get("created_at","")}')
+    return Response(content="\n".join(lines), media_type="text/csv",
+                    headers={"Content-Disposition": 'attachment; filename="iscritti-newsletter.csv"'})
+
+
+@api_router.delete("/admin/newsletter/subscribers/{sub_id}")
+async def admin_nl_sub_delete(sub_id: str, admin: str = Depends(get_current_admin)):
+    await db.subscribers.delete_one({"id": sub_id})
+    return {"ok": True}
+
+
+@api_router.post("/admin/newsletter/preview")
+async def admin_nl_preview(data: dict, admin: str = Depends(get_current_admin)):
+    subject, inner, err = await nl.resolve(data.get("kind"), slug=data.get("slug"),
+                                           text=data.get("text"), subject=data.get("subject"),
+                                           html=data.get("html"))
+    if err:
+        return {"ok": False, "error": err}
+    return {"ok": True, "subject": subject, "html": nl._wrap(inner, f"{SITE_URL}/")}
+
+
+@api_router.post("/admin/newsletter/test")
+async def admin_nl_test(data: dict, admin: str = Depends(get_current_admin)):
+    subject, inner, err = await nl.resolve(data.get("kind"), slug=data.get("slug"),
+                                           text=data.get("text"), subject=data.get("subject"),
+                                           html=data.get("html"))
+    if err:
+        return {"ok": False, "error": err}
+    cfg = await nl.get_config()
+    to = data.get("to") or cfg.get("owner_email") or os.environ.get("ADMIN_EMAIL", "")
+    return await nl.send_test(to, subject, inner)
+
+
+@api_router.post("/admin/newsletter/send")
+async def admin_nl_send(data: dict, admin: str = Depends(get_current_admin)):
+    subject, inner, err = await nl.resolve(data.get("kind"), slug=data.get("slug"),
+                                           text=data.get("text"), subject=data.get("subject"),
+                                           html=data.get("html"))
+    if err:
+        return {"ok": False, "error": err}
+    return await nl.send_campaign(subject, inner, kind=data.get("kind", "campaign"))
 
 
 @api_router.get("/live")
@@ -1108,6 +1196,14 @@ async def sponsor_lead(payload: SponsorLeadIn):
     }
     await db.sponsor_leads.insert_one(doc)
     await auto.log_automation("sponsor", "ok", f"Nuova richiesta sponsor da {doc['company'] or doc['name']}")
+    owner_html = (f"<p style='margin:0 0 12px 0;font-size:18px;font-weight:800;'>📨 Nuova richiesta sponsor</p>"
+                  f"<p style='margin:4px 0;'><b>Azienda:</b> {doc['company'] or '—'}</p>"
+                  f"<p style='margin:4px 0;'><b>Nome:</b> {doc['name']}</p>"
+                  f"<p style='margin:4px 0;'><b>Email:</b> {doc['email']}</p>"
+                  f"<p style='margin:4px 0;'><b>Telefono:</b> {doc['phone'] or '—'}</p>"
+                  f"<p style='margin:4px 0;'><b>Budget:</b> {doc['budget'] or '—'} · <b>Categoria:</b> {doc['category'] or '—'}</p>"
+                  f"<p style='margin:10px 0 0 0;'><b>Messaggio:</b><br/>{doc['message'] or '—'}</p>")
+    await nl.notify_owner(f"Nuova richiesta sponsor — {doc['company'] or doc['name']}", owner_html)
     return {"ok": True}
 
 
